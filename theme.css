@@ -1,0 +1,49 @@
+/* 공통 테마: 회색 종이 바탕 + 세리프 제목 + 고정폭 숫자. 두 페이지의 인라인 스타일 뒤에 로드되어 덮어씀 */
+:root{
+  --bg:light-dark(#d8d8d4,#0f0f0e);
+  --ink:light-dark(#0d0d0c,#e8e7e2);
+  --mute:light-dark(rgba(13,13,12,.62),rgba(232,231,226,.6));
+  --line:light-dark(rgba(13,13,12,.16),rgba(232,231,226,.14));
+  --card:light-dark(#e1e1dd,#171716);
+  --acc:light-dark(#0d0d0c,#e8e7e2);
+  --blue:light-dark(#2d4f7c,#8fb0dc);
+  --long:light-dark(#9e1b1b,#ff6b5e);
+  --short:light-dark(#1f6b42,#5fd08f);
+  --up:light-dark(#1f6b42,#5fd08f);
+  --dn:light-dark(#9e1b1b,#ff6b5e);
+  --flash:light-dark(#ecebe6,#24221f);
+  --serif:"Instrument Serif",Pretendard,"Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",serif;
+  --sans:Pretendard,"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+body{font-family:var(--sans);letter-spacing:-.01em;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+h1,h2,h3{font-family:var(--serif);font-weight:400;letter-spacing:-.012em}
+h1{font-size:clamp(44px,8vw,84px);line-height:.98}
+h1 em,h2 em{font-style:italic}
+h2{font-size:30px}
+h3{font-weight:400!important;font-size:20px!important}
+.brand{font-family:var(--serif)!important;font-weight:400!important;font-size:26px!important}
+.bar-top,nav.top{background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.panel{border-top:1px solid var(--ink)}
+button{border-radius:2px;background:var(--ink);color:var(--bg);font-weight:500}
+button.ghost,.seg button{border-radius:2px;border-color:var(--line)}
+input,select{border-radius:2px;background:transparent;border-color:var(--line)}
+.kpis,.tot,.feed,details,.empty{border-radius:2px}
+details{background:transparent}
+.kpi,.tot>div{background:var(--bg)}
+.kpi .v,.tot .v,.coin .px{font-family:var(--mono)!important;font-weight:400!important;letter-spacing:-.03em}
+.kpi .v{font-size:22px}.tot .v{font-size:22px}
+.coin .px{font-size:clamp(24px,3.4vw,34px)!important}
+table,.rk,.addr,ul.ev time,.tape{font-family:var(--mono)}
+td b{font-weight:500}
+th{font-family:var(--sans);background:var(--bg)}
+.sub,.src{letter-spacing:0}
+.meter,.rk .bar{border-radius:0}
+.tip{border-radius:2px;font-family:var(--mono)}
+/* 상단 흐르는 청산 띠 */
+.tape{overflow:hidden;white-space:nowrap;border-bottom:1px solid var(--line);font-size:13px;height:30px;display:flex;align-items:center}
+.tape .run{display:inline-flex;gap:28px;padding-left:100%;animation:tape 60s linear infinite}
+.tape span{white-space:nowrap}
+@keyframes tape{to{transform:translateX(-100%)}}
+@media(prefers-reduced-motion:reduce){.tape .run{animation:none;padding-left:14px}}

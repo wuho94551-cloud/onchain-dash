@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>실시간 청산 · 온체인 데스크</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&family=Sofia+Sans+Condensed:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* VOICE: 트레이딩 데스크의 경보판, 빠르게 훑고 큰 것만 눈에 띄게
    IDEA: 공항 출발 안내판처럼 위에서부터 새 줄이 계속 들어오는 청산 보드
@@ -81,16 +82,19 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:600px){table{font-size:13px}th,td{padding:6px 6px}.tot .v{font-size:22px}.arow label{width:100%}}
 @media(prefers-reduced-motion:reduce){tr.new{animation:none}}
 </style>
+<link rel="stylesheet" href="./theme.css">
 </head>
 <body>
 <nav class="top"><div class="band">
-  <div class="brand">온체인 데스크</div>
+  <div class="brand"><em>Onchain</em> Desk</div>
   <a href="./">코인 분석</a>
   <a href="./liq.html" aria-current="page">실시간 청산</a>
 </div></nav>
+<div class="tape" aria-label="최근 큰 청산"><div class="run" id="tape"><span>$50K 이상 청산을 기다리는 중…</span></div></div>
 
 <header class="band">
-  <h1>실시간 청산</h1>
+  <h1><em>Liquidation</em> Tape</h1>
+  <p style="margin:8px 0 0;font-size:15px">OKX · Bybit · Gate 무기한 선물 실시간 청산</p>
   <p class="sub" id="conn"></p>
   <div class="phead" style="margin:14px 0 0"><span class="sub" style="margin:0">합계 구간</span><div class="seg" id="win"></div></div>
   <div class="tot" id="tot"></div>
@@ -278,6 +282,10 @@ function drawMin(){
 const minRO=new ResizeObserver(drawMin);minRO.observe(svg);
 setInterval(()=>{if(dirty){dirty=false;summary();drawMin()}},1000);
 setInterval(()=>{dirty=true},15000);
+let tapeSig='';
+setInterval(()=>{const big=[];for(let i=EV.length-1;i>=0&&big.length<24;i--)if(EV[i].usd>=5e4)big.push(EV[i]);
+  const sig=big.map(e=>e.t+e.coin).join();if(!big.length||sig===tapeSig)return;tapeSig=sig;
+  $('#tape').innerHTML=big.map(e=>`<span>${hm(e.t)} <b>${esc(e.coin)}</b> <span class="${e.side}">${e.side==='L'?'롱':'숏'} ${usd(e.usd)}</span> ${EXS[e.ex]}</span>`).join('')},20000);
 
 /* ---- alerts ---- */
 let A=JSON.parse(store.get('liq-alert')||'{"one":0,"sum":0,"coins":"","sound":true,"notif":false}');

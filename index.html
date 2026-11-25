@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>내 온체인 데스크</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&family=Sofia+Sans+Condensed:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* VOICE: 개인 트레이딩 데스크, 숫자 먼저, 장식 없음
    IDEA: 코인 하나를 넣으면 그 코인의 수급 보고서 한 장이 나오는 구조
@@ -75,10 +76,11 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:600px){table{font-size:13px}.fig{min-height:240px}.kpi .v{font-size:22px}.keyrow label{width:100%}}
 @media(prefers-reduced-motion:no-preference){.panel{animation:in .35s ease both}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
 </style>
+<link rel="stylesheet" href="./theme.css">
 </head>
 <body>
 <div class="bar-top"><div class="band">
-  <div class="brand">온체인 데스크</div>
+  <div class="brand"><em>Onchain</em> Desk</div>
   <a class="nav" href="./liq.html">실시간 청산 →</a>
   <form class="search" id="search">
     <input id="q" placeholder="코인 심볼 또는 이름 (예: ARB, PEPE, ETH)" autocomplete="off" spellcheck="false" aria-label="코인 검색">
@@ -89,7 +91,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 
 <header class="band">
   <div class="coin">
-    <h1 id="cname">코인을 검색하세요</h1>
+    <h1 id="cname"><em>Coin</em> Report</h1>
     <span class="px" id="cpx"></span>
     <span id="cch"></span>
   </div>
@@ -224,7 +226,7 @@ async function loadCoin(q){
   try{C=await findCoin(q)}catch(e){$('#stamp').textContent='조회 실패: '+e.message;return}
   store.set('coin',C.sym);try{history.replaceState(null,'','#'+C.sym.replace(/[^A-Za-z0-9-]/g,''))}catch(e){}
   document.title=C.sym+' · 온체인 데스크';
-  $('#cname').textContent=`${C.name} (${C.sym})`;
+  $('#cname').innerHTML=`<em>${esc(C.name)}</em> <span style="font-size:.45em;color:var(--mute)">${esc(C.sym)}</span>`;
   $('#cpx').textContent=C.price!=null?price(C.price):'';
   $('#cch').innerHTML=C.chg!=null?pct(C.chg)+' <span class="sub">24시간</span>':'';
   const chainNames=Object.keys(C.platforms).filter(k=>k&&C.platforms[k]).slice(0,4).join(', ');
