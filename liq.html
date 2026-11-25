@@ -21,7 +21,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Instrument Sa
 h1,h2{font-family:"Sofia Sans Condensed","Malgun Gothic",sans-serif;font-weight:800;line-height:1.05;margin:0}
 h1{font-size:clamp(32px,5vw,48px)}h2{font-size:22px}
 nav.top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
-nav.top .band{padding-block:10px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+nav.top .band{padding-block:10px;display:flex;gap:4px 16px;align-items:center;flex-wrap:wrap}
 nav.top a{color:var(--mute);text-decoration:none;font-weight:600;min-height:44px;display:flex;align-items:center}
 nav.top a[aria-current]{color:var(--ink);border-bottom:2px solid var(--acc)}
 .brand{font-family:"Sofia Sans Condensed",sans-serif;font-weight:800;font-size:22px;margin-right:auto}
@@ -88,6 +88,8 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 <nav class="top"><div class="band">
   <div class="brand"><em>Onchain</em> Desk</div>
   <a href="./">코인 분석</a>
+  <a href="./setup.html">급등 준비</a>
+  <a href="./watch.html">호가 감시</a>
   <a href="./scan.html">스캐너</a>
   <a href="./liq.html" aria-current="page">실시간 청산</a>
   <a href="./liqmap.html">청산 압력</a>
