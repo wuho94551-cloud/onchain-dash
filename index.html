@@ -21,6 +21,7 @@ h1,h2{font-family:"Sofia Sans Condensed","Malgun Gothic",sans-serif;font-weight:
 h1{font-size:clamp(32px,5vw,52px)}h2{font-size:24px}
 .bar-top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
 .bar-top .band{padding-block:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.nav{color:var(--ink);font-weight:600;text-decoration:none;min-height:44px;display:flex;align-items:center;padding:0 6px}
 .brand{font-family:"Sofia Sans Condensed",sans-serif;font-weight:800;font-size:22px;margin-right:auto}
 form.search{display:flex;gap:8px;flex:1 1 340px;max-width:560px}
 button,input,select{font:inherit;font-size:16px}
@@ -78,6 +79,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 <body>
 <div class="bar-top"><div class="band">
   <div class="brand">온체인 데스크</div>
+  <a class="nav" href="./liq.html">실시간 청산 →</a>
   <form class="search" id="search">
     <input id="q" placeholder="코인 심볼 또는 이름 (예: ARB, PEPE, ETH)" autocomplete="off" spellcheck="false" aria-label="코인 검색">
     <button type="submit">조회</button>

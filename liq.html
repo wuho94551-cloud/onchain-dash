@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>실시간 청산 · 온체인 데스크</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&family=Sofia+Sans+Condensed:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 트레이딩 데스크의 경보판, 빠르게 훑고 큰 것만 눈에 띄게
+   IDEA: 공항 출발 안내판처럼 위에서부터 새 줄이 계속 들어오는 청산 보드
+   PICTURE: 분당 롱/숏 청산 막대(위 롱, 아래 숏)와 실시간 피드
+   COLOUR and TYPE: 온체인 데스크와 같은 바탕, 롱 청산 빨강, 숏 청산 초록, 강조 버밀리언; Sofia Sans Condensed + Instrument Sans
+   LAYOUT: 상단 합계 → 분당 차트 → 피드 | 코인 순위 → 알림 설정 */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#120d0b);--ink:light-dark(#111111,#f4eeea);--mute:light-dark(#5d5a58,#a89f99);--line:light-dark(#e6e2df,#2c2420);--acc:#ff4a1c;--long:light-dark(#c0141f,#ff5c5c);--short:light-dark(#0a7a3d,#3fcf82);--card:light-dark(#faf8f7,#1a1412);--flash:light-dark(#fff1ec,#2a1610)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Instrument Sans",system-ui,"Malgun Gothic",sans-serif;overflow-x:clip}
+.band{padding:clamp(14px,2.4vw,32px) max(4vw,14px);max-width:1240px;margin:0 auto}
+h1,h2{font-family:"Sofia Sans Condensed","Malgun Gothic",sans-serif;font-weight:800;line-height:1.05;margin:0}
+h1{font-size:clamp(32px,5vw,48px)}h2{font-size:22px}
+nav.top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+nav.top .band{padding-block:10px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+nav.top a{color:var(--mute);text-decoration:none;font-weight:600;min-height:44px;display:flex;align-items:center}
+nav.top a[aria-current]{color:var(--ink);border-bottom:2px solid var(--acc)}
+.brand{font-family:"Sofia Sans Condensed",sans-serif;font-weight:800;font-size:22px;margin-right:auto}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--mute);margin-right:4px}
+.dot.on{background:var(--short)}
+button,input,select{font:inherit;font-size:16px}
+button{min-height:44px;padding:0 16px;border-radius:8px;border:0;background:var(--acc);color:#fff;font-weight:600;cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+input,select{min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.tot{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:14px}
+.tot div{background:var(--bg);padding:10px 14px}
+.tot .l{font-size:13px;color:var(--mute)}
+.tot .v{font-family:"Sofia Sans Condensed",sans-serif;font-weight:700;font-size:26px;white-space:nowrap;line-height:1.15}
+.tot .r{font-size:13px;white-space:nowrap}
+.L{color:var(--long)}.S{color:var(--short)}
+.ratio{height:8px;border-radius:4px;overflow:hidden;display:flex;margin-top:6px;background:var(--line)}
+.ratio i{display:block;height:100%}
+.panel{border-top:2px solid var(--ink);padding-top:12px}
+.phead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.fig{position:relative;min-height:220px}.fig>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;padding:6px 9px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-115%);display:none;z-index:2}
+.grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:28px}
+@media(max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.filters input{flex:1 1 140px;max-width:220px}
+.chk{display:flex;align-items:center;gap:6px;font-size:14px;min-height:36px}
+.chk input{min-height:auto;width:18px;height:18px}
+.feed{max-height:560px;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right}
+th{position:sticky;top:0;background:var(--bg);font-size:13px;color:var(--mute);font-weight:600}
+th.l,td.l{text-align:left}
+tr.new{animation:fl 1.6s ease-out}
+@keyframes fl{from{background:var(--flash)}to{background:transparent}}
+tr.big td{font-weight:700}
+tr.huge td{font-weight:700;background:var(--flash)}
+.side{font-weight:700;font-size:13px}
+.ex{color:var(--mute);font-size:13px}
+.rank{display:grid;gap:6px}
+.rk{display:grid;grid-template-columns:5.5em minmax(0,1fr) 5.5em;gap:8px;align-items:center;font-size:14px}
+.rk b{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.rk .bar{display:flex;height:12px;border-radius:0 4px 4px 0;overflow:hidden;gap:2px}
+.rk .bar i{display:block;height:100%}
+.rk span{text-align:right;white-space:nowrap}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:16px;color:var(--mute);font-size:15px}
+details{border:1px solid var(--line);border-radius:10px;padding:12px 16px;background:var(--card)}
+summary{cursor:pointer;font-weight:600;min-height:28px}
+.arow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.arow label{width:11em;font-size:14px}
+.arow input,.arow select{flex:1 1 200px;max-width:340px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:10px;font-weight:600;display:none;z-index:9;max-width:92vw}
+@media(max-width:600px){table{font-size:13px}th,td{padding:6px 6px}.tot .v{font-size:22px}.arow label{width:100%}}
+@media(prefers-reduced-motion:reduce){tr.new{animation:none}}
+</style>
+</head>
+<body>
+<nav class="top"><div class="band">
+  <div class="brand">온체인 데스크</div>
+  <a href="./">코인 분석</a>
+  <a href="./liq.html" aria-current="page">실시간 청산</a>
+</div></nav>
+
+<header class="band">
+  <h1>실시간 청산</h1>
+  <p class="sub" id="conn"></p>
+  <div class="phead" style="margin:14px 0 0"><span class="sub" style="margin:0">합계 구간</span><div class="seg" id="win"></div></div>
+  <div class="tot" id="tot"></div>
+</header>
+
+<section class="band" style="padding-top:0">
+  <div class="panel">
+    <div class="phead"><h2>분당 청산 (최근 60분)</h2>
+      <div class="sub" style="margin:0"><span class="L">■ 롱 청산 (위)</span> · <span class="S">■ 숏 청산 (아래)</span></div></div>
+    <div class="fig" id="f-min"></div>
+  </div>
+</section>
+
+<section class="band grid2">
+  <div class="panel">
+    <div class="phead"><h2>청산 피드</h2><button class="ghost" id="pause" aria-pressed="false" style="min-height:36px;font-size:14px">일시정지</button></div>
+    <div class="filters">
+      <div class="seg" id="minq"></div>
+      <input id="coinf" placeholder="코인 필터 (예: BTC, SOL)" autocomplete="off" aria-label="코인 필터">
+    </div>
+    <div class="filters" id="exf"></div>
+    <div class="feed"><table><thead><tr><th class="l">시각</th><th class="l">코인</th><th class="l">청산</th><th>금액</th><th>가격</th><th class="l">거래소</th></tr></thead><tbody id="rows"></tbody></table></div>
+  </div>
+  <div class="panel">
+    <div class="phead"><h2>코인별 청산 순위</h2><span class="sub" style="margin:0" id="rkwin"></span></div>
+    <div class="rank" id="rank"><div class="empty">청산이 들어오면 여기에 순위가 쌓여요.</div></div>
+  </div>
+</section>
+
+<section class="band">
+  <details id="alerts" open>
+    <summary>청산 알림 설정</summary>
+    <p class="sub">이 페이지가 열려 있는 동안 소리와 알림으로 알려줘요. 폰에서는 화면이 꺼지거나 다른 앱으로 넘어가면 브라우저가 멈춰서 알림이 오지 않을 수 있어요.</p>
+    <form id="aform">
+      <div class="arow"><label for="a-one">단일 청산이 이 금액 이상</label><select id="a-one"><option value="0">끄기</option><option>100000</option><option>250000</option><option>500000</option><option>1000000</option><option>5000000</option></select></div>
+      <div class="arow"><label for="a-sum">1분 합계가 이 금액 이상</label><select id="a-sum"><option value="0">끄기</option><option>1000000</option><option>5000000</option><option>10000000</option><option>50000000</option></select></div>
+      <div class="arow"><label for="a-coins">관심 코인만 (비우면 전체)</label><input id="a-coins" placeholder="예: BTC, ETH, SOL" autocomplete="off"></div>
+      <div class="arow"><label>알림 방식</label>
+        <span class="chk"><input type="checkbox" id="a-sound" checked><label for="a-sound" style="width:auto">소리</label></span>
+        <span class="chk"><input type="checkbox" id="a-notif"><label for="a-notif" style="width:auto">브라우저 알림</label></span>
+      </div>
+      <div class="arow"><span style="width:11em"></span><button type="submit">저장하고 켜기</button><button type="button" class="ghost" id="a-test">테스트</button><span class="sub" id="amsg"></span></div>
+    </form>
+  </details>
+</section>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const num=n=>{const a=Math.abs(n);return a>=1e9?(n/1e9).toFixed(2)+'B':a>=1e6?(n/1e6).toFixed(2)+'M':a>=1e3?(n/1e3).toFixed(1)+'K':n.toFixed(0)};
+const usd=n=>'$'+num(n);
+const px=n=>n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:1}):n>=1?n.toFixed(3):n.toPrecision(4);
+const hms=t=>new Date(t).toLocaleTimeString('ko-KR',{hour12:false});
+
+/* events: {t, ex, coin, side:'L'|'S', usd, px} */
+const EV=[];const MAXEV=20000;
+const EXS={okx:'OKX',bybit:'Bybit',gate:'Gate'};
+const st={okx:false,bybit:false,gate:false};
+let MINQ=Number(store.get('liq-min')||10000),WIN=Number(store.get('liq-win')||3600e3),paused=false,coinF='';
+let exOn=JSON.parse(store.get('liq-ex')||'{"okx":true,"bybit":true,"gate":true}');
+
+function add(e){
+  if(!(e.usd>0)||!isFinite(e.usd))return;
+  EV.push(e);if(EV.length>MAXEV)EV.splice(0,EV.length-MAXEV);
+  checkAlert(e);
+  if(!paused&&pass(e))prependRow(e);
+  dirty=true;
+}
+const pass=e=>exOn[e.ex]&&e.usd>=MINQ&&(!coinF||coinF.includes(e.coin));
+function rowHTML(e,isNew){
+  const cls=[isNew?'new':'',e.usd>=1e6?'huge':e.usd>=1e5?'big':''].join(' ');
+  return `<tr class="${cls}"><td class="l">${hms(e.t)}</td><td class="l"><b>${esc(e.coin)}</b></td><td class="l side ${e.side}">${e.side==='L'?'롱':'숏'}</td><td>${usd(e.usd)}</td><td>${esc(px(e.px))}</td><td class="l ex">${EXS[e.ex]}</td></tr>`;
+}
+function prependRow(e){
+  const tb=$('#rows');tb.insertAdjacentHTML('afterbegin',rowHTML(e,true));
+  while(tb.rows.length>300)tb.deleteRow(-1);
+}
+function rebuildRows(){
+  const out=[];for(let i=EV.length-1;i>=0&&out.length<300;i--)if(pass(EV[i]))out.push(rowHTML(EV[i],false));
+  $('#rows').innerHTML=out.join('')||`<tr><td colspan="6" class="l" style="color:var(--mute)">조건에 맞는 청산을 기다리는 중…</td></tr>`;
+}
+
+/* ---- OKX: all swaps ---- */
+const okxCt={};
+async function okx(){
+  try{const r=await fetch('https://www.okx.com/api/v5/public/instruments?instType=SWAP').then(r=>r.json());for(const i of r.data)okxCt[i.instId]={v:Number(i.ctVal),inv:i.ctType==='inverse',ccy:i.instFamily.split('-')[0]}}catch(e){}
+  sock('okx','wss://ws.okx.com:443/ws/v5/public',ws=>ws.send(JSON.stringify({op:'subscribe',args:[{channel:'liquidation-orders',instType:'SWAP'}]})),d=>{
+    if(!d.data)return;
+    for(const it of d.data){const c=okxCt[it.instId];if(!c)continue;
+      for(const x of it.details||[]){const sz=Number(x.sz),p=Number(x.bkPx);
+        add({t:Number(x.ts),ex:'okx',coin:c.ccy,side:x.posSide==='short'?'S':'L',px:p,usd:c.inv?sz*c.v:sz*c.v*p})}}
+  },ws=>setInterval(()=>ws.readyState===1&&ws.send('ping'),20000));
+}
+/* ---- Bybit: top 150 USDT perps by turnover ---- */
+async function bybit(){
+  let syms=[];try{const t=await fetch('https://api.bybit.com/v5/market/tickers?category=linear').then(r=>r.json());
+    syms=t.result.list.filter(x=>x.symbol.endsWith('USDT')).sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,150).map(x=>x.symbol)}catch(e){syms=['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','DOGEUSDT']}
+  sock('bybit','wss://stream.bybit.com/v5/public/linear',ws=>{for(let i=0;i<syms.length;i+=10)ws.send(JSON.stringify({op:'subscribe',args:syms.slice(i,i+10).map(s=>'allLiquidation.'+s)}))},d=>{
+    if(!d.topic||!d.data)return;
+    for(const x of d.data){const v=Number(x.v),p=Number(x.p);add({t:Number(x.T),ex:'bybit',coin:String(x.s).replace(/USDT$/,''),side:x.S==='Buy'?'L':'S',px:p,usd:v*p})}
+  },ws=>setInterval(()=>ws.readyState===1&&ws.send(JSON.stringify({op:'ping'})),20000));
+}
+/* ---- Gate: all USDT perps ---- */
+const gateM={};
+async function gate(){
+  try{const r=await fetch('https://api.gateio.ws/api/v4/futures/usdt/contracts').then(r=>r.json());for(const c of r)gateM[c.name]=Number(c.quanto_multiplier)||1}catch(e){}
+  sock('gate','wss://fx-ws.gateio.ws/v4/ws/usdt',ws=>ws.send(JSON.stringify({time:Math.floor(Date.now()/1000),channel:'futures.public_liquidates',event:'subscribe',payload:['!all']})),d=>{
+    if(d.event!=='update'||!Array.isArray(d.result))return;
+    for(const x of d.result){const m=gateM[x.contract]||1,p=Number(x.price),sz=Number(x.size);
+      add({t:Number(x.time)||Date.now(),ex:'gate',coin:String(x.contract).replace(/_USDT$/,''),side:sz<0?'L':'S',px:p,usd:Math.abs(sz)*m*p})}
+  },ws=>setInterval(()=>ws.readyState===1&&ws.send(JSON.stringify({time:Math.floor(Date.now()/1000),channel:'futures.ping'})),20000));
+}
+function sock(name,url,onopen,onmsg,keep){
+  let tries=0;
+  const go=()=>{let ws,ka;try{ws=new WebSocket(url)}catch(e){return setTimeout(go,5000)}
+    ws.onopen=()=>{tries=0;st[name]=true;conn();onopen(ws);ka=keep(ws)};
+    ws.onmessage=ev=>{if(ev.data==='pong')return;let d;try{d=JSON.parse(ev.data)}catch(e){return}onmsg(d)};
+    ws.onclose=()=>{st[name]=false;conn();clearInterval(ka);setTimeout(go,Math.min(30000,1000*2**tries++))};
+    ws.onerror=()=>{try{ws.close()}catch(e){}};
+  };go();
+}
+function conn(){$('#conn').innerHTML=Object.keys(EXS).map(k=>`<span style="margin-right:14px;white-space:nowrap"><i class="dot ${st[k]?'on':''}"></i>${EXS[k]} ${st[k]?'연결됨':'연결 중…'}</span>`).join('')+` <span>· ${new Date().toLocaleTimeString('ko-KR',{hour12:false})}부터 수집</span>`}
+const since=Date.now();
+
+/* ---- controls ---- */
+const MINS=[[0,'전체'],[10000,'$10K+'],[100000,'$100K+'],[1000000,'$1M+']];
+const WINS=[[60e3,'1분'],[300e3,'5분'],[3600e3,'1시간'],[864e5,'24시간']];
+function seg(id,opts,cur,cb){const el=$(id);const r=()=>{el.innerHTML=opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${v===cur()}">${l}</button>`).join('')};r();
+  el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cb(Number(b.dataset.v));r()})}
+seg('#minq',MINS,()=>MINQ,v=>{MINQ=v;store.set('liq-min',v);rebuildRows()});
+seg('#win',WINS,()=>WIN,v=>{WIN=v;store.set('liq-win',v);dirty=true});
+$('#exf').innerHTML=Object.keys(EXS).map(k=>`<span class="chk"><input type="checkbox" id="ex-${k}" ${exOn[k]?'checked':''}><label for="ex-${k}">${EXS[k]}</label></span>`).join('');
+$('#exf').addEventListener('change',e=>{const k=e.target.id.slice(3);exOn[k]=e.target.checked;store.set('liq-ex',JSON.stringify(exOn));rebuildRows();dirty=true});
+$('#coinf').addEventListener('input',e=>{coinF=e.target.value.toUpperCase().split(/[\s,]+/).filter(Boolean);if(!coinF.length)coinF='';rebuildRows();dirty=true});
+$('#pause').addEventListener('click',e=>{paused=!paused;e.currentTarget.setAttribute('aria-pressed',paused);e.currentTarget.textContent=paused?'다시 보기':'일시정지';if(!paused)rebuildRows()});
+
+/* ---- totals, ranking, minute chart (redrawn every second when dirty) ---- */
+let dirty=true;
+function summary(){
+  const now=Date.now(),from=now-WIN;let l=0,s=0,n=0,big=null;const by=new Map();
+  for(let i=EV.length-1;i>=0;i--){const e=EV[i];if(e.t<from)break;if(!exOn[e.ex])continue;
+    n++;if(e.side==='L')l+=e.usd;else s+=e.usd;if(!big||e.usd>big.usd)big=e;
+    const c=by.get(e.coin)||{l:0,s:0};c[e.side==='L'?'l':'s']+=e.usd;by.set(e.coin,c)}
+  const t=l+s,lp=t?l/t*100:50;
+  const winL=WINS.find(w=>w[0]===WIN)[1];
+  const partial=now-since<WIN?' <span class="sub">(수집 시작 이후)</span>':'';
+  $('#tot').innerHTML=`<div><div class="l">총 청산 · ${winL}${partial}</div><div class="v">${usd(t)}</div><div class="ratio"><i style="width:${lp}%;background:var(--long)"></i><i style="width:${100-lp}%;background:var(--short)"></i></div></div>
+    <div><div class="l">롱 청산</div><div class="v L">${usd(l)}</div><div class="r">${lp.toFixed(0)}%</div></div>
+    <div><div class="l">숏 청산</div><div class="v S">${usd(s)}</div><div class="r">${(100-lp).toFixed(0)}%</div></div>
+    <div><div class="l">건수</div><div class="v">${n.toLocaleString()}</div></div>
+    <div><div class="l">최대 단일 청산</div><div class="v">${big?usd(big.usd):'–'}</div><div class="r">${big?`${esc(big.coin)} <span class="${big.side}">${big.side==='L'?'롱':'숏'}</span> · ${EXS[big.ex]}`:''}</div></div>`;
+  const rk=[...by.entries()].sort((a,b)=>(b[1].l+b[1].s)-(a[1].l+a[1].s)).slice(0,15);
+  const mx=rk.length?rk[0][1].l+rk[0][1].s:1;
+  $('#rkwin').textContent=winL+' 기준';
+  $('#rank').innerHTML=rk.length?rk.map(([c,v])=>{const w=(v.l+v.s)/mx*100;return `<div class="rk"><b>${esc(c)}</b><div class="bar" style="width:${w.toFixed(1)}%" title="롱 ${usd(v.l)} · 숏 ${usd(v.s)}"><i style="flex:${v.l};background:var(--long)"></i><i style="flex:${v.s};background:var(--short)"></i></div><span>${usd(v.l+v.s)}</span></div>`}).join(''):'<div class="empty">이 구간에 청산이 아직 없어요.</div>';
+}
+const box=$('#f-min');box.innerHTML='<svg></svg><div class="tip"></div>';
+const svg=box.querySelector('svg'),tip=box.querySelector('.tip');let bins=[];
+function drawMin(){
+  const W=svg.clientWidth,H=svg.clientHeight;if(!W||!H)return;
+  const now=Date.now(),m0=Math.floor(now/60e3)*60e3-59*60e3;
+  bins=Array.from({length:60},(_,i)=>({t:m0+i*60e3,l:0,s:0}));
+  for(let i=EV.length-1;i>=0;i--){const e=EV[i];if(e.t<m0)break;if(!exOn[e.ex])continue;const b=bins[Math.floor((e.t-m0)/60e3)];if(b)b[e.side==='L'?'l':'s']+=e.usd}
+  const mx=Math.max(1,...bins.map(b=>Math.max(b.l,b.s)));
+  const narrow=W<520,pl=narrow?6:56,pr=6,pt=8,pb=narrow?8:22,mid=pt+(H-pt-pb)/2,half=(H-pt-pb)/2,bw=(W-pl-pr)/60;
+  let g=`<line x1="${pl}" x2="${W-pr}" y1="${mid}" y2="${mid}" stroke="var(--mute)"/>`;
+  if(!narrow){g+=`<text x="${pl-6}" y="${pt+10}" text-anchor="end" font-size="12" fill="var(--mute)">${usd(mx)}</text><text x="${pl-6}" y="${H-pb}" text-anchor="end" font-size="12" fill="var(--mute)">${usd(mx)}</text>`;
+    [0,15,30,45,59].forEach(i=>{g+=`<text x="${pl+i*bw+bw/2}" y="${H-5}" text-anchor="middle" font-size="12" fill="var(--mute)">${new Date(bins[i].t).toLocaleTimeString('ko-KR',{hour12:false,hour:'2-digit',minute:'2-digit'})}</text>`})}
+  bins.forEach((b,i)=>{const x=pl+i*bw+bw*.15,w=Math.max(1,bw*.7);
+    if(b.l){const h=b.l/mx*half;g+=`<rect x="${x.toFixed(1)}" y="${(mid-h-1).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="var(--long)"/>`}
+    if(b.s){const h=b.s/mx*half;g+=`<rect x="${x.toFixed(1)}" y="${(mid+1).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="var(--short)"/>`}});
+  if(now-since<3600e3){const x=pl+Math.max(0,(since-m0)/60e3)*bw;if(x>pl+2)g+=`<line x1="${x}" x2="${x}" y1="${pt}" y2="${H-pb}" stroke="var(--ink)" stroke-dasharray="3 3" opacity=".4"/><text x="${x+4}" y="${pt+12}" font-size="12" fill="var(--mute)">수집 시작</text>`}
+  svg.innerHTML=g;
+  svg.onpointermove=e=>{const r=svg.getBoundingClientRect(),i=Math.min(59,Math.max(0,Math.floor((e.clientX-r.left-pl)/bw)));const b=bins[i];
+    tip.style.display='block';tip.style.left=Math.min(Math.max(pl+i*bw,110),W-110)+'px';tip.style.top=(e.clientY-r.top)+'px';
+    tip.textContent=`${new Date(b.t).toLocaleTimeString('ko-KR',{hour12:false,hour:'2-digit',minute:'2-digit'})} · 롱 ${usd(b.l)} · 숏 ${usd(b.s)}`};
+  svg.onpointerleave=()=>{tip.style.display='none'};
+}
+const minRO=new ResizeObserver(drawMin);minRO.observe(svg);
+setInterval(()=>{if(dirty){dirty=false;summary();drawMin()}},1000);
+setInterval(()=>{dirty=true},15000);
+
+/* ---- alerts ---- */
+let A=JSON.parse(store.get('liq-alert')||'{"one":0,"sum":0,"coins":"","sound":true,"notif":false}');
+$('#a-one').value=String(A.one);$('#a-sum').value=String(A.sum);$('#a-coins').value=A.coins;$('#a-sound').checked=A.sound;$('#a-notif').checked=A.notif;
+let actx=null,lastSum=0;
+const watch=()=>A.coins?A.coins.toUpperCase().split(/[\s,]+/).filter(Boolean):null;
+function beep(){if(!A.sound)return;try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.type='square';o.frequency.value=880;g.gain.setValueAtTime(.08,actx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+.35);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.35)}catch(e){}}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',6000)}
+function fire(title,body){beep();toast(title+' · '+body);
+  if(A.notif&&'Notification' in window&&Notification.permission==='granted'){try{new Notification(title,{body,tag:'liq'})}catch(e){}}
+  document.title='🔔 '+title;clearTimeout(fire.h);fire.h=setTimeout(()=>document.title='실시간 청산 · 온체인 데스크',8000)}
+function checkAlert(e){
+  const w=watch();if(w&&!w.includes(e.coin))return;
+  if(A.one&&e.usd>=A.one)fire(`${e.coin} ${e.side==='L'?'롱':'숏'} 청산 ${usd(e.usd)}`,`${EXS[e.ex]} · 가격 ${px(e.px)}`);
+  if(A.sum&&Date.now()-lastSum>60e3){const from=Date.now()-60e3;let t=0;for(let i=EV.length-1;i>=0&&EV[i].t>=from;i--){const x=EV[i];if(!w||w.includes(x.coin))t+=x.usd}
+    if(t>=A.sum){lastSum=Date.now();fire(`1분 청산 ${usd(t)} 돌파`,w?w.join(', '):'전체 코인')}}
+}
+$('#aform').addEventListener('submit',async e=>{e.preventDefault();
+  A={one:Number($('#a-one').value),sum:Number($('#a-sum').value),coins:$('#a-coins').value.trim(),sound:$('#a-sound').checked,notif:$('#a-notif').checked};
+  store.set('liq-alert',JSON.stringify(A));let msg='저장했어요';
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();await actx.resume()}catch(er){}
+  if(A.notif){if(!('Notification' in window))msg+=' · 이 브라우저는 알림을 지원하지 않아요 (아이폰은 홈 화면에 추가한 뒤 가능)';
+    else{const p=await Notification.requestPermission().catch(()=>'denied');if(p!=='granted')msg+=' · 브라우저 알림이 거부됐어요. 브라우저 설정에서 허용해 주세요'}}
+  $('#amsg').textContent=msg});
+$('#a-test').addEventListener('click',async()=>{try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();await actx.resume()}catch(e){}fire('테스트 알림','이렇게 알려드려요')});
+
+rebuildRows();conn();okx();bybit();gate();
+}
+</script>
+</body>
+</html>
