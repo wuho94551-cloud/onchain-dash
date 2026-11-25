@@ -127,7 +127,7 @@ let actx=null;function beep(f){if(!$('#snd').checked)return;try{actx=actx||new (
 const LOG=[];
 function log(kind,side,html){LOG.unshift({t:Date.now(),kind,side,html});if(LOG.length>200)LOG.pop();
   $('#log').innerHTML=LOG.map(l=>`<div><time>${hms(l.t)}</time><b class="${l.side}">${esc(l.kind)}</b> ${l.html}</div>`).join('');
-  if(kind!=='벽 등장')beep(side==='B'?880:440)}
+  if(kind!=='큰 벽 등장')beep(side==='B'?880:440)}
 
 function mid(){const bb=Math.max(...bids.keys()),ba=Math.min(...asks.keys());return isFinite(bb)&&isFinite(ba)?(bb+ba)/2:lastPx}
 /* wall tracking every second */
@@ -137,13 +137,13 @@ function scanWalls(){
   if(near.length<10)return;const sorted=[...near].sort((a,b)=>a-b),med=sorted[Math.floor(sorted.length/2)],th=Math.max(med*8,2e4);
   const now=Date.now(),cur=new Set();
   for(const [side,book] of [['B',bids],['A',asks]])for(const [p,s] of book){const v=s*p;if(Math.abs(p/m-1)>.03||v<th)continue;const k=side+p;cur.add(k);
-    const w=walls.get(k);if(!w){walls.set(k,{side,p,first:now,max:v,last:v});if(walls.size>0&&now-start>15e3)log('벽 등장',side,`${side==='B'?'매수':'매도'}벽 ${px(p)} · ${usd(v)} (현재가 대비 ${((p/m-1)*100).toFixed(2)}%)`)}
+    const w=walls.get(k);if(!w){walls.set(k,{side,p,first:now,max:v,last:v});if(v>=th*4&&now-start>30e3)log('큰 벽 등장',side,`${side==='B'?'매수':'매도'}벽 ${px(p)} · ${usd(v)} (현재가 대비 ${((p/m-1)*100).toFixed(2)}%)`)}
     else{w.max=Math.max(w.max,v);w.last=v}}
   for(const [k,w] of walls){if(cur.has(k))continue;
     const book=w.side==='B'?bids:asks,s=book.get(w.p)||0,left=s*w.p,dist=Math.abs(w.p/m-1);
     const traded=(exec.get(w.side+w.p)||0);
     if(left<w.max*.3){const moved=[...walls.values()].some(o=>o!==w&&o.side===w.side&&o.first>=now-3e3&&Math.abs(o.p/w.p-1)<=.002&&o.last>=w.max*.5);
-      if(!moved&&dist<=.004&&traded<(w.max-left)*.3&&now-w.first>=20e3&&now-start>30e3)log(w.side==='A'?'매도벽 철거':'매수벽 철거',w.side,`${px(w.p)}의 ${usd(w.max)} 벽이 체결 없이 사라짐 (체결 ${usd(traded)}) · 현재가와 ${(dist*100).toFixed(2)}%`);walls.delete(k)}
+      if(!moved&&dist<=.004&&dist>=.0005&&traded<(w.max-left)*.3&&now-w.first>=20e3&&now-start>30e3)log(w.side==='A'?'매도벽 철거':'매수벽 철거',w.side,`${px(w.p)}의 ${usd(w.max)} 벽이 체결 없이 사라짐 (체결 ${usd(traded)}) · 현재가와 ${(dist*100).toFixed(2)}%`);walls.delete(k)}
   }
   drawLadder(m,th);
 }
