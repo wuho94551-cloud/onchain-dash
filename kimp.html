@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>김치 프리미엄 · 온체인 데스크</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* VOICE: 환전소 시세판처럼 차분하게, 벌어진 곳만 눈에 띄게
+   IDEA: 은행 창구의 환율 보드, 코인마다 한 줄
+   PICTURE: BTC·테더 김프 추이 선과 코인별 김프 표
+   COLOUR and TYPE: theme.css 공통 (회색 종이, 세리프 제목, 고정폭 숫자), 양수 빨강/음수 파랑
+   LAYOUT: 요약 지표 → 추이 차트 → 필터 → 표 → 알림 */
+:root{color-scheme:light dark}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5;overflow-x:clip}
+.band{padding:clamp(14px,2.4vw,32px) max(4vw,14px);max-width:1240px;margin:0 auto}
+h1,h2{margin:0;line-height:1.02}
+nav.top{position:sticky;top:0;z-index:5}
+nav.top .band{padding-block:10px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+nav.top a{color:var(--mute);text-decoration:none;font-weight:600;min-height:44px;display:flex;align-items:center}
+nav.top a[aria-current]{color:var(--ink);border-bottom:2px solid var(--ink)}
+.brand{margin-right:auto}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+button,input,select{font:inherit;font-size:16px}
+button{min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+input,select{min-height:44px;padding:0 12px;border:1px solid var(--line);color:var(--ink)}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));margin-top:14px}
+.kpi{padding:10px 14px}
+.kpi .l{font-size:13px;color:var(--mute)}
+.kpi .v{white-space:nowrap;line-height:1.2}
+.kpi .r{font-size:13px;color:var(--mute);white-space:nowrap}
+.pos{color:var(--long)}.neg{color:var(--blue)}
+.panel{padding-top:12px}
+.phead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.fig{position:relative;min-height:220px}.fig>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;padding:6px 9px;white-space:nowrap;transform:translate(-50%,-115%);display:none;z-index:2}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--mute);flex-wrap:wrap}
+.legend i{display:inline-block;width:14px;height:2px;margin-right:6px;vertical-align:4px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.filters input{flex:1 1 160px;max-width:240px}
+.tbl{max-height:70vh;overflow:auto;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right}
+th{position:sticky;top:0;font-size:13px;color:var(--mute);font-weight:600;cursor:pointer;user-select:none}
+th[aria-sort=descending]::after{content:" ↓"}th[aria-sort=ascending]::after{content:" ↑"}
+th.l,td.l{text-align:left}
+td.nm{font-family:var(--sans)}
+td.nm small{color:var(--mute);font-size:12px;margin-left:6px}
+tr.hot td{background:var(--flash)}
+.kbar{display:inline-block;height:8px;vertical-align:middle;margin-left:6px}
+details{border:1px solid var(--line);padding:12px 16px}
+summary{cursor:pointer;font-weight:600;min-height:28px}
+.arow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.arow label{width:11em;font-size:14px}
+.arow input,.arow select{flex:1 1 200px;max-width:320px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;font-weight:600;display:none;z-index:9;max-width:92vw}
+@media(max-width:600px){table{font-size:13px}th,td{padding:6px}.arow label{width:100%}.hide-sm{display:none}}
+</style>
+<link rel="stylesheet" href="./theme.css">
+</head>
+<body>
+<nav class="top"><div class="band">
+  <div class="brand"><em>Onchain</em> Desk</div>
+  <a href="./">코인 분석</a>
+  <a href="./liq.html">실시간 청산</a>
+  <a href="./kimp.html" aria-current="page">김프</a>
+</div></nav>
+
+<header class="band">
+  <h1><em>Kimchi</em> Premium</h1>
+  <p style="margin:8px 0 0;font-size:15px">업비트·빗썸 원화 가격과 해외 거래소 가격 비교</p>
+  <p class="sub" id="stat">불러오는 중…</p>
+  <div class="kpis" id="kp"></div>
+</header>
+
+<section class="band" style="padding-top:0">
+  <div class="panel">
+    <div class="phead"><h2>김프 추이 <span class="sub" style="font-size:14px">페이지를 연 뒤부터</span></h2>
+      <div class="legend"><span><i style="background:var(--ink)"></i>BTC 김프</span><span><i style="background:var(--long)"></i>테더 김프</span></div></div>
+    <div class="fig" id="f-k"></div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="panel">
+    <div class="phead"><h2>코인별 김프</h2>
+      <div class="seg" id="ref" aria-label="해외 기준 거래소"></div></div>
+    <div class="filters">
+      <input id="q" placeholder="코인 검색 (BTC, 리플…)" autocomplete="off" aria-label="코인 검색">
+      <div class="seg" id="kmin"></div>
+      <label class="sub" style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="usdt" style="min-height:auto;width:18px;height:18px"> 테더 가격 기준으로 계산</label>
+    </div>
+    <div class="tbl"><table><thead><tr id="hd"></tr></thead><tbody id="rows"><tr><td colspan="7" class="l nm">불러오는 중…</td></tr></tbody></table></div>
+    <p class="sub">김프 = 국내 원화 가격 ÷ (해외 USDT 가격 × 환율) − 1. 환율 기준이 기본이고, 체크하면 업비트 테더(USDT) 가격으로 환산해요. 같은 심볼이 다른 코인인 경우가 있어 ±40%가 넘는 값은 숨겨요.</p>
+  </div>
+</section>
+
+<section class="band">
+  <details id="alerts">
+    <summary>김프 알림</summary>
+    <form id="aform">
+      <div class="arow"><label for="a-th">김프 절댓값이 이 % 이상</label><select id="a-th"><option value="0">끄기</option><option>3</option><option>5</option><option>7</option><option>10</option></select></div>
+      <div class="arow"><label for="a-coins">관심 코인만 (비우면 전체)</label><input id="a-coins" placeholder="예: BTC, XRP" autocomplete="off"></div>
+      <div class="arow"><label for="a-vol">업비트 거래대금 최소</label><select id="a-vol"><option value="0">제한 없음</option><option value="1e9">10억원</option><option value="1e10">100억원</option><option value="1e11">1000억원</option></select></div>
+      <div class="arow"><span style="width:11em"></span><button type="submit">저장하고 켜기</button><span class="sub" id="amsg"></span></div>
+    </form>
+    <p class="sub">페이지가 열려 있는 동안만 알려요. 같은 코인은 10분에 한 번만 울려요.</p>
+  </details>
+</section>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const krw=n=>n>=1e4?Math.round(n).toLocaleString('ko-KR'):n>=100?n.toFixed(1):n>=1?n.toFixed(2):n.toPrecision(4);
+const won=n=>n>=1e12?(n/1e12).toFixed(2)+'조':n>=1e8?(n/1e8).toFixed(0)+'억':n>=1e4?(n/1e4).toFixed(0)+'만':String(Math.round(n));
+const kp=v=>v==null||!isFinite(v)?'–':`<span class="${v>=0?'pos':'neg'}">${v>=0?'+':''}${v.toFixed(2)}%</span>`;
+const p2=n=>String(n).padStart(2,'0');const hm=t=>{const d=new Date(t);return p2(d.getHours())+':'+p2(d.getMinutes())};
+async function j(u){const r=await fetch(u);if(r.status===429)throw new Error('429');if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+
+let FX=null,FXT=0,names={},up={},bt={},ref={},REF=store.get('kimp-ref')||'bybit',KMIN=Number(store.get('kimp-min')||0),useUSDT=store.get('kimp-usdt')==='1';
+let sortK='kimp',sortD=-1,q='';const hist=[];
+const REFS=[['bybit','Bybit'],['okx','OKX'],['gate','Gate']];
+
+async function loadFX(){try{const d=await j('https://open.er-api.com/v6/latest/USD');FX=d.rates.KRW;FXT=d.time_last_update_unix*1000}catch(e){}}
+async function loadNames(){try{const d=await j('https://api.upbit.com/v1/market/all');for(const m of d)if(m.market.startsWith('KRW-'))names[m.market.slice(4)]=m.korean_name}catch(e){}}
+async function loadUpbit(){const d=await j('https://api.upbit.com/v1/ticker/all?quote_currencies=KRW');up={};for(const t of d)up[t.market.slice(4)]={p:t.trade_price,c:t.signed_change_rate*100,v:t.acc_trade_price_24h}}
+async function loadBithumb(){try{const d=await j('https://api.bithumb.com/public/ticker/ALL_KRW');bt={};for(const [k,v] of Object.entries(d.data||{}))if(v&&v.closing_price)bt[k]={p:Number(v.closing_price),v:Number(v.acc_trade_value_24H)}}catch(e){}}
+async function loadRef(){
+  ref={};
+  if(REF==='bybit'){const d=await j('https://api.bybit.com/v5/market/tickers?category=spot');for(const t of d.result.list)if(t.symbol.endsWith('USDT'))ref[t.symbol.slice(0,-4)]=Number(t.lastPrice)}
+  else if(REF==='okx'){const d=await j('https://www.okx.com/api/v5/market/tickers?instType=SPOT');for(const t of d.data)if(t.instId.endsWith('-USDT'))ref[t.instId.slice(0,-5)]=Number(t.last)}
+  else{const d=await j('https://api.gateio.ws/api/v4/spot/tickers');for(const t of d)if(t.currency_pair.endsWith('_USDT'))ref[t.currency_pair.slice(0,-5)]=Number(t.last)}
+}
+function rate(){return useUSDT&&up.USDT?up.USDT.p:FX}
+function rows(){
+  const R=rate();if(!R)return[];
+  const out=[];
+  for(const [s,u] of Object.entries(up)){if(s==='USDT')continue;const r=ref[s];if(!r)continue;
+    const g=r*R,k=(u.p/g-1)*100,b=bt[s]?(bt[s].p/g-1)*100:null;if(Math.abs(k)>40)continue;
+    out.push({s,n:names[s]||'',up:u.p,g,kimp:k,bk:b!=null&&Math.abs(b)<=40?b:null,c:u.c,v:u.v})}
+  return out;
+}
+const COLS=[['s','코인','l'],['up','업비트'],['g','해외 (원화 환산)','hide-sm'],['kimp','업비트 김프'],['bk','빗썸 김프'],['c','24시간','hide-sm'],['v','거래대금']];
+function head(){$('#hd').innerHTML=COLS.map(([k,l,c])=>`<th class="${c||''}" data-k="${k}" aria-sort="${sortK===k?(sortD<0?'descending':'ascending'):'none'}" tabindex="0">${l}</th>`).join('')}
+$('#hd').addEventListener('click',e=>{const th=e.target.closest('th');if(!th)return;const k=th.dataset.k;if(sortK===k)sortD=-sortD;else{sortK=k;sortD=k==='s'?1:-1}head();render()});
+let last=[];
+function render(){
+  const R=rate();let rs=rows();last=rs;
+  const f=rs.filter(r=>(!q||r.s.includes(q)||r.n.includes(q))&&Math.abs(r.kimp)>=KMIN);
+  f.sort((a,b)=>{const x=a[sortK],y=b[sortK];if(sortK==='s')return sortD*String(x).localeCompare(String(y));return sortD*((x??-1e18)-(y??-1e18))});
+  const mx=Math.max(1,...f.map(r=>Math.abs(r.kimp)));
+  $('#rows').innerHTML=f.length?f.map(r=>`<tr class="${Math.abs(r.kimp)>=5?'hot':''}"><td class="l nm"><b>${esc(r.s)}</b><small>${esc(r.n)}</small></td><td>${krw(r.up)}</td><td class="hide-sm">${krw(r.g)}</td><td>${kp(r.kimp)}<span class="kbar" style="width:${(Math.abs(r.kimp)/mx*40).toFixed(0)}px;background:${r.kimp>=0?'var(--long)':'var(--blue)'}"></span></td><td>${kp(r.bk)}</td><td class="hide-sm">${kp(r.c)}</td><td>${won(r.v)}</td></tr>`).join(''):'<tr><td colspan="7" class="l nm">조건에 맞는 코인이 없어요.</td></tr>';
+  // summary
+  const btc=rs.find(r=>r.s==='BTC'),eth=rs.find(r=>r.s==='ETH');
+  const tk=up.USDT&&FX?(up.USDT.p/FX-1)*100:null;
+  let wv=0,ws=0;for(const r of rs){wv+=r.v;ws+=r.v*r.kimp}
+  const pos=rs.filter(r=>r.kimp>0).length;
+  $('#kp').innerHTML=[
+    ['BTC 김프',kp(btc?.kimp),btc?`업비트 ${krw(btc.up)}원`:''],
+    ['ETH 김프',kp(eth?.kimp),''],
+    ['테더 김프',kp(tk),up.USDT?`USDT ${krw(up.USDT.p)}원`:''],
+    ['거래대금 가중 평균',kp(wv?ws/wv:null),`${rs.length}개 코인`],
+    ['프리미엄 / 역프',`${pos} / ${rs.length-pos}`,''],
+    ['환율 (USD/KRW)',FX?krw(FX):'–',FXT?`${new Date(FXT).toLocaleDateString('ko-KR')} 기준`:'']
+  ].map(([l,v,r])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="r">${r||'&nbsp;'}</div></div>`).join('');
+  if(btc){hist.push([Date.now(),btc.kimp,tk]);if(hist.length>2000)hist.shift();draw()}
+  checkAlerts(rs);
+}
+
+/* history chart, one % axis */
+const box=$('#f-k');box.innerHTML='<svg></svg><div class="tip"></div>';const svg=box.querySelector('svg'),tip=box.querySelector('.tip');
+function draw(){
+  const W=svg.clientWidth,H=svg.clientHeight;if(!W||!H||hist.length<1)return;
+  const narrow=W<520,pl=narrow?6:52,pr=8,pt=10,pb=narrow?8:22;
+  const ys=hist.flatMap(h=>[h[1],h[2]]).filter(v=>v!=null);let y0=Math.min(...ys,0),y1=Math.max(...ys,0);const pd=(y1-y0)*.12||.5;y0-=pd;y1+=pd;
+  const x0=hist[0][0],x1=Math.max(hist.at(-1)[0],x0+60e3);
+  const X=t=>pl+(t-x0)/(x1-x0)*(W-pl-pr),Y=v=>pt+(1-(v-y0)/(y1-y0))*(H-pt-pb);
+  let g='';if(!narrow)for(let i=0;i<=4;i++){const v=y0+(y1-y0)*i/4;g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${pl-6}" y="${Y(v)+4}" text-anchor="end" font-size="12" fill="var(--mute)">${v.toFixed(1)}%</text>`}
+  g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--mute)"/>`;
+  if(!narrow){g+=`<text x="${pl}" y="${H-5}" font-size="12" fill="var(--mute)">${hm(x0)}</text><text x="${W-pr}" y="${H-5}" text-anchor="end" font-size="12" fill="var(--mute)">${hm(x1)}</text>`}
+  const path=i=>hist.filter(h=>h[i]!=null).map((h,k)=>(k?'L':'M')+X(h[0]).toFixed(1)+','+Y(h[i]).toFixed(1)).join('');
+  g+=`<path d="${path(2)}" fill="none" stroke="var(--long)" stroke-width="2"/><path d="${path(1)}" fill="none" stroke="var(--ink)" stroke-width="2"/><line class="cx" y1="${pt}" y2="${H-pb}" stroke="var(--ink)" opacity="0"/>`;
+  svg.innerHTML=g;
+  svg.onpointermove=e=>{const r=svg.getBoundingClientRect(),mx=e.clientX-r.left;let b=hist[0],bd=1e18;for(const h of hist){const d=Math.abs(X(h[0])-mx);if(d<bd){bd=d;b=h}}
+    const cx=svg.querySelector('.cx');cx.setAttribute('x1',X(b[0]));cx.setAttribute('x2',X(b[0]));cx.setAttribute('opacity',.3);
+    tip.style.display='block';tip.style.left=Math.min(Math.max(X(b[0]),100),W-100)+'px';tip.style.top=(e.clientY-r.top)+'px';tip.textContent=`${hm(b[0])} · BTC ${b[1].toFixed(2)}% · 테더 ${b[2]!=null?b[2].toFixed(2)+'%':'–'}`};
+  svg.onpointerleave=()=>{tip.style.display='none'};
+}
+const kro=new ResizeObserver(draw);kro.observe(svg);
+
+/* controls */
+function seg(id,opts,cur,cb){const el=$(id);const r=()=>{el.innerHTML=opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${String(v)===String(cur())}">${l}</button>`).join('')};r();
+  el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cb(b.dataset.v);r()})}
+seg('#ref',REFS,()=>REF,async v=>{REF=v;store.set('kimp-ref',v);$('#stat').textContent='기준 거래소 바꾸는 중…';try{await loadRef()}catch(e){}render();stat()});
+seg('#kmin',[[0,'전체'],[2,'±2%+'],[3,'±3%+'],[5,'±5%+']],()=>KMIN,v=>{KMIN=Number(v);store.set('kimp-min',v);render()});
+$('#usdt').checked=useUSDT;$('#usdt').addEventListener('change',e=>{useUSDT=e.target.checked;store.set('kimp-usdt',useUSDT?'1':'0');render()});
+$('#q').addEventListener('input',e=>{q=e.target.value.trim().toUpperCase();render()});
+head();
+
+/* alerts */
+let A=JSON.parse(store.get('kimp-alert')||'{"th":0,"coins":"","vol":0}');const fired={};let actx=null;
+$('#a-th').value=String(A.th);$('#a-coins').value=A.coins;$('#a-vol').value=String(A.vol);
+function beep(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=660;g.gain.setValueAtTime(.08,actx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+.4);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.4)}catch(e){}}
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',6000)}
+function checkAlerts(rs){if(!A.th)return;const w=A.coins?A.coins.toUpperCase().split(/[\s,]+/).filter(Boolean):null;
+  for(const r of rs){if(w&&!w.includes(r.s))continue;if(r.v<A.vol)continue;if(Math.abs(r.kimp)<A.th)continue;if(Date.now()-(fired[r.s]||0)<600e3)continue;
+    fired[r.s]=Date.now();const m=`${r.s} 김프 ${r.kimp>=0?'+':''}${r.kimp.toFixed(2)}%`;beep();toast(m);
+    if('Notification' in window&&Notification.permission==='granted'){try{new Notification(m,{body:`업비트 ${krw(r.up)}원 · 해외 ${krw(r.g)}원`,tag:'kimp-'+r.s})}catch(e){}}}}
+$('#aform').addEventListener('submit',async e=>{e.preventDefault();A={th:Number($('#a-th').value),coins:$('#a-coins').value.trim(),vol:Number($('#a-vol').value)};store.set('kimp-alert',JSON.stringify(A));
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();await actx.resume()}catch(er){}
+  let m='저장했어요';if('Notification' in window){const p=await Notification.requestPermission().catch(()=>'denied');if(p!=='granted')m+=' · 브라우저 알림은 꺼져 있어서 소리와 화면 안내로만 알려요'}$('#amsg').textContent=m});
+
+/* loop */
+let wait=5000,lastOk=0;
+function stat(){$('#stat').textContent=`업비트·빗썸 vs ${REFS.find(r=>r[0]===REF)[1]} 현물 · ${lastOk?hm(lastOk)+' 갱신':'불러오는 중'} · 5초마다 자동 갱신`}
+async function tick(){
+  try{await Promise.all([loadUpbit(),loadBithumb(),loadRef()]);lastOk=Date.now();wait=5000;render();stat()}
+  catch(e){wait=e.message==='429'?Math.min(60000,wait*2):10000;$('#stat').textContent=(e.message==='429'?'업비트 요청 제한, 잠시 후 다시 시도':'불러오기 실패: '+e.message)+` (${Math.round(wait/1000)}초 뒤)`}
+  setTimeout(tick,wait);
+}
+Promise.all([loadFX(),loadNames()]).then(tick);
+setInterval(loadFX,3600e3);
+}
+</script>
+</body>
+</html>
