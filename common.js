@@ -36,7 +36,7 @@ const css=`
 @media(max-width:600px){.odc-wrap{aspect-ratio:4/3.4}}
 .odc-wrap>div{position:relative;z-index:1}
 .odc-wrap canvas.vp{position:absolute;top:0;left:0;z-index:0;pointer-events:none}
-.odc-info{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;margin-top:8px;font-family:var(--mono)}
+.odc-info{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;margin-top:8px;font-family:var(--sans);font-variant-numeric:tabular-nums}
 .odc-info span{white-space:nowrap}.odc-info i{font-style:normal;color:var(--mute);font-family:var(--sans);margin-right:4px}
 .odc-note{font-size:13px;color:var(--mute);margin:6px 0 0}
 .odc-tools .sp{flex:1}
