@@ -181,7 +181,7 @@ async function mountChart(host,base,opt={}){
     const isUp=(k,i)=>c.prev&&i>0?k.close>=K[i-1].close:k.close>=k.open;
     cs.setData(K.map((k,i)=>{const o={time:k.time,open:k.open,high:k.high,low:k.low,close:k.close};
       if(c.prev){const u=isUp(k,i)?'up':'dn';o.color=c.body.on?rgba(c.body[u]):'rgba(0,0,0,0)';o.borderColor=rgba(c.border[u]);o.wickColor=rgba(c.wick[u])}return o}));
-    vs.setData(K.map((k,i)=>{const u=isUp(k,i)?'up':'dn';return{time:k.time,value:k.q,color:rgba([c.body[u][0],.4])}}));
+    vs.setData(K.map((k,i)=>{const u=isUp(k,i)?'up':'dn';return{time:k.time,value:k.q,color:rgba([c.border[u][0],.4])}}));
   }
   const onCol=()=>{applyCol();paint()};window.addEventListener('odc-col',onCol);
   async function resolve(){for(const s of [base+'USDT','1000'+base+'USDT','10000'+base+'USDT','1000000'+base+'USDT']){try{const r=await j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${s}&interval=60&limit=1`);if(r.result?.list?.length)return s}catch(e){}}return null}
