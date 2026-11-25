@@ -100,6 +100,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   </details>
 </section>
 
+<script src="./common.js"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -119,7 +120,7 @@ function seg(id,opts,cur,cb){const el=$(id);const r=()=>{el.innerHTML=opts.map((
 seg('#topn',[[20,'상위 20'],[30,'상위 30'],[50,'상위 50']],()=>TOPN,v=>{TOPN=Number(v);store.set('lm-top',v);run()});
 seg('#sort',[['ign','점화 우선'],['bias','쏠림 강도'],['oi','OI 변화'],['vol','거래대금']],()=>SORT,v=>{SORT=v;store.set('lm-sort',v);render()});
 seg('#filt',[['all','전체'],['long','롱 과밀'],['short','숏 과밀'],['ign','점화만']],()=>FILT,v=>{FILT=v;store.set('lm-filt',v);render()});
-$('#cards').addEventListener('click',e=>{const c=e.target.closest('.card');if(c)location.href='./#'+encodeURIComponent(c.dataset.s)});
+$('#cards').addEventListener('click',e=>{const c=e.target.closest('.card');if(c)OD.openChart(c.dataset.s,{kind:c.dataset.k})});
 
 function analyze(st,cs,mult,price){
   // st: gate contract_stats 1h asc; cs: gate candles 1h asc {t,h,l,c}
@@ -158,8 +159,8 @@ function render(){
   const key={ign:d=>(d.a.ign?1e6:0)+d.a.ignx,bias:d=>Math.abs(d.a.bias),oi:d=>Math.abs(d.a.doi1),vol:d=>d.vol}[SORT];
   f.sort((x,y)=>key(y)-key(x));
   $('#cards').innerHTML=f.length?f.map(d=>{const a=d.a;const bw=Math.abs(a.bias)/2;
-    return `<article class="card ${a.ign?'ign':''}" data-s="${esc(d.base)}" tabindex="0">
-      <div class="ch"><b>${esc(d.base)}</b><span class="p">${px(d.p)} ${pc(d.c24)}</span></div>
+    return `<article class="card ${a.ign?'ign':''}" data-s="${esc(d.base)}" data-k="${esc(d.kind||'')}" tabindex="0">
+      <div class="ch"><b>${esc(d.base)}<span class="kb">${esc(d.kind||'')}</span></b><span class="p">${px(d.p)} ${pc(d.c24)}</span></div>
       <div class="strip">${strip(a.bins)}</div>
       <div class="ticks"><span>−10%</span><span>−5%</span><span>현재가</span><span>+5%</span><span>+10%</span></div>
       <div class="zones"><span class="L">${a.zl?`롱 밀집 ${a.zl.d.toFixed(1)}% · ${usd(a.zl.v)}`:'롱 밀집 없음'}</span><span class="S">${a.zu?`숏 밀집 +${a.zu.d.toFixed(1)}% · ${usd(a.zu.v)}`:'숏 밀집 없음'}</span></div>
@@ -182,8 +183,9 @@ async function run(){
     if(!Object.keys(gm).length){const cs=await j('https://api.gateio.ws/api/v4/futures/usdt/contracts');for(const c of cs)gm[c.name]=Number(c.quanto_multiplier)||1}
     const t=await j('https://api.bybit.com/v5/market/tickers?category=linear');
     const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')).sort((a,b)=>b.turnover24h-a.turnover24h)
-      .map(x=>({base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),p:+x.lastPrice,c24:+x.price24hPcnt*100,vol:+x.turnover24h}))
+      .map(x=>({sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),p:+x.lastPrice,c24:+x.price24hPcnt*100,vol:+x.turnover24h}))
       .filter(x=>gm[x.base+'_USDT']).slice(0,TOPN);
+    await OD.loadTypes();for(const d of top)d.kind=OD.kindOf(d.sym);
     DATA=top;
     await pool(top,6,async d=>{const c=d.base+'_USDT';
       const [st,cs]=await Promise.all([j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${c}&interval=1h&limit=48`),j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${c}&interval=1h&limit=48`)]);

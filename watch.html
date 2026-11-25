@@ -99,6 +99,11 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
   </div>
 </section>
 
+<section class="band">
+  <div class="phead"><h2>차트 · 볼륨 프로파일</h2><span class="sub" style="margin:0">보이는 구간의 매물대가 차트 오른쪽에 겹쳐져요. 확대·이동하면 다시 계산돼요.</span></div>
+  <div id="f-chart"></div>
+</section>
+
 <section class="band grid2">
   <div class="panel">
     <div class="phead"><h2>볼륨 프로파일</h2><span class="sub" style="margin:0">최근 10일 15분봉</span></div>
@@ -110,6 +115,7 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
   </div>
 </section>
 
+<script src="./common.js"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -121,7 +127,7 @@ const px=n=>n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:2}):n>=1?n.t
 const p2=n=>String(n).padStart(2,'0');const hms=t=>{const d=new Date(t);return p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds())};const hm=t=>{const d=new Date(t);return p2(d.getHours())+':'+p2(d.getMinutes())};
 async function j(u){const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
 
-let SYM=null,BASE=null,socks=[],bids=new Map(),asks=new Map(),walls=new Map(),exec=new Map(),iceSeen=new Map(),cvdP=new Map(),cvdS=new Map(),start=0,lastPx=0,ms=null,vp=null;
+let CH=null,SYM=null,BASE=null,socks=[],bids=new Map(),asks=new Map(),walls=new Map(),exec=new Map(),iceSeen=new Map(),cvdP=new Map(),cvdS=new Map(),start=0,lastPx=0,ms=null,vp=null;
 $('#snd').checked=store.get('w-snd')==='1';$('#snd').addEventListener('change',e=>store.set('w-snd',e.target.checked?'1':'0'));
 let actx=null;function beep(f){if(!$('#snd').checked)return;try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=f;g.gain.setValueAtTime(.07,actx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+.3);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.3)}catch(e){}}
 const LOG=[];
@@ -253,6 +259,7 @@ async function startWatch(q){
   $('#log').innerHTML='<div class="sub">감시 시작. 이상 징후가 생기면 여기에 기록돼요.</div>';
   $('#sym').textContent=q;document.title=q+' 호가 감시 · 온체인 데스크';store.set('w-sym',q);try{history.replaceState(null,'','#'+q)}catch(e){}
   $('#stat').textContent=`Bybit ${sym} 호가 200단계·현물/선물 체결 실시간 감시 · ${hm(start)}부터`;
+  if(CH)CH.destroy();CH=null;$('#f-chart').innerHTML='';OD.mountChart($('#f-chart'),q,{links:false}).then(c=>CH=c).catch(()=>{});
   connect();loadStructure().catch(e=>{$('#ms').innerHTML=`<li class="sub">구조 데이터를 불러오지 못했어요: ${esc(e.message)}</li>`});
 }
 $('#qf').addEventListener('submit',e=>{e.preventDefault();startWatch($('#q').value)});
