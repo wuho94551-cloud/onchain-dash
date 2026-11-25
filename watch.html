@@ -142,7 +142,8 @@ function scanWalls(){
   for(const [k,w] of walls){if(cur.has(k))continue;
     const book=w.side==='B'?bids:asks,s=book.get(w.p)||0,left=s*w.p,dist=Math.abs(w.p/m-1);
     const traded=(exec.get(w.side+w.p)||0);
-    if(left<w.max*.3){if(dist<=.006&&traded<(w.max-left)*.3&&now-w.first>5e3)log(w.side==='A'?'매도벽 철거':'매수벽 철거',w.side,`${px(w.p)}의 ${usd(w.max)} 벽이 체결 없이 사라짐 (체결 ${usd(traded)}) · 현재가와 ${(dist*100).toFixed(2)}%`);walls.delete(k)}
+    if(left<w.max*.3){const moved=[...walls.values()].some(o=>o!==w&&o.side===w.side&&o.first>=now-3e3&&Math.abs(o.p/w.p-1)<=.002&&o.last>=w.max*.5);
+      if(!moved&&dist<=.004&&traded<(w.max-left)*.3&&now-w.first>=20e3&&now-start>30e3)log(w.side==='A'?'매도벽 철거':'매수벽 철거',w.side,`${px(w.p)}의 ${usd(w.max)} 벽이 체결 없이 사라짐 (체결 ${usd(traded)}) · 현재가와 ${(dist*100).toFixed(2)}%`);walls.delete(k)}
   }
   drawLadder(m,th);
 }
@@ -232,7 +233,7 @@ function renderMS(){
   verdict();
 }
 function verdict(){
-  if(!vp)return;const c=drawCVD()||{s:0,p:0};
+  if(!vp)return;const sum=M=>{let x=0;for(const v of M.values())x+=v;return x};const c={s:sum(cvdS),p:sum(cvdP)};
   const bw=[...walls.values()].filter(w=>w.side==='B').reduce((s,w)=>s+w.last,0),aw=[...walls.values()].filter(w=>w.side==='A').reduce((s,w)=>s+w.last,0);
   const ice=LOG.filter(l=>l.kind.includes('아이스버그')&&l.side==='B').length,pull=LOG.filter(l=>l.kind==='매도벽 철거').length;
   const cells=[
