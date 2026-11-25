@@ -35,7 +35,7 @@ button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line
 .seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 input,select{min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
 :focus-visible{outline:3px solid var(--acc);outline-offset:2px}
-.tot{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:14px}
+.tot{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:14px}
 .tot div{background:var(--bg);padding:10px 14px}
 .tot .l{font-size:13px;color:var(--mute)}
 .tot .v{font-family:"Sofia Sans Condensed",sans-serif;font-weight:700;font-size:26px;white-space:nowrap;line-height:1.15}
@@ -77,6 +77,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 .arow label{width:11em;font-size:14px}
 .arow input,.arow select{flex:1 1 200px;max-width:340px}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:10px;font-weight:600;display:none;z-index:9;max-width:92vw}
+@media(max-width:760px){.tot{grid-template-columns:repeat(2,minmax(0,1fr))}.tot>div:first-child{grid-column:1/-1}}
 @media(max-width:600px){table{font-size:13px}th,td{padding:6px 6px}.tot .v{font-size:22px}.arow label{width:100%}}
 @media(prefers-reduced-motion:reduce){tr.new{animation:none}}
 </style>
@@ -93,6 +94,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   <p class="sub" id="conn"></p>
   <div class="phead" style="margin:14px 0 0"><span class="sub" style="margin:0">합계 구간</span><div class="seg" id="win"></div></div>
   <div class="tot" id="tot"></div>
+  <p class="sub">* 페이지를 연 뒤부터 모은 값이라, 연 지 얼마 안 됐으면 선택한 구간보다 짧은 기간의 합계예요.</p>
 </header>
 
 <section class="band" style="padding-top:0">
@@ -238,7 +240,7 @@ function summary(){
     const c=by.get(e.coin)||{l:0,s:0};c[e.side==='L'?'l':'s']+=e.usd;by.set(e.coin,c)}
   const t=l+s,lp=t?l/t*100:50;
   const winL=WINS.find(w=>w[0]===WIN)[1];
-  const partial=now-since<WIN?' <span class="sub">(수집 시작 이후)</span>':'';
+  const partial=now-since<WIN?' *':'';
   $('#tot').innerHTML=`<div><div class="l">총 청산 · ${winL}${partial}</div><div class="v">${usd(t)}</div><div class="ratio"><i style="width:${lp}%;background:var(--long)"></i><i style="width:${100-lp}%;background:var(--short)"></i></div></div>
     <div><div class="l">롱 청산</div><div class="v L">${usd(l)}</div><div class="r">${lp.toFixed(0)}%</div></div>
     <div><div class="l">숏 청산</div><div class="v S">${usd(s)}</div><div class="r">${(100-lp).toFixed(0)}%</div></div>
