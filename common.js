@@ -32,8 +32,10 @@ const css=`
 .odc-tools button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
 .odc-tools a{font-size:14px;color:var(--ink);margin-left:8px}
 .odc-x{min-height:40px;min-width:40px;background:transparent!important;color:var(--ink)!important;border:1px solid var(--line)!important;font-size:18px;cursor:pointer}
-.odc-wrap{position:relative;height:min(62vh,560px)}
-.odc-wrap canvas.vp{position:absolute;top:0;pointer-events:none}
+.odc-wrap{position:relative;width:100%;aspect-ratio:16/8;min-height:300px;max-height:68vh}
+@media(max-width:600px){.odc-wrap{aspect-ratio:4/3.4}}
+.odc-wrap>div{position:relative;z-index:1}
+.odc-wrap canvas.vp{position:absolute;top:0;left:0;z-index:0;pointer-events:none}
 .odc-info{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;margin-top:8px;font-family:var(--mono)}
 .odc-info span{white-space:nowrap}.odc-info i{font-style:normal;color:var(--mute);font-family:var(--sans);margin-right:4px}
 .odc-note{font-size:13px;color:var(--mute);margin:6px 0 0}
@@ -80,10 +82,11 @@ function volumeProfile(K,nb=48){
 
 /* ---- 캔들 색 설정 (모든 차트 공통, 기기마다 저장) ---- */
 const isDark=()=>{const m=cvar('--bg').match(/[\d.]+/g);return m?(+m[0]+ +m[1]+ +m[2])/3<128:false};
-const defCol=()=>{const dn=isDark()?'#FFFFFF':'#1F1F1F';return{prev:false,body:{on:true,up:['#81D8D0',1],dn:[dn,1]},border:{on:true,up:['#81D8D0',1],dn:[dn,1]},wick:{on:true,up:['#81D8D0',1],dn:[dn,1]}}};
-const PRESETS=[['민트·화이트',null],['초록·빨강',['#26A69A','#EF5350']],['빨강·파랑',['#E8384F','#2F6BFF']],['흑백',['#9E9E9E','#424242']]];
-const getCol=()=>{try{const s=JSON.parse(localStorage.getItem('odc-col'));if(s&&s.body)return s}catch(e){}return defCol()};
-const setCol=s=>{localStorage.setItem('odc-col',JSON.stringify(s));window.dispatchEvent(new Event('odc-col'))};
+const hexOf=c=>{const m=c.match(/[\d.]+/g);return m?'#'+m.slice(0,3).map(x=>(+x).toString(16).padStart(2,'0')).join('').toUpperCase():'#808080'};
+const defCol=()=>{const u=[hexOf(cvar('--up')),1],d=[hexOf(cvar('--dn')),1];return{v:2,prev:false,body:{on:true,up:u,dn:d},border:{on:true,up:[...u],dn:[...d]},wick:{on:true,up:[...u],dn:[...d]}}};
+const PRESETS=[['기본',null],['민트·화이트',['#81D8D0','#FFFFFF']],['초록·빨강',['#26A69A','#EF5350']],['빨강·파랑',['#E8384F','#2F6BFF']],['흑백',['#9E9E9E','#424242']]];
+const getCol=()=>{try{const s=JSON.parse(localStorage.getItem('odc-col'));if(s&&s.body&&s.v===2)return s}catch(e){}return defCol()};
+const setCol=s=>{s.v=2;localStorage.setItem('odc-col',JSON.stringify(s));window.dispatchEvent(new Event('odc-col'))};
 const rgba=([hx,a])=>{const n=parseInt(hx.slice(1),16);return`rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
 const PAL=(()=>{const g=['#FFFFFF','#EBEBEB','#D6D6D6','#BDBDBD','#9E9E9E','#808080','#616161','#424242','#262626','#000000'];
   const hues=[[354,82],[33,100],[52,95],[122,39],[174,100],[187,100],[221,100],[262,52],[291,64],[340,82]];
@@ -119,7 +122,7 @@ function colorPanel(box){
     ${rows.map(([k,l])=>`<div class="r"><b>${l} · 상승 · 하락</b><input type="checkbox" data-on="${k}" ${s[k].on?'checked':''} aria-label="${l} 보이기">${sw(k,'up')}${sw(k,'dn')}</div>`).join('')}
     <div class="pre"><b style="font-weight:500;align-self:center;margin-right:6px">색 바로 고르기</b>${PRESETS.map(([n],i)=>`<button type="button" data-p="${i}">${n}</button>`).join('')}</div>
     <div class="ft"><button type="button" data-a="cancel">취소</button><button type="button" class="ok" data-a="ok">확인</button></div>`};
-  const live=()=>{localStorage.setItem('odc-col',JSON.stringify(s));window.dispatchEvent(new Event('odc-col'))};
+  const live=()=>{s.v=2;localStorage.setItem('odc-col',JSON.stringify(s));window.dispatchEvent(new Event('odc-col'))};
   draw();box.hidden=false;
   box.onchange=e=>{const t=e.target;if(t.dataset.prev!=null)s.prev=t.checked;else if(t.dataset.on)s[t.dataset.on].on=t.checked;live()};
   box.onclick=e=>{const b=e.target.closest('button');if(!b)return;
@@ -137,7 +140,7 @@ async function mountChart(host,base,opt={}){
   let tf=opt.tf||localStorage.getItem('odc-tf')||'60',sym=null,K=[],vp=null,lines=[];
   const ink=cvar('--ink'),mute=cvar('--mute'),line=cvar('--line'),up=cvar('--up'),dn=cvar('--dn');
   const chart=LightweightCharts.createChart(wrap,{autoSize:true,layout:{background:{type:'solid',color:'transparent'},textColor:mute,fontFamily:'JetBrains Mono, monospace',fontSize:11},
-    grid:{vertLines:{color:line},horzLines:{color:line}},rightPriceScale:{borderColor:line,scaleMargins:{top:.08,bottom:.22}},timeScale:{borderColor:line,timeVisible:true,secondsVisible:false},crosshair:{mode:0},
+    grid:{vertLines:{color:alpha(line,.05)},horzLines:{color:alpha(line,.07)}},rightPriceScale:{borderColor:line,scaleMargins:{top:.08,bottom:.22}},timeScale:{borderColor:line,timeVisible:true,secondsVisible:false},crosshair:{mode:0},
     localization:{locale:'ko-KR'}});
   const cs=chart.addCandlestickSeries({});
   let COL=getCol();
@@ -146,7 +149,7 @@ async function mountChart(host,base,opt={}){
   applyCol();
   const vs=chart.addHistogramSeries({priceScaleId:'v',priceFormat:{type:'volume'},color:mute});
   chart.priceScale('v').applyOptions({scaleMargins:{top:.82,bottom:0}});
-  wrap.insertBefore(cv,null);
+  wrap.insertBefore(cv,wrap.firstChild);
   const tools=$('tools');
   const renderTools=()=>{tools.innerHTML=TFS.map(([v,l])=>`<button type="button" data-tf="${v}" aria-pressed="${v===tf}">${l}</button>`).join('')+'<span class="sp"></span><button type="button" data-set>차트 설정</button>'+(opt.links!==false?`<a href="./watch.html#${encodeURIComponent(base)}">호가 감시 →</a><a href="./coin.html#${encodeURIComponent(base)}">코인 분석 →</a>`:'')};
   renderTools();
@@ -157,15 +160,15 @@ async function mountChart(host,base,opt={}){
     const r=chart.timeScale().getVisibleLogicalRange();if(!r||!K.length)return;
     const vis=K.slice(Math.max(0,Math.floor(r.from)),Math.min(K.length,Math.ceil(r.to)+1));if(vis.length<5)return;
     vp=volumeProfile(vis);
-    const psw=chart.priceScale('right').width(),maxW=(W-psw)*.22,x1=W-psw-2,mx=Math.max(...vp.bins);
+    const psw=chart.priceScale('right').width(),maxW=(W-psw)*.18,x1=W-psw-2,mx=Math.max(...vp.bins);
     for(let i=0;i<vp.nb;i++){const yA=cs.priceToCoordinate(vp.L+i*vp.st),yB=cs.priceToCoordinate(vp.L+(i+1)*vp.st);if(yA==null||yB==null)continue;
       const h=Math.max(1,Math.abs(yA-yB)-1),w=vp.bins[i]/mx*maxW;const inVA=i>=vp.lo&&i<=vp.hi;
-      g.globalAlpha=i===vp.poc?.85:inVA?.38:.16;g.fillStyle=i===vp.poc?ink:mute;g.fillRect(x1-w,Math.min(yA,yB),w,h)}
+      g.globalAlpha=i===vp.poc?.5:inVA?.26:.12;g.fillStyle=i===vp.poc?ink:mute;g.fillRect(x1-w,Math.min(yA,yB),w,h)}
     g.globalAlpha=1;
     for(const l of lines)cs.removePriceLine(l);lines=[
-      cs.createPriceLine({price:vp.POC,color:ink,lineWidth:2,lineStyle:0,axisLabelVisible:true,title:'POC'}),
-      cs.createPriceLine({price:vp.VAH,color:mute,lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'VAH'}),
-      cs.createPriceLine({price:vp.VAL,color:mute,lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'VAL'})];
+      cs.createPriceLine({price:vp.POC,color:alpha(ink,.45),lineWidth:1,lineStyle:0,axisLabelVisible:true,title:'POC'}),
+      cs.createPriceLine({price:vp.VAH,color:alpha(mute,.4),lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'VAH'}),
+      cs.createPriceLine({price:vp.VAL,color:alpha(mute,.4),lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'VAL'})];
     const last=K.at(-1).close,ib=Math.floor((last-vp.L)/vp.st),inL=vp.lvn.includes(ib);
     const f=n=>n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:2}):n>=1?(+n.toFixed(4)).toString():n.toPrecision(4);
     $('info').innerHTML=`<span><i>현재가</i>${f(last)}</span><span><i>POC</i>${f(vp.POC)}</span><span><i>VAH</i>${f(vp.VAH)}</span><span><i>VAL</i>${f(vp.VAL)}</span><span><i>위치</i>${last>vp.VAH?'가치 영역 위':last<vp.VAL?'가치 영역 아래':'가치 영역 안'}${inL?' · 매물 공백(LVN) 안':''}</span>`;
@@ -173,6 +176,7 @@ async function mountChart(host,base,opt={}){
   let raf=0;const sched=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(drawVP)};
   chart.timeScale().subscribeVisibleLogicalRangeChange(sched);
   const ro=new ResizeObserver(sched);ro.observe(wrap);
+  let mq;const watchDpr=()=>{mq=matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);mq.addEventListener('change',()=>{sched();watchDpr()},{once:true})};watchDpr();
   function paint(){if(!K.length)return;const c=COL;
     const isUp=(k,i)=>c.prev&&i>0?k.close>=K[i-1].close:k.close>=k.open;
     cs.setData(K.map((k,i)=>{const o={time:k.time,open:k.open,high:k.high,low:k.low,close:k.close};
