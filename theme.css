@@ -48,3 +48,4 @@ th{font-family:var(--sans);background:var(--bg)}
 @keyframes tape{to{transform:translateX(-100%)}}
 @media(prefers-reduced-motion:reduce){.tape .run{animation:none;padding-left:14px}}
 td.side,td[colspan],td.ex,.tape .L,.tape .S,.empty{font-family:var(--sans)}
+.kpis{background:transparent;gap:0;border:0;border-top:1px solid var(--line);border-left:1px solid var(--line)}.kpi{border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
