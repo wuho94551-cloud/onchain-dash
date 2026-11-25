@@ -83,10 +83,10 @@ function volumeProfile(K,nb=48){
 /* ---- 캔들 색 설정 (모든 차트 공통, 기기마다 저장) ---- */
 const isDark=()=>{const m=cvar('--bg').match(/[\d.]+/g);return m?(+m[0]+ +m[1]+ +m[2])/3<128:false};
 const hexOf=c=>{const m=c.match(/[\d.]+/g);return m?'#'+m.slice(0,3).map(x=>(+x).toString(16).padStart(2,'0')).join('').toUpperCase():'#808080'};
-const defCol=()=>{const u=[hexOf(cvar('--up')),1],d=[hexOf(cvar('--dn')),1];return{v:2,prev:false,body:{on:true,up:u,dn:d},border:{on:true,up:[...u],dn:[...d]},wick:{on:true,up:[...u],dn:[...d]}}};
-const PRESETS=[['기본',null],['민트·화이트',['#81D8D0','#FFFFFF']],['초록·빨강',['#26A69A','#EF5350']],['빨강·파랑',['#E8384F','#2F6BFF']],['흑백',['#9E9E9E','#424242']]];
-const getCol=()=>{try{const s=JSON.parse(localStorage.getItem('odc-col'));if(s&&s.body&&s.v===2)return s}catch(e){}return defCol()};
-const setCol=s=>{s.v=2;localStorage.setItem('odc-col',JSON.stringify(s));window.dispatchEvent(new Event('odc-col'))};
+const defCol=()=>{const dk=isDark(),u=['#5B9CF6',1],d=[dk?'#D1D4DC':'#5C5F66',1];return{v:3,prev:false,body:{on:false,up:['#3E5F8A',1],dn:['#8A8A8A',1]},border:{on:true,up:[...u],dn:[...d]},wick:{on:true,up:[...u],dn:[...d]}}};
+const PRESETS=[['기본(파랑·회색)',null],['초록·빨강 채움',['GREENRED']],['민트·화이트',['#81D8D0','#FFFFFF']],['초록·빨강',['#26A69A','#EF5350']],['빨강·파랑',['#E8384F','#2F6BFF']],['흑백',['#9E9E9E','#424242']]];
+const getCol=()=>{try{const s=JSON.parse(localStorage.getItem('odc-col'));if(s&&s.body&&s.v===3)return s}catch(e){}return defCol()};
+const setCol=s=>{s.v=3;localStorage.setItem('odc-col',JSON.stringify(s));window.dispatchEvent(new Event('odc-col'))};
 const rgba=([hx,a])=>{const n=parseInt(hx.slice(1),16);return`rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
 const PAL=(()=>{const g=['#FFFFFF','#EBEBEB','#D6D6D6','#BDBDBD','#9E9E9E','#808080','#616161','#424242','#262626','#000000'];
   const hues=[[354,82],[33,100],[52,95],[122,39],[174,100],[187,100],[221,100],[262,52],[291,64],[340,82]];
@@ -122,12 +122,12 @@ function colorPanel(box){
     ${rows.map(([k,l])=>`<div class="r"><b>${l} · 상승 · 하락</b><input type="checkbox" data-on="${k}" ${s[k].on?'checked':''} aria-label="${l} 보이기">${sw(k,'up')}${sw(k,'dn')}</div>`).join('')}
     <div class="pre"><b style="font-weight:500;align-self:center;margin-right:6px">색 바로 고르기</b>${PRESETS.map(([n],i)=>`<button type="button" data-p="${i}">${n}</button>`).join('')}</div>
     <div class="ft"><button type="button" data-a="cancel">취소</button><button type="button" class="ok" data-a="ok">확인</button></div>`};
-  const live=()=>{s.v=2;localStorage.setItem('odc-col',JSON.stringify(s));window.dispatchEvent(new Event('odc-col'))};
+  const live=()=>{s.v=3;localStorage.setItem('odc-col',JSON.stringify(s));window.dispatchEvent(new Event('odc-col'))};
   draw();box.hidden=false;
   box.onchange=e=>{const t=e.target;if(t.dataset.prev!=null)s.prev=t.checked;else if(t.dataset.on)s[t.dataset.on].on=t.checked;live()};
   box.onclick=e=>{const b=e.target.closest('button');if(!b)return;
     if(b.classList.contains('odc-sw')){const {k,d}=b.dataset;colorPop(b,box,s[k][d],v=>{s[k][d]=v;b.querySelector('i').style.background=rgba(v);live()});return}
-    if(b.dataset.p!=null){const p=PRESETS[+b.dataset.p][1];if(!p){const d=defCol();d.prev=s.prev;s=d}else for(const[k]of rows){s[k].up=[p[0],1];s[k].dn=[p[1],1]}draw();live();return}
+    if(b.dataset.p!=null){const p=PRESETS[+b.dataset.p][1];if(!p){const d=defCol();d.prev=s.prev;s=d}else if(p[0]==='GREENRED'){const u=hexOf(cvar('--up')),d=hexOf(cvar('--dn'));for(const[k]of rows){s[k].on=true;s[k].up=[u,1];s[k].dn=[d,1]}}else for(const[k]of rows){s[k].on=true;s[k].up=[p[0],1];s[k].dn=[p[1],1]}draw();live();return}
     if(b.dataset.a==='cancel'){localStorage.setItem('odc-col',orig);window.dispatchEvent(new Event('odc-col'));box.hidden=true;box.innerHTML=''}
     if(b.dataset.a==='ok'){setCol(s);box.hidden=true;box.innerHTML=''}};
 }
