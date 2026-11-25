@@ -43,7 +43,8 @@ const css=`
 .odc-set .r{display:flex;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid var(--line)}
 .odc-set .r>b{font-weight:500;flex:1}
 .odc-set .d{font-size:12px;color:var(--mute);margin:2px 0 6px}
-.odc-set input[type=checkbox]{width:20px;height:20px;accent-color:var(--ink)}
+.odc-set input[type=checkbox]{width:20px!important;height:20px!important;min-height:0!important;min-width:0!important;padding:0!important;margin:0;flex:none;accent-color:var(--ink)}
+.odc-set .odc-sw{flex:none}
 .odc-sw{width:40px;height:30px;border:1px solid var(--line);cursor:pointer;padding:0;background-image:linear-gradient(45deg,#8884 25%,transparent 25%,transparent 75%,#8884 75%),linear-gradient(45deg,#8884 25%,transparent 25%,transparent 75%,#8884 75%);background-size:10px 10px;background-position:0 0,5px 5px;position:relative}
 .odc-sw i{position:absolute;inset:0}
 .odc-set .pre{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0}
@@ -58,7 +59,7 @@ const css=`
 .odc-pop .cu label{width:28px;height:28px;border:1px dashed var(--mute);display:grid;place-items:center;cursor:pointer;color:var(--mute);position:relative}
 .odc-pop .cu label input{position:absolute;opacity:0;inset:0;cursor:pointer}
 .odc-pop .cu .now{width:28px;height:28px;border:1px solid var(--line)}
-.odc-pop .cu input[type=text]{width:90px;font-family:var(--mono);font-size:13px;background:transparent;color:var(--ink);border:1px solid var(--line);padding:4px 6px}
+.odc-pop .cu input[type=text]{min-height:0;width:90px;font-family:var(--mono);font-size:13px;background:transparent;color:var(--ink);border:1px solid var(--line);padding:4px 6px}
 .odc-pop .al{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px}
 .odc-pop .al input{flex:1;accent-color:var(--ink)}.odc-pop .al b{font-family:var(--mono);font-weight:400;width:38px;text-align:right}
 `;
