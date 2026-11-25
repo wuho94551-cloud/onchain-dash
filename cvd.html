@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>크기별 CVD · 온체인 데스크</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* VOICE: 누가 사고 누가 파는지, 주문 크기로 갈라 본다
+   IDEA: 같은 CVD를 지갑 크기별 층으로 나눈 단면도
+   LAYOUT: 입력 → 판정 요약 → 가격+호가 히트맵 → 크기별 CVD → 크기별 표 → 계산 방법 */
+:root{color-scheme:light dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5;overflow-x:clip}
+.band{padding:clamp(14px,2.4vw,32px) max(4vw,14px);max-width:1240px;margin:0 auto}
+h1,h2{margin:0;line-height:1.02}
+nav.top{position:sticky;top:0;z-index:5}
+nav.top .band{padding-block:10px;display:flex;gap:4px 16px;align-items:center;flex-wrap:wrap}
+nav.top a{color:var(--mute);text-decoration:none;font-weight:600;min-height:44px;display:flex;align-items:center}
+nav.top a[aria-current]{color:var(--ink);border-bottom:2px solid var(--ink)}
+.brand{margin-right:auto}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+button{font:inherit;font-size:16px;min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap;background:var(--ink);color:var(--bg)}
+button[disabled]{opacity:.5;cursor:wait}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:14px 0 10px}
+.ctl form{display:flex;gap:6px}
+.ctl input[type=text]{font:inherit;font-family:var(--mono);min-height:44px;width:150px;padding:0 10px;color:var(--ink);border:1px solid var(--line);text-transform:uppercase}
+.lab{font-size:13px;color:var(--mute);margin-right:4px}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}
+.chk input{width:18px;height:18px;accent-color:var(--ink)}
+.prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.verdict{border:1px solid var(--line);padding:10px 14px;font-size:15px;margin-bottom:14px}
+.verdict b{font-weight:600}
+.fig{position:relative;width:100%;height:clamp(460px,64vh,720px);border:1px solid var(--line)}
+.fig canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y}
+.tip{position:absolute;pointer-events:none;background:var(--bg);border:1px solid var(--ink);padding:6px 9px;font-size:12px;font-family:var(--mono);white-space:nowrap;display:none;z-index:2;line-height:1.45}
+.tip i{display:inline-block;width:9px;height:3px;margin-right:6px;vertical-align:middle}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin:10px 0 0;font-size:14px}
+.legend label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;min-height:32px}
+.legend i{width:16px;height:3px;display:inline-block}
+.legend input{width:16px;height:16px;accent-color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:16px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-weight:500;color:var(--mute);font-size:13px}
+td.l,th.l{text-align:left}td{font-family:var(--mono)}td.l{font-family:var(--sans)}
+.wrapt{overflow-x:auto}
+.up{color:var(--up)}.dn{color:var(--dn)}
+details{border:1px solid var(--line);padding:12px 16px;margin-top:18px}
+summary{cursor:pointer;font-weight:600;min-height:28px}
+details p,details li{font-size:14px;color:var(--mute);margin:8px 0 0}
+</style>
+<link rel="stylesheet" href="./theme.css">
+</head>
+<body>
+<nav class="top"><div class="band">
+  <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
+  <a href="./">급등 준비</a>
+  <a href="./coin.html">코인 분석</a>
+  <a href="./watch.html">호가 감시</a>
+  <a href="./scan.html">스캐너</a>
+  <a href="./liq.html">실시간 청산</a>
+  <a href="./liqmap.html">청산 압력</a>
+  <a href="./cvd.html" aria-current="page">크기별 CVD</a>
+  <a href="./kimp.html">김프</a>
+</div></nav>
+<header class="band" style="padding-bottom:0">
+  <h1><em>Size</em> CVD</h1>
+  <p style="margin:8px 0 0;font-size:15px">시장가 체결을 주문 크기별로 나눠서, 소액과 큰손 중 누가 사고 누가 파는지 따로 보여줘요. Binance 공개 데이터라 키가 필요 없어요.</p>
+  <div class="ctl">
+    <form id="f"><input type="text" id="q" value="BTC" aria-label="티커" spellcheck="false" autocomplete="off"><button type="submit" id="go">불러오기</button></form>
+    <span><span class="lab">시장</span><span class="seg" id="mk"><button type="button" data-v="spot">현물</button><button type="button" data-v="fut">선물</button></span></span>
+    <span><span class="lab">기간</span><span class="seg" id="win"></span></span>
+    <label class="chk"><input type="checkbox" id="norm" checked> 정규화</label>
+    <label class="chk"><input type="checkbox" id="prec"> 정밀 (느림)</label>
+  </div>
+  <div class="prog"><i id="pg"></i></div>
+  <p class="sub" id="stat" style="margin-bottom:10px">준비 중…</p>
+  <div class="verdict" id="vd">불러오면 크기별 매수·매도 판정이 여기에 떠요.</div>
+</header>
+<section class="band" style="padding-top:0">
+  <div class="fig" id="fig"><canvas id="cv"></canvas><div class="tip" id="tip"></div></div>
+  <div class="legend" id="lg"></div>
+  <div class="wrapt"><table><thead><tr><th class="l">주문 크기</th><th>기간 순매수</th><th>최근 1/4 구간</th><th>체결 비중</th><th>건수</th></tr></thead><tbody id="tb"></tbody></table></div>
+  <details>
+    <summary>계산 방법</summary>
+    <ul>
+      <li>1일·3일·1주: Binance aggTrades(같은 주문이 같은 가격에 체결된 묶음)를 받아서 체결 금액(USD) 기준으로 5개 구간에 나눠요. 시장가 매수는 +, 시장가 매도는 −로 쌓은 게 각 선이에요.</li>
+      <li>거래가 많은 코인은 기간 전체를 다 받으면 수천 번 요청이 필요해서, 기간을 고르게 나눈 표본만 받아 전체 규모로 환산해요. 이때는 위에 '표본 추정'이라고 표시돼요. '정밀'을 켜면 표본을 3배로 늘려요.</li>
+      <li>1개월·1년: 체결 하나하나를 받기엔 너무 많아서, 캔들의 시장가 매수 거래대금으로 전체 CVD 한 줄만 그려요. 크기별 구분은 1주 이하에서만 돼요.</li>
+      <li>정규화: 선마다 기간 안의 최저를 0, 최고를 1로 맞춰서 규모가 다른 구간끼리 방향만 비교해요. 끄면 실제 달러 금액이에요.</li>
+      <li>호가 히트맵: 페이지를 연 순간부터 20초마다 Binance 호가창을 찍어서 가격대별 대기 물량을 쌓아요. 과거 호가는 공개 API로 받을 수 없어서 오른쪽 끝부터 채워져요. 밝을수록 물량이 많아요.</li>
+      <li>열어 두는 동안은 실시간 체결이 계속 더해져요.</li>
+    </ul>
+  </details>
+</section>
+<script src="./common.js?v=7"></script>
+<script>
+{
+const $=s=>document.querySelector(s);
+const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const usd=n=>{const a=Math.abs(n),s=n<0?'−':'';return a>=1e9?s+'$'+(a/1e9).toFixed(2)+'B':a>=1e6?s+'$'+(a/1e6).toFixed(2)+'M':a>=1e3?s+'$'+(a/1e3).toFixed(1)+'K':s+'$'+a.toFixed(0)};
+const pxf=n=>n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:1}):n>=1?(+n.toFixed(4)).toString():(+n.toPrecision(4)).toString();
+const API={spot:'https://data-api.binance.vision/api/v3',fut:'https://fapi.binance.com/fapi/v1'};
+const WS={spot:s=>`wss://stream.binance.com:9443/ws/${s}@aggTrade`,fut:s=>`wss://fstream.binance.com/ws/${s}@aggTrade`};
+const WINS=[['1D','1일',864e5,'5m',3e5],['3D','3일',2592e5,'15m',9e5],['1W','1주',6048e5,'1h',36e5],['1M','1개월',2592e6,'4h',144e5],['1Y','1년',31536e6,'1d',864e5]];
+const CLS=[['$1K 미만',1e3,'#8E9196'],['$1K–10K',1e4,'#3E8EDE'],['$10K–100K',1e5,'#2BA672'],['$100K–1M',1e6,'#E8961E'],['$1M 이상',Infinity,'#E0453F']];
+const clsOf=v=>{for(let i=0;i<CLS.length;i++)if(v<CLS[i][1])return i;return CLS.length-1};
+let MK=store.get('scvd-mk')||'spot',WIN=store.get('scvd-win')||'1D',SYM='BTCUSDT',D=null,ws=null,depthT=null,run=0,HEAT=[],hide=new Set(JSON.parse(store.get('scvd-hide')||'[]'));
+$('#q').value=(decodeURIComponent(location.hash.slice(1))||store.get('scvd-q')||'BTC').toUpperCase();
+$('#norm').checked=store.get('scvd-norm')!=='0';
+const segs=()=>{$('#win').innerHTML=WINS.map(w=>`<button type="button" data-v="${w[0]}" aria-pressed="${w[0]===WIN}">${w[1]}</button>`).join('');
+  for(const b of $('#mk').children)b.setAttribute('aria-pressed',b.dataset.v===MK)};
+segs();
+async function j(u,tries=4){for(let i=0;i<tries;i++){const r=await fetch(u);if(r.ok)return r.json();
+  if(r.status===429||r.status===418){$('#stat').textContent='요청 한도에 걸려서 잠깐 쉬었다가 이어서 받을게요…';await sleep((+r.headers.get('retry-after')||15)*1000);continue}
+  if(r.status===400){const t=await r.json().catch(()=>({}));throw new Error(t.msg||'HTTP 400')}throw new Error('HTTP '+r.status)}throw new Error('요청 한도 초과')}
+const symOf=q=>q.toUpperCase().replace(/[\s_\/-]/g,'').replace(/(USDT|USDC|USD)$/,'')+'USDT';
+
+async function load(){
+  const my=++run;closeLive();HEAT=[];
+  SYM=symOf($('#q').value);const base=SYM.replace(/USDT$/,'');$('#q').value=base;store.set('scvd-q',base);try{history.replaceState(null,'','#'+base)}catch(e){}
+  document.title=base+' 크기별 CVD · 온체인 데스크';
+  const [,,span,iv,bk]=WINS.find(w=>w[0]===WIN),now=Date.now(),t0=Math.floor((now-span)/bk)*bk,nb=Math.ceil((now-t0)/bk);
+  const A=API[MK],sym=MK==='fut'&&/^(PEPE|SHIB|BONK|FLOKI|LUNC|XEC|SATS|RATS|CAT|CHEEMS|MOG|WHY|X)$/.test(base)?'1000'+SYM:SYM;
+  $('#go').disabled=true;$('#pg').style.width='3%';$('#stat').textContent=`${base} 캔들 받는 중…`;
+  try{
+    // price (and taker-buy CVD for long windows)
+    let K=[],st=t0;
+    while(true){const r=await j(`${A}/klines?symbol=${sym}&interval=${iv}&startTime=${st}&limit=1000`);K=K.concat(r);if(r.length<1000)break;st=+r.at(-1)[0]+bk;if(st>=now)break}
+    if(!K.length)throw new Error('캔들이 없어요');
+    const kl=K.map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],qv:+k[7],tb:+k[10]}));
+    D={base,sym,t0,bk,nb,kl,price:new Array(nb).fill(null),del:CLS.map(()=>new Float64Array(nb)),cnt:new Float64Array(CLS.length),vol:new Float64Array(CLS.length),tot:new Float64Array(nb),mode:'',w:1,size:span<=6048e5};
+    for(const k of kl){const i=Math.floor((k.t-t0)/bk);if(i>=0&&i<nb){D.price[i]=k.c;D.tot[i]=2*k.tb-k.qv}}
+    if(D.size){
+      $('#stat').textContent=`${base} 체결 범위 확인 중…`;
+      const last=(await j(`${A}/aggTrades?symbol=${sym}&limit=1`))[0].a;
+      let first=null;for(const h of [1,6,24]){const r=await j(`${A}/aggTrades?symbol=${sym}&startTime=${t0}&endTime=${t0+h*36e5}&limit=1`);if(r.length){first=r[0].a;break}}
+      const budget=(MK==='spot'?400:90)*($('#prec').checked?3:1);
+      if(first==null)first=Math.max(0,last-budget*1000);
+      const N=last-first+1,pages=Math.ceil(N/1000);let ids;
+      if(pages<=budget){ids=Array.from({length:pages},(_,k)=>first+k*1000);D.w=1;D.mode='full'}
+      else{const st=N/budget;ids=Array.from({length:budget},(_,k)=>Math.round(first+k*st));D.w=N/(budget*1000);D.mode='sample'}
+      D.tot.fill(0);
+      const conc=MK==='spot'?8:3;let done=0,ix=0;
+      const worker=async()=>{while(ix<ids.length&&my===run){const id=ids[ix++];const r=await j(`${A}/aggTrades?symbol=${sym}&fromId=${id}&limit=1000`);
+          for(const x of r){if(x.T<t0)continue;add(x,D.w)}done++;if(done%5===0||done===ids.length){$('#pg').style.width=(5+done/ids.length*95)+'%';$('#stat').textContent=`${base} 체결 받는 중… ${done}/${ids.length}`;draw()}
+          if(MK==='fut')await sleep(350)}};
+      await Promise.all(Array.from({length:conc},worker));
+      if(my!==run)return;
+    }else D.mode='kline';
+    $('#pg').style.width='100%';
+    status();draw();table();openLive();
+  }catch(e){if(my===run){$('#stat').textContent=`불러오지 못했어요: ${e.message}. ${MK==='fut'?'선물에 없는 코인일 수 있어요.':'Binance 현물에 없는 코인이면 선물로 바꿔 보세요.'}`;$('#pg').style.width='0'}}
+  finally{if(my===run)$('#go').disabled=false}
+}
+function add(x,w){const i=Math.floor((x.T-D.t0)/D.bk);if(i<0)return;grow(i);const v=+x.p*+x.q,c=clsOf(v),s=x.m?-1:1;
+  D.del[c][i]+=s*v*w;D.tot[i]+=s*v*w;D.cnt[c]+=w;D.vol[c]+=v*w}
+function grow(i){while(D.nb<=i){D.nb++;D.price.push(null);D.del=D.del.map(a=>{const b=new Float64Array(D.nb);b.set(a);return b});const t=new Float64Array(D.nb);t.set(D.tot);D.tot=t}}
+function status(){const w=WINS.find(x=>x[0]===WIN);
+  $('#stat').textContent=`${D.base} · Binance ${MK==='spot'?'현물':'선물'} · ${w[1]} · ${w[3]} 구간`+(D.mode==='full'?' · 전체 체결 집계':D.mode==='sample'?` · 표본 추정 (실제 체결의 약 ${(100/D.w).toFixed(D.w>20?1:0)}%를 받아 환산)`:' · 캔들 기반 전체 CVD (크기별 구분은 1주 이하에서만 돼요)')+(ws?' · 실시간':'')}
+
+/* live */
+function closeLive(){if(ws){ws.onclose=null;ws.close();ws=null}clearInterval(depthT);depthT=null}
+let dq=0;
+function openLive(){
+  try{ws=new WebSocket(WS[MK](D.sym.toLowerCase()));ws.onmessage=e=>{const x=JSON.parse(e.data);const i=Math.floor((x.T-D.t0)/D.bk);grow(i);D.price[i]=+x.p;
+      if(D.size)add({p:x.p,q:x.q,T:x.T,m:x.m},1);else{const v=+x.p*+x.q;D.tot[i]+=x.m?-v:v}
+      if(!dq)dq=setTimeout(()=>{dq=0;draw();table()},1000)};ws.onopen=status;ws.onclose=()=>{ws=null;status()}}catch(e){}
+  const snap=async()=>{if(document.hidden)return;try{const lim=MK==='spot'?5000:1000;const r=await j(`${API[MK]}/depth?symbol=${D.sym}&limit=${lim}`);
+      const mid=(+r.bids[0][0]+ +r.asks[0][0])/2,st=mid*.0008,m=new Map();
+      for(const [p,q] of [...r.bids,...r.asks]){const b=Math.round(+p/st);m.set(b,(m.get(b)||0)+ +p*+q)}
+      HEAT.push({t:Date.now(),st,m});if(HEAT.length>2000)HEAT.shift();draw()}catch(e){}};
+  snap();depthT=setInterval(snap,20e3);
+}
+
+/* chart */
+const cv=$('#cv'),tip=$('#tip');let G=null,hx=null;
+function series(){
+  const S=[];const norm=$('#norm').checked;
+  const mk=(arr,col,name,dash)=>{let c=0;const v=Array.from(arr,x=>c+=x);return{v,col,name,dash}};
+  if(D.size)CLS.forEach(([n,,c],i)=>{if(!hide.has(i))S.push(mk(D.del[i],c,n))});
+  if(!hide.has(9))S.push(mk(D.tot,cvar('--ink'),'전체',true));
+  if(norm)for(const s of S){const lo=Math.min(...s.v),hi=Math.max(...s.v),r=hi-lo||1;s.raw=s.v;s.v=s.v.map(x=>(x-lo)/r)}else for(const s of S)s.raw=s.v;
+  return S}
+function cvar(n){const e=document.createElement('span');e.style.color=`var(${n})`;document.body.appendChild(e);const c=getComputedStyle(e).color;e.remove();return c}
+function draw(){
+  if(!D)return;const dpr=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+  const ink=cvar('--ink'),mute=cvar('--mute'),line=cvar('--line');
+  const L=10,R=W<560?58:76,T=10,ph=Math.round((H-40)*.52),cy0=T+ph+26,ch=H-cy0-24,n=D.nb,x=i=>L+(i+.5)/n*(W-L-R);
+  // price range
+  let lo=Infinity,hi=-Infinity;for(const k of D.kl){if(k.l<lo)lo=k.l;if(k.h>hi)hi=k.h}for(const p of D.price)if(p!=null){if(p<lo)lo=p;if(p>hi)hi=p}
+  const pad=(hi-lo)*.06||hi*.01;lo-=pad;hi+=pad;const y=p=>T+(hi-p)/(hi-lo)*ph;
+  g.font='11px "JetBrains Mono",monospace';g.textBaseline='middle';
+  // grid
+  g.strokeStyle=line;g.globalAlpha=.5;g.lineWidth=1;g.fillStyle=mute;
+  for(let k=0;k<=4;k++){const p=lo+(hi-lo)*k/4,yy=Math.round(y(p))+.5;g.beginPath();g.moveTo(L,yy);g.lineTo(W-R,yy);g.stroke();g.globalAlpha=1;g.fillText(pxf(p),W-R+6,yy);g.globalAlpha=.5}
+  g.globalAlpha=1;
+  // heatmap
+  if(HEAT.length){const tEnd=D.t0+D.nb*D.bk,xt=t=>L+(t-D.t0)/(tEnd-D.t0)*(W-L-R);let mx=0;for(const h of HEAT)for(const [b,v] of h.m){const p=b*h.st;if(p>=lo&&p<=hi&&v>mx)mx=v}
+    HEAT.forEach((h,k)=>{let xa=xt(h.t),xb=k<HEAT.length-1?xt(HEAT[k+1].t):W-R;if(xb-xa<5)xa=xb-5;xa=Math.max(L,xa);
+      for(const [b,v] of h.m){const p=b*h.st;if(p<lo||p>hi)continue;const a=Math.sqrt(v/mx);if(a<.06)continue;const y1=y(p+h.st/2),y2=y(p-h.st/2);
+        g.fillStyle=`hsla(${18+a*36},95%,${42+a*18}%,${.18+a*.75})`;g.fillRect(xa,y1,xb-xa,Math.max(1,y2-y1))}})}
+  // price line
+  g.strokeStyle=ink;g.lineWidth=1.4;g.beginPath();let st=false;D.price.forEach((p,i)=>{if(p==null)return;st?g.lineTo(x(i),y(p)):g.moveTo(x(i),y(p));st=true});g.stroke();
+  const lp=[...D.price].reverse().find(p=>p!=null);if(lp!=null){g.fillStyle=ink;g.fillRect(W-R+1,y(lp)-8,R-2,16);g.fillStyle=cvar('--bg');g.fillText(pxf(lp),W-R+6,y(lp))}
+  // cvd
+  const S=series(),norm=$('#norm').checked;let a=Infinity,b=-Infinity;for(const s of S)for(const v of s.v){if(v<a)a=v;if(v>b)b=v}
+  if(!S.length){a=0;b=1}if(norm){a=0;b=1}const r=(b-a)||1,yc=v=>cy0+(b-v)/r*ch;
+  g.fillStyle=mute;g.font='12px Pretendard,sans-serif';g.textBaseline='alphabetic';g.fillText(norm?'크기별 CVD (정규화 0~1)':'크기별 CVD (USD)',L,cy0-8);g.font='11px "JetBrains Mono",monospace';g.textBaseline='middle';
+  g.strokeStyle=line;g.globalAlpha=.5;for(let k=0;k<=2;k++){const v=a+r*k/2,yy=Math.round(yc(v))+.5;g.beginPath();g.moveTo(L,yy);g.lineTo(W-R,yy);g.stroke();g.globalAlpha=1;g.fillText(norm?v.toFixed(1):usd(v),W-R+6,yy);g.globalAlpha=.5}g.globalAlpha=1;
+  if(!norm&&a<0&&b>0){g.strokeStyle=mute;g.setLineDash([3,3]);g.beginPath();g.moveTo(L,yc(0));g.lineTo(W-R,yc(0));g.stroke();g.setLineDash([])}
+  for(const s of S){g.strokeStyle=s.col;g.lineWidth=s.dash?1.2:1.7;g.setLineDash(s.dash?[5,4]:[]);g.beginPath();s.v.forEach((v,i)=>i?g.lineTo(x(i),yc(v)):g.moveTo(x(i),yc(v)));g.stroke()}g.setLineDash([]);
+  // time axis
+  g.fillStyle=mute;g.textAlign='center';const nt=Math.max(2,Math.floor((W-L-R)/110));
+  for(let k=0;k<=nt;k++){const i=Math.round(k/nt*(n-1)),t=new Date(D.t0+i*D.bk);const s=D.bk>=864e5?`${t.getFullYear()%100}.${t.getMonth()+1}.${t.getDate()}`:D.bk>=36e5?`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}시`:`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;g.fillText(s,Math.min(W-R-30,Math.max(L+30,x(i))),H-10)}
+  g.textAlign='left';
+  // crosshair
+  G={x,n,L,R,W,S,yc,ph,T,cy0,ch};
+  if(hx!=null){const i=Math.max(0,Math.min(n-1,Math.round((hx-L)/(W-L-R)*n-.5)));g.strokeStyle=mute;g.setLineDash([2,3]);g.beginPath();g.moveTo(x(i),T);g.lineTo(x(i),cy0+ch);g.stroke();g.setLineDash([]);
+    const t=new Date(D.t0+i*D.bk),p=D.price[i];
+    tip.innerHTML=`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}${p!=null?' · '+pxf(p):''}<br>`+S.map(s=>`<i style="background:${s.col}"></i>${s.name} ${usd(s.raw[i])}`).join('<br>');
+    tip.style.display='block';const tw=tip.offsetWidth;tip.style.left=(x(i)+12+tw>W?x(i)-tw-12:x(i)+12)+'px';tip.style.top=(cy0-10)+'px'}else tip.style.display='none';
+}
+const mv=e=>{const r=cv.getBoundingClientRect();hx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;draw()};
+cv.addEventListener('pointermove',mv);cv.addEventListener('pointerleave',()=>{hx=null;draw()});
+new ResizeObserver(()=>draw()).observe(cv);
+function legend(){$('#lg').innerHTML=[...CLS.map(([n,,c],i)=>[i,n,c]),[9,'전체 (점선)',cvar('--ink')]].map(([i,n,c])=>`<label><input type="checkbox" data-i="${i}" ${hide.has(i)?'':'checked'}><i style="background:${c}"></i>${n}</label>`).join('')}
+legend();
+$('#lg').addEventListener('change',e=>{const i=+e.target.dataset.i;e.target.checked?hide.delete(i):hide.add(i);store.set('scvd-hide',JSON.stringify([...hide]));draw()});
+function table(){
+  if(!D)return;const q=Math.floor(D.nb*.75),rows=[];
+  if(D.size)CLS.forEach(([n,,c],i)=>{const a=D.del[i];let s=0,s4=0;for(let k=0;k<a.length;k++){s+=a[k];if(k>=q)s4+=a[k]}rows.push({n,c,s,s4,share:D.vol[i],cnt:D.cnt[i]})});
+  const tv=rows.reduce((x,r)=>x+r.share,0)||1;let ts=0,ts4=0;for(let k=0;k<D.tot.length;k++){ts+=D.tot[k];if(k>=q)ts4+=D.tot[k]}
+  $('#tb').innerHTML=rows.map(r=>`<tr><td class="l"><i style="display:inline-block;width:12px;height:3px;background:${r.c};vertical-align:middle;margin-right:8px"></i>${r.n}</td><td class="${r.s>=0?'up':'dn'}">${usd(r.s)}</td><td class="${r.s4>=0?'up':'dn'}">${usd(r.s4)}</td><td>${(r.share/tv*100).toFixed(1)}%</td><td>${Math.round(r.cnt).toLocaleString()}</td></tr>`).join('')+
+    `<tr><td class="l"><b>전체</b></td><td class="${ts>=0?'up':'dn'}">${usd(ts)}</td><td class="${ts4>=0?'up':'dn'}">${usd(ts4)}</td><td>–</td><td>–</td></tr>`;
+  // verdict
+  if(!D.size){$('#vd').innerHTML=`기간 전체 시장가 순매수 <b class="${ts>=0?'up':'dn'}">${usd(ts)}</b>, 최근 1/4 구간 <b class="${ts4>=0?'up':'dn'}">${usd(ts4)}</b>. 1개월·1년은 크기별 구분 없이 전체만 보여줘요.`;return}
+  const big=rows[3].s+rows[4].s,big4=rows[3].s4+rows[4].s4,sm=rows[0].s+rows[1].s,sm4=rows[0].s4+rows[1].s4;
+  let v;if(big4>0&&sm4<0)v='<b class="up">큰손 매집 신호</b>: 최근 구간에 $100K 이상 주문은 순매수, 소액은 순매도예요.';
+  else if(big4<0&&sm4>0)v='<b class="dn">큰손 분산 신호</b>: 최근 구간에 $100K 이상 주문은 순매도, 소액이 받아 주고 있어요.';
+  else if(big4>0&&sm4>0)v='<b class="up">전 구간 동반 매수</b>: 큰손과 소액 모두 순매수예요.';
+  else if(big4<0&&sm4<0)v='<b class="dn">전 구간 동반 매도</b>: 큰손과 소액 모두 순매도예요.';else v='뚜렷한 방향이 없어요.';
+  $('#vd').innerHTML=v+` <span class="sub" style="display:inline">기간 전체: $100K 이상 ${usd(big)} · $10K 미만 ${usd(sm)}${D.mode==='sample'?' · 표본 추정치라 큰 주문 구간은 오차가 커요':''}</span>`;
+}
+$('#f').addEventListener('submit',e=>{e.preventDefault();load()});
+$('#win').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;WIN=b.dataset.v;store.set('scvd-win',WIN);segs();load()});
+$('#mk').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;MK=b.dataset.v;store.set('scvd-mk',MK);segs();load()});
+$('#norm').addEventListener('change',()=>{store.set('scvd-norm',$('#norm').checked?'1':'0');draw()});
+$('#prec').addEventListener('change',load);
+window.addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1));if(h&&symOf(h)!==SYM){$('#q').value=h;load()}});
+load();
+}
+</script>
+</body>
+</html>
