@@ -143,7 +143,7 @@ const WS={spot:s=>`wss://stream.binance.com:9443/ws/${s}@aggTrade`,fut:s=>`wss:/
 const WINS=[['1D','1D',864e5,'5m',3e5],['1W','1W',6048e5,'30m',18e5],['1M','1M',2592e6,'2h',72e5],['6M','6M',15552e6,'12h',432e5],['1Y','1Y',31536e6,'1d',864e5],['3Y','3Y',94608e6,'3d',2592e5]];
 const CLS=[['$1K 미만',1e3,'#B08CF0','개미 주문. 개인 투자자의 작은 시장가 체결이에요.'],['$1K–10K',1e4,'#4AA3FF','중간 크기 개인 주문이에요.'],['$10K–100K',1e5,'#3FBF6E','큰 개인이나 작은 기관 주문이에요.'],['$100K–1M',1e6,'#F39A2B','큰손 주문. 기관·고래가 시장가로 밀어붙인 체결이에요.'],['$1M 이상',Infinity,'#F0453A','초대형 고래 주문. 드물지만 나오면 방향성이 강해요.']];
 const clsOf=v=>{for(let i=0;i<CLS.length;i++)if(v<CLS[i][1])return i;return CLS.length-1};
-const PR=70; // price rows in heatmap
+const PR=56; // price rows in heatmap
 let MK=store.get('scvd-mk')||'spot',WIN=store.get('scvd-win')||'1D',MODE=store.get('scvd-mode')||'n',SYM='BTCUSDT',D=null,ws=null,run=0,hide=new Set(JSON.parse(store.get('scvd-hide')||'[]'));
 if(!WINS.some(w=>w[0]===WIN))WIN='1D';
 let P1=+(store.get('scvd-p1')||96),P2=+(store.get('scvd-p2')||99);
@@ -253,7 +253,9 @@ function series(){
   if(!hide.has(9))S.push(mk(D.tot,'#e9e9e6','전체','total',D.size));
   if(MODE==='n')for(const s of S){let lo=Infinity,hi=-Infinity;for(const x of s.v){if(x<lo)lo=x;if(x>hi)hi=x}const r=hi-lo||1;s.v=s.v.map(x=>(x-lo)/r)}
   return S}
-function thresholds(){const a=[];for(const v of D.heat)if(v>0)a.push(v);if(!a.length)return[0,1];a.sort((x,y)=>x-y);const q=p=>a[Math.min(a.length-1,Math.floor(a.length*p/100))];let lo=q(P1),hi=q(Math.min(99.99,P2));if(hi<=lo)hi=lo*1.0001+1e-9;return[lo,hi]}
+function heatGrid(){const n=D.nb,gs=Math.max(1,Math.ceil(n/110)),nc=Math.ceil(n/gs),H=new Float64Array(nc*PR);
+  for(let i=0;i<n;i++){const c=Math.floor(i/gs);for(let r=0;r<PR;r++)H[c*PR+r]+=D.heat[i*PR+r]}return{H,gs,nc}}
+function thresholds(H){const a=[];for(const v of H)if(v>0)a.push(v);if(!a.length)return[0,1];a.sort((x,y)=>x-y);const q=p=>a[Math.min(a.length-1,Math.floor(a.length*p/100))];let lo=q(P1),hi=q(Math.min(99.99,P2));if(hi<=lo)hi=lo*1.0001+1e-9;return[lo,hi]}
 function draw(){
   if(!D)return;const dpr=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
   const mute='#9a9b97',grid='rgba(255,255,255,.07)',small=W<640;
@@ -268,8 +270,8 @@ function draw(){
   const nt=Math.max(2,Math.floor(PW/130)),ticks=[];for(let k=1;k<nt;k++)ticks.push(Math.round(k/nt*(n-1)));
   for(const i of ticks){const xx=Math.round(x(i))+.5;g.strokeStyle=grid;g.beginPath();g.moveTo(xx,T);g.lineTo(xx,T+ph);g.moveTo(xx,cy0);g.lineTo(xx,cy0+ch);g.stroke()}
   // heatmap
-  const [tl,th]=thresholds();const cw=PW/n,rh=ph/PR;
-  for(let i=0;i<n;i++)for(let r=0;r<PR;r++){const v=D.heat[i*PR+r];if(v<tl)continue;g.fillStyle=v>=th?'#fff':cmap(.12+.88*(v-tl)/(th-tl));g.fillRect(L+i*cw,T+ph-(r+1)*rh,Math.max(1,cw+.3),Math.max(1,rh-.4))}
+  const HG=heatGrid(),[tl,th]=thresholds(HG.H),cw=PW/n*HG.gs,rh=ph/PR;
+  for(let c=0;c<HG.nc;c++)for(let r=0;r<PR;r++){const v=HG.H[c*PR+r];if(!v||v<tl)continue;g.fillStyle=v>=th?'#fff':cmap(.12+.88*(v-tl)/(th-tl));g.fillRect(L+c*cw,T+ph-(r+1)*rh,Math.max(1,Math.min(cw,L+PW-(L+c*cw))-.5),Math.max(1,rh-.5))}
   // price
   g.save();g.beginPath();g.rect(L,T,PW,ph);g.clip();g.strokeStyle='#3d8fe0';g.lineWidth=1.8;g.lineJoin='round';g.beginPath();let st=false;D.price.forEach((p,i)=>{if(p==null)return;st?g.lineTo(x(i),y(p)):g.moveTo(x(i),y(p));st=true});g.stroke();g.restore();
   const lp=[...D.price].reverse().find(p=>p!=null);if(lp!=null){g.fillStyle='#3d8fe0';g.fillRect(W-R+2,y(lp)-9,R-4,18);g.fillStyle='#fff';g.fillText(pxf(lp),W-R+8,y(lp))}
@@ -290,10 +292,10 @@ function draw(){
   g.fillStyle=mute;g.textAlign='center';g.font='11px "JetBrains Mono",monospace';
   const tf=t=>D.bk>=864e5?`${t.getFullYear()}/${t.getMonth()+1}`+(WIN==='6M'||WIN==='1M'?'/'+t.getDate():''):D.bk>=18e5&&WIN!=='1D'?`${t.getMonth()+1}/${String(t.getDate()).padStart(2,'0')}`:`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
   for(const i of ticks)g.fillText(tf(new Date(D.t0+i*D.bk)),x(i),H-14);g.textAlign='left';
-  G={x,n,L,R,W,PW,S,yc,ph,T,cy0,ch,lo,hi,CB,tl,th};
+  G={x,n,L,R,W,PW,S,yc,ph,T,cy0,ch,lo,hi,CB,tl,th,HG};
   // crosshair
   if(hx!=null&&hx>=L&&hx<=W-R){const i=Math.max(0,Math.min(n-1,Math.floor((hx-L)/PW*n)));g.strokeStyle='rgba(255,255,255,.35)';g.setLineDash([2,3]);g.beginPath();g.moveTo(x(i),T);g.lineTo(x(i),cy0+ch);g.stroke();
-    let extra='';if(hy!=null&&hy>=T&&hy<=T+ph){g.beginPath();g.moveTo(L,hy);g.lineTo(W-R,hy);g.stroke();const pr=hi-(hy-T)/ph*(hi-lo),row=rowOf(pr),hv=D.heat[i*PR+row];extra=`<br><em>커서 가격</em> ${pxf(pr)} · <em>이 칸 체결</em> ${usd(hv)}`}
+    let extra='';if(hy!=null&&hy>=T&&hy<=T+ph){g.beginPath();g.moveTo(L,hy);g.lineTo(W-R,hy);g.stroke();const pr=hi-(hy-T)/ph*(hi-lo),row=rowOf(pr),hv=HG.H[Math.floor(i/HG.gs)*PR+row];extra=`<br><em>커서 가격</em> ${pxf(pr)} · <em>이 칸 체결</em> ${usd(hv)}`}
     g.setLineDash([]);const t=new Date(D.t0+i*D.bk),p=D.price[i];
     tip.innerHTML=`${t.getFullYear()}/${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}${p!=null?' · <em>가격</em> '+pxf(p):''}${extra}<br>`+S.map(s=>`<i style="background:${s.col}"></i>${s.name} ${usd(s.raw[i])}`).join('<br>');
     tip.style.display='block';const tw=tip.offsetWidth,th2=tip.offsetHeight;tip.style.left=(x(i)+14+tw>W?x(i)-tw-14:x(i)+14)+'px';tip.style.top=Math.max(4,Math.min(H-th2-4,(hy??cy0)-th2/2))+'px'}else tip.style.display='none';
