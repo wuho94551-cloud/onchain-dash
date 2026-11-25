@@ -86,7 +86,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 </head>
 <body>
 <nav class="top"><div class="band">
-  <div class="brand"><em>Onchain</em> Desk</div>
+  <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
   <a href="./">급등 준비</a>
   <a href="./coin.html">코인 분석</a>
   <a href="./watch.html">호가 감시</a>
@@ -148,6 +148,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 </section>
 <div id="toast" role="status" aria-live="polite"></div>
 
+<script src="./common.js?v=7"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -299,7 +300,7 @@ let actx=null,lastSum=0;
 const watch=()=>A.coins?A.coins.toUpperCase().split(/[\s,]+/).filter(Boolean):null;
 function beep(){if(!A.sound)return;try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.type='square';o.frequency.value=880;g.gain.setValueAtTime(.08,actx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+.35);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.35)}catch(e){}}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',6000)}
-function fire(title,body){beep();toast(title+' · '+body);
+function fire(title,body){beep();OD.notify(title,body,{href:'./liq.html'});
   if(A.notif&&'Notification' in window&&Notification.permission==='granted'){try{new Notification(title,{body,tag:'liq'})}catch(e){}}
   document.title='🔔 '+title;clearTimeout(fire.h);fire.h=setTimeout(()=>document.title='실시간 청산 · 온체인 데스크',8000)}
 function checkAlert(e){

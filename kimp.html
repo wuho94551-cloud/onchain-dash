@@ -68,7 +68,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 </head>
 <body>
 <nav class="top"><div class="band">
-  <div class="brand"><em>Onchain</em> Desk</div>
+  <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
   <a href="./">급등 준비</a>
   <a href="./coin.html">코인 분석</a>
   <a href="./watch.html">호가 감시</a>
@@ -121,6 +121,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 </section>
 <div id="toast" role="status" aria-live="polite"></div>
 
+<script src="./common.js?v=7"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -219,7 +220,7 @@ function beep(){try{actx=actx||new (window.AudioContext||window.webkitAudioConte
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',6000)}
 function checkAlerts(rs){if(!A.th)return;const w=A.coins?A.coins.toUpperCase().split(/[\s,]+/).filter(Boolean):null;
   for(const r of rs){if(w&&!w.includes(r.s))continue;if(r.v<A.vol)continue;if(Math.abs(r.kimp)<A.th)continue;if(Date.now()-(fired[r.s]||0)<600e3)continue;
-    fired[r.s]=Date.now();const m=`${r.s} 김프 ${r.kimp>=0?'+':''}${r.kimp.toFixed(2)}%`;beep();toast(m);
+    fired[r.s]=Date.now();const m=`${r.s} 김프 ${r.kimp>=0?'+':''}${r.kimp.toFixed(2)}%`;beep();OD.notify(m,`업비트 ${krw(r.up)}원 · 해외 ${krw(r.g)}원`,{side:r.kimp>=0?'B':'S',href:'./kimp.html'});
     if('Notification' in window&&Notification.permission==='granted'){try{new Notification(m,{body:`업비트 ${krw(r.up)}원 · 해외 ${krw(r.g)}원`,tag:'kimp-'+r.s})}catch(e){}}}}
 $('#aform').addEventListener('submit',async e=>{e.preventDefault();A={th:Number($('#a-th').value),coins:$('#a-coins').value.trim(),vol:Number($('#a-vol').value)};store.set('kimp-alert',JSON.stringify(A));
   try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();await actx.resume()}catch(er){}

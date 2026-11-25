@@ -19,6 +19,30 @@ async function loadTypes(){
 }
 const kindOf=sym=>(typeMap&&typeMap.get(sym))||'코인';
 
+
+/* ---- 우측 상단 알림 팝업 (3초 뒤 사라짐, 열린 다른 탭에도 표시) ---- */
+const tcss=`.od-toasts{position:fixed;top:64px;right:14px;z-index:60;display:flex;flex-direction:column;gap:8px;width:min(320px,calc(100vw - 28px));pointer-events:none}
+.od-toast{pointer-events:auto;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-left:3px solid var(--ink);box-shadow:0 6px 20px rgba(0,0,0,.18);padding:10px 12px;font-family:var(--sans);font-size:13px;line-height:1.4;cursor:pointer;opacity:0;transform:translateX(16px);transition:opacity .25s,transform .25s}
+.od-toast.in{opacity:1;transform:none}
+.od-toast b{display:block;font-size:14px;font-weight:600;margin-bottom:2px}
+.od-toast.B{border-left-color:var(--up)}.od-toast.S{border-left-color:var(--dn)}
+.od-toast small{color:var(--mute);font-size:11px;float:right;font-family:var(--mono)}
+@media(prefers-reduced-motion:reduce){.od-toast{transition:none}}`;
+let tbox=null;
+function toast(title,body='',o={}){
+  if(!tbox){const s=document.createElement('style');s.textContent=tcss;document.head.appendChild(s);tbox=document.createElement('div');tbox.className='od-toasts';tbox.setAttribute('role','status');tbox.setAttribute('aria-live','polite');document.body.appendChild(tbox)}
+  const t=document.createElement('div');t.className='od-toast '+(o.side||'');
+  const d=new Date(o.t||Date.now()),tm=[d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+  t.innerHTML=`<small>${tm}${o.from?' · '+esc(o.from):''}</small><b>${esc(title)}</b>${body?esc(body):''}`;
+  if(o.href)t.onclick=()=>{location.href=o.href};else t.onclick=()=>t.remove();
+  tbox.prepend(t);while(tbox.children.length>4)tbox.lastChild.remove();
+  requestAnimationFrame(()=>t.classList.add('in'));
+  setTimeout(()=>{t.classList.remove('in');setTimeout(()=>t.remove(),300)},o.ms||3000);
+}
+/* 알림 발생: 이 탭에 띄우고, 같은 사이트의 다른 열린 탭에도 전달 */
+function notify(title,body='',o={}){toast(title,body,o);try{localStorage.setItem('od-alert',JSON.stringify({title,body,o:{...o,from:o.from||document.title.split(' · ')[0]},t:Date.now()}))}catch(e){}}
+window.addEventListener('storage',e=>{if(e.key!=='od-alert'||!e.newValue)return;try{const a=JSON.parse(e.newValue);if(Date.now()-a.t<10e3)toast(a.title,a.body,{...a.o,t:a.t})}catch(x){}});
+
 /* ---- 차트 창 ---- */
 let lwcP=null;const loadLWC=()=>lwcP||(lwcP=new Promise((res,rej)=>{if(window.LightweightCharts)return res();const s=document.createElement('script');s.src=LWC;s.onload=res;s.onerror=()=>rej(new Error('차트 라이브러리를 불러오지 못했어요'));document.head.appendChild(s)}));
 const css=`
@@ -211,5 +235,5 @@ async function openChart(base,meta={}){
   try{inst=await mountChart(back.querySelector('[data-r="body"]'),base)}catch(e){back.querySelector('[data-r="body"]').innerHTML=`<p class="odc-note">${esc(e.message)}</p>`}
 }
 
-window.OD={loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
+window.OD={toast,notify,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
 })();

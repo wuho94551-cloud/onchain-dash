@@ -63,7 +63,7 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
 </head>
 <body>
 <nav class="top"><div class="band">
-  <div class="brand"><em>Onchain</em> Desk</div>
+  <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
   <a href="./">급등 준비</a>
   <a href="./coin.html">코인 분석</a>
   <a href="./watch.html" aria-current="page">호가 감시</a>
@@ -115,7 +115,7 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
   </div>
 </section>
 
-<script src="./common.js?v=6"></script>
+<script src="./common.js?v=7"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -133,7 +133,7 @@ let actx=null;function beep(f){if(!$('#snd').checked)return;try{actx=actx||new (
 const LOG=[];
 function log(kind,side,html){LOG.unshift({t:Date.now(),kind,side,html});if(LOG.length>200)LOG.pop();
   $('#log').innerHTML=LOG.map(l=>`<div><time>${hms(l.t)}</time><b class="${l.side}">${esc(l.kind)}</b> ${l.html}</div>`).join('');
-  if(kind!=='큰 벽 등장')beep(side==='B'?880:440)}
+  if(kind!=='큰 벽 등장'){beep(side==='B'?880:440);const tx=document.createElement('div');tx.innerHTML=html;OD.notify(`${BASE} ${kind}`,tx.textContent,{side,href:'./watch.html#'+encodeURIComponent(BASE)})}}
 
 function mid(){const bb=Math.max(...bids.keys()),ba=Math.min(...asks.keys());return isFinite(bb)&&isFinite(ba)?(bb+ba)/2:lastPx}
 /* wall tracking every second */
