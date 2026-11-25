@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>내 온체인 데스크</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* VOICE: 개인 트레이딩 데스크, 숫자 먼저, 장식 없음
+   IDEA: 코인 하나를 넣으면 그 코인의 수급 보고서 한 장이 나오는 구조
+   PICTURE: CVD 큰 차트가 첫 화면의 중심, 그 아래 유입·언락·보유자
+   COLOUR and TYPE: 흰 바탕/검정/버밀리언 #ff4a1c, 보조 파랑 #2f6bd8, 밤 #120d0b; Sofia Sans Condensed + Instrument Sans
+   LAYOUT: 검색 바 → 코인 헤더 → CVD → 유입 | 언락 → 보유자 → 키 설정 */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#120d0b);--ink:light-dark(#111111,#f4eeea);--mute:light-dark(#5d5a58,#a89f99);--line:light-dark(#e6e2df,#2c2420);--acc:#ff4a1c;--blue:light-dark(#2f6bd8,#6b9bff);--up:light-dark(#0a7a3d,#4cc985);--dn:light-dark(#c0141f,#ff6b6b);--card:light-dark(#faf8f7,#1a1412)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Instrument Sans",system-ui,"Malgun Gothic",sans-serif;overflow-x:clip}
+.band{padding:clamp(16px,2.6vw,36px) max(4vw,14px);max-width:1240px;margin:0 auto}
+h1,h2{font-family:"Sofia Sans Condensed","Malgun Gothic",sans-serif;font-weight:800;line-height:1.05;margin:0;text-wrap:balance}
+h1{font-size:clamp(32px,5vw,52px)}h2{font-size:24px}
+.bar-top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.bar-top .band{padding-block:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.nav{color:var(--ink);font-weight:600;text-decoration:none;min-height:44px;display:flex;align-items:center;padding:0 6px}
+.brand{font-family:"Sofia Sans Condensed",sans-serif;font-weight:800;font-size:22px;margin-right:auto}
+form.search{display:flex;gap:8px;flex:1 1 340px;max-width:560px}
+button,input,select{font:inherit;font-size:16px}
+button{min-height:44px;padding:0 16px;border-radius:8px;border:0;background:var(--acc);color:#fff;font-weight:600;cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.small{min-height:36px;padding:0 12px;font-size:14px}
+button[disabled]{opacity:.5;cursor:wait}
+input,select{min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+input{flex:1 1 auto}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+.coin{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:baseline}
+.coin .px{font-family:"Sofia Sans Condensed",sans-serif;font-weight:700;font-size:clamp(28px,4vw,40px);white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--mute);font-size:14px;margin-top:6px}
+.chips b{color:var(--ink);font-weight:600}
+.panel{border-top:2px solid var(--ink);padding-top:12px}
+.phead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:12px}
+.kpi{background:var(--bg);padding:10px 14px}
+.kpi .l{font-size:13px;color:var(--mute)}
+.kpi .v{font-family:"Sofia Sans Condensed",sans-serif;font-weight:700;font-size:26px;line-height:1.15;white-space:nowrap}
+.up{color:var(--up)}.dn{color:var(--dn)}.err{color:var(--mute);font-size:14px}
+.fig{position:relative;min-height:320px}.fig.sm{min-height:220px}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:28px}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;padding:6px 9px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-115%);display:none;z-index:2}
+.src{font-size:13px;color:var(--mute);margin-top:6px}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--mute);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th.l,td.l{text-align:left}
+th{font-weight:600;color:var(--mute);font-size:13px}
+td a{color:var(--ink)}
+.meter{height:8px;background:var(--acc);border-radius:0 4px 4px 0;min-width:2px}
+.scroll{overflow-x:auto}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--mute);font-size:15px}
+.empty b{color:var(--ink)}
+ul.ev{list-style:none;margin:0;padding:0}
+ul.ev li{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+ul.ev time{font-weight:600;white-space:nowrap}
+details{border:1px solid var(--line);border-radius:10px;padding:12px 16px;background:var(--card)}
+summary{cursor:pointer;font-weight:600;min-height:28px}
+.keyrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.keyrow label{width:9em;font-size:14px}
+.keyrow input{flex:1 1 220px}
+.addr{font-family:ui-monospace,Consolas,monospace;font-size:14px}
+@media(max-width:600px){table{font-size:13px}.fig{min-height:240px}.kpi .v{font-size:22px}.keyrow label{width:100%}}
+@media(prefers-reduced-motion:no-preference){.panel{animation:in .35s ease both}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
+</style>
+<link rel="stylesheet" href="./theme.css">
+</head>
+<body>
+<div class="bar-top"><div class="band">
+  <div class="brand"><em>Onchain</em> Desk</div>
+  <a class="nav" href="./">급등 준비</a>
+  <a class="nav" href="./watch.html">호가 감시</a>
+  <a class="nav" href="./scan.html">스캐너</a>
+  <a class="nav" href="./liq.html">실시간 청산</a>
+  <a class="nav" href="./liqmap.html">청산 압력</a>
+  <a class="nav" href="./kimp.html">김프</a>
+  <form class="search" id="search">
+    <input id="q" placeholder="코인 심볼 또는 이름 (예: ARB, PEPE, ETH)" autocomplete="off" spellcheck="false" aria-label="코인 검색">
+    <button type="submit">조회</button>
+  </form>
+  <button class="ghost" id="gokeys">API 키</button>
+</div></div>
+
+<header class="band">
+  <div class="coin">
+    <h1 id="cname"><em>Coin</em> Report</h1>
+    <span class="px" id="cpx"></span>
+    <span id="cch"></span>
+  </div>
+  <div class="chips" id="cinfo"></div>
+  <p class="sub" id="stamp"></p>
+</header>
+
+<section class="band">
+  <div class="panel" style="margin-bottom:24px">
+    <div class="phead"><h2>차트 · 볼륨 프로파일</h2></div>
+    <div id="f-chart"></div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="panel">
+    <div class="phead">
+      <h2>CVD (누적 체결 델타)</h2>
+      <div class="seg" id="tf"></div>
+    </div>
+    <div class="fig" id="f-cvd"></div>
+    <div class="kpis" id="cvdk"></div>
+    <p class="src">Gate.io USDT 무기한 선물의 시장가 매수 체결량 − 시장가 매도 체결량 누적. 미결제약정·펀딩·청산도 같은 데이터에서 계산.</p>
+  </div>
+</section>
+
+<section class="band grid2">
+  <div class="panel">
+    <div class="phead"><h2>거래소 유입·유출</h2><button class="small" id="flowbtn">Dune으로 계산</button></div>
+    <div id="flow"><div class="empty">코인을 먼저 조회하세요.</div></div>
+    <p class="src">Dune tokens.transfers × cex.addresses, 최근 30일. 거래소 핫·콜드 지갑 기준이라 개인 입금 주소로 들어온 물량은 일부 빠질 수 있어요.</p>
+  </div>
+  <div class="panel">
+    <div class="phead"><h2>언락 일정</h2></div>
+    <div id="unlock"><div class="empty">코인을 먼저 조회하세요.</div></div>
+    <p class="src">DefiLlama 언락 데이터셋</p>
+  </div>
+</section>
+
+<section class="band">
+  <div class="panel">
+    <div class="phead"><h2>주요 보유자 상위 20</h2></div>
+    <div id="holders"><div class="empty">코인을 먼저 조회하세요.</div></div>
+    <p class="src">Ethplorer (이더리움 메인넷 토큰). 주소를 누르면 Arkham에서 누구 지갑인지 확인할 수 있어요.</p>
+  </div>
+</section>
+
+<section class="band">
+  <details id="keys">
+    <summary>API 키 설정</summary>
+    <p class="sub">키는 이 기기 브라우저에만 저장되고 각 서비스로만 전송됩니다. 폰과 PC에서 한 번씩 넣어주세요.</p>
+    <form id="keyform">
+      <div class="keyrow"><label for="k-dune">Dune (유입·유출)</label><input id="k-dune" autocomplete="off" spellcheck="false" placeholder="dune.com → Settings → API"></div>
+      <div class="keyrow"><label for="k-ethp">Ethplorer (보유자)</label><input id="k-ethp" autocomplete="off" spellcheck="false" placeholder="비워두면 freekey 사용"></div>
+      <div class="keyrow"><span style="width:9em"></span><button type="submit">저장</button><span class="sub" id="keymsg"></span></div>
+    </form>
+  </details>
+</section>
+
+<script src="./common.js"></script>
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const num=(n,d=2)=>{n=Number(n);const a=Math.abs(n);return a>=1e12?(n/1e12).toFixed(d)+'T':a>=1e9?(n/1e9).toFixed(d)+'B':a>=1e6?(n/1e6).toFixed(d)+'M':a>=1e3?(n/1e3).toFixed(d)+'K':n.toFixed(a<1&&a>0?4:d)};
+const usd=n=>(n<0?'-$':'$')+num(Math.abs(n));
+const price=n=>{n=Number(n);return '$'+(n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:0}):n>=1?n.toFixed(2):n.toPrecision(4))};
+const sgn=(n,f)=>`<span class="${n>=0?'up':'dn'}">${n>=0?'+':''}${f(n)}</span>`;
+const pct=n=>sgn(n,v=>v.toFixed(2)+'%');
+const dfmt=(t,full)=>{const d=new Date(t);return full?d.toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):`${d.getMonth()+1}/${d.getDate()}`};
+const ddate=t=>new Date(t).toLocaleDateString('ko-KR');
+async function j(url,opt){const r=await fetch(url,opt);const t=await r.text();let d;try{d=JSON.parse(t)}catch(e){throw new Error('HTTP '+r.status)}if(!r.ok)throw new Error(d.error?.message||d.error||d.message||d.label||('HTTP '+r.status));return d}
+const empty=(sel,html)=>{$(sel).innerHTML=`<div class="empty">${html}</div>`};
+
+/* chart: series [{pts:[[t,v]],color,name,type:'line'|'bar'}] on one axis */
+function chart(box,series,fmtY,fmtX){
+  box.innerHTML='<svg role="img"></svg><div class="tip"></div>';
+  const s=box.querySelector('svg'),tip=box.querySelector('.tip');
+  const all=series.flatMap(x=>x.pts);if(!all.length){box.innerHTML='<div class="empty">데이터 없음</div>';return}
+  const draw=()=>{
+    const W=s.clientWidth,H=s.clientHeight;if(!W||!H)return;
+    const narrow=W<520,pl=narrow?6:64,pr=10,pt=10,pb=narrow?10:26;
+    const xs=all.map(p=>p[0]),ys=all.map(p=>p[1]);
+    let x0=Math.min(...xs),x1=Math.max(...xs);const hasBar=series.some(x=>x.type==='bar');
+    const step=hasBar&&series[0].pts.length>1?(series[0].pts[1][0]-series[0].pts[0][0]):864e5;if(hasBar){x0-=step/2;x1+=step/2}
+    let y0=Math.min(...ys,hasBar?0:Infinity),y1=Math.max(...ys,hasBar?0:-Infinity);const pad=(y1-y0)*.08||1;y0-=pad;y1+=pad;
+    const X=x=>pl+(x-x0)/(x1-x0||1)*(W-pl-pr),Y=y=>pt+(1-(y-y0)/(y1-y0))*(H-pt-pb);
+    let g='';
+    if(!narrow){for(let i=0;i<=4;i++){const v=y0+(y1-y0)*i/4,y=Y(v);g+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-8}" y="${y+4}" text-anchor="end" font-size="12" fill="var(--mute)">${esc(fmtY(v))}</text>`}
+      for(let i=0;i<=4;i++){const v=x0+(x1-x0)*i/4;g+=`<text x="${X(v)}" y="${H-5}" text-anchor="${i==0?'start':i==4?'end':'middle'}" font-size="12" fill="var(--mute)">${esc(fmtX(v))}</text>`}}
+    if(y0<0&&y1>0)g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--mute)" stroke-width="1"/>`;
+    for(const sr of series){
+      if(sr.type==='bar'){const bw=Math.max(1,(X(x0+step)-X(x0))*.7);
+        g+=sr.pts.map(p=>{const y=Y(Math.max(p[1],0)),h=Math.abs(Y(p[1])-Y(0));return `<rect x="${(X(p[0])-bw/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h,0.5).toFixed(1)}" rx="${Math.min(2,bw/2)}" fill="${sr.color}"/>`}).join('')}
+      else{const d=sr.pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)).join('');
+        if(sr.area){const b=Y(Math.max(y0,Math.min(0,y1)));g+=`<path d="${d}L${X(sr.pts.at(-1)[0])},${b}L${X(sr.pts[0][0])},${b}Z" fill="${sr.color}" opacity=".12"/>`}
+        g+=`<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2" stroke-linejoin="round"/>`;
+        if(sr.mark){const m=sr.mark;g+=`<line x1="${X(m)}" x2="${X(m)}" y1="${pt}" y2="${H-pb}" stroke="var(--ink)" stroke-dasharray="3 3" opacity=".5"/><text x="${X(m)+4}" y="${pt+12}" font-size="12" fill="var(--mute)">오늘</text>`}}
+    }
+    g+=`<line class="cx" y1="${pt}" y2="${H-pb}" stroke="var(--ink)" opacity="0"/>`;
+    s.innerHTML=g;
+    const base=series[0].pts;
+    s.onpointermove=e=>{const r=s.getBoundingClientRect(),mx=e.clientX-r.left;let b=0,bd=1e18;base.forEach((p,i)=>{const d=Math.abs(X(p[0])-mx);if(d<bd){bd=d;b=i}});
+      const t=base[b][0],px=X(t);const cx=s.querySelector('.cx');cx.setAttribute('x1',px);cx.setAttribute('x2',px);cx.setAttribute('opacity',.3);
+      const vals=series.map(sr=>{const p=sr.pts.find(q=>q[0]===t);return p?(series.length>1?sr.name+' ':'')+fmtY(p[1],true):''}).filter(Boolean).join(' · ');
+      tip.style.display='block';tip.style.left=Math.min(Math.max(px,90),W-90)+'px';tip.style.top=(e.clientY-r.top)+'px';tip.textContent=fmtX(t,true)+' · '+vals};
+    s.onpointerleave=()=>{tip.style.display='none';s.querySelector('.cx')?.setAttribute('opacity',0)};
+  };
+  if(box._ro)box._ro.disconnect();box._ro=new ResizeObserver(draw);box._ro.observe(s);draw();
+}
+
+/* state */
+let C=null;
+let TF=store.get('tf')||'1h';
+const TFS=[['5m','5분'],['15m','15분'],['1h','1시간'],['4h','4시간'],['1d','1일']];
+const renderTF=()=>{$('#tf').innerHTML=TFS.map(([v,l])=>`<button type="button" data-tf="${v}" aria-pressed="${v===TF}">${l}</button>`).join('')};
+renderTF();
+$('#tf').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;TF=b.dataset.tf;store.set('tf',TF);renderTF();if(C)loadCVD()});
+
+/* coin lookup via CoinGecko */
+async function findCoin(q){
+  const s=await j('https://api.coingecko.com/api/v3/search?query='+encodeURIComponent(q));
+  const qq=q.trim().toLowerCase();
+  const list=s.coins||[];if(!list.length)throw new Error('코인을 찾지 못했어요');
+  const exact=list.filter(c=>c.symbol.toLowerCase()===qq).sort((a,b)=>(a.market_cap_rank||1e9)-(b.market_cap_rank||1e9));
+  const pick=exact[0]||list.find(c=>c.id===qq||c.name.toLowerCase()===qq)||list[0];
+  const d=await j(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(pick.id)}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`);
+  const m=d.market_data||{};const dp=d.detail_platforms||{};
+  return {id:d.id,sym:(d.symbol||'').toUpperCase(),name:d.name,price:m.current_price?.usd,chg:m.price_change_percentage_24h,mcap:m.market_cap?.usd,fdv:m.fully_diluted_valuation?.usd,circ:m.circulating_supply,max:m.max_supply||m.total_supply,
+    eth:d.id==='ethereum'?'native':(d.platforms?.ethereum||''),decimals:dp.ethereum?.decimal_place??18,platforms:d.platforms||{}};
+}
+
+async function loadCoin(q){
+  $('#stamp').textContent='불러오는 중…';
+  try{C=await findCoin(q)}catch(e){$('#stamp').textContent='조회 실패: '+e.message;return}
+  store.set('coin',C.sym);try{history.replaceState(null,'','#'+C.sym.replace(/[^A-Za-z0-9-]/g,''))}catch(e){}
+  document.title=C.sym+' · 온체인 데스크';
+  $('#cname').innerHTML=`<em>${esc(C.name)}</em> <span style="font-size:.45em;color:var(--mute)">${esc(C.sym)}</span>`;
+  $('#cpx').textContent=C.price!=null?price(C.price):'';
+  $('#cch').innerHTML=C.chg!=null?pct(C.chg)+' <span class="sub">24시간</span>':'';
+  const chainNames=Object.keys(C.platforms).filter(k=>k&&C.platforms[k]).slice(0,4).join(', ');
+  $('#cinfo').innerHTML=[C.mcap&&`<span>시총 <b>${usd(C.mcap)}</b></span>`,C.fdv&&`<span>FDV <b>${usd(C.fdv)}</b></span>`,C.circ&&C.max&&`<span>유통 <b>${(C.circ/C.max*100).toFixed(1)}%</b></span>`,chainNames&&`<span>체인 <b>${esc(chainNames)}</b></span>`].filter(Boolean).join('');
+  if(CH)CH.destroy();CH=null;$('#f-chart').innerHTML='';OD.mountChart($('#f-chart'),C.sym,{links:false}).then(c=>CH=c).catch(e=>{$('#f-chart').innerHTML=`<div class="empty">차트를 불러오지 못했어요: ${esc(e.message)}</div>`});
+  await Promise.allSettled([loadCVD(),loadUnlock(),loadHolders(),showFlowCache()]);
+  $('#stamp').textContent='마지막 갱신 '+new Date().toLocaleString('ko-KR');
+}
+
+/* CVD from Gate futures contract_stats */
+async function loadCVD(){
+  const box=$('#f-cvd');box.innerHTML='<div class="empty">불러오는 중…</div>';$('#cvdk').innerHTML='';
+  const ct=C.sym+'_USDT';
+  try{
+    const [info,st]=await Promise.all([j('https://api.gateio.ws/api/v4/futures/usdt/contracts/'+ct),j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${ct}&interval=${TF}&limit=200`)]);
+    const mult=Number(info.quanto_multiplier)||1;
+    if(!st.length)throw new Error('데이터 없음');
+    let cum=0;const pts=[];let liqL=0,liqS=0;
+    for(const r of st){cum+=((r.long_taker_size||0)-(r.short_taker_size||0))*mult;pts.push([r.time*1000,cum]);liqL+=r.long_liq_usd||0;liqS+=r.short_liq_usd||0}
+    chart(box,[{pts,color:'var(--acc)',name:'CVD',area:true}],(v,f)=>num(v)+(f?' '+C.sym:''),dfmt);
+    const a=st[0],z=st.at(-1),mp=Number(z.mark_price)||C.price||0;
+    const oiChg=a.open_interest_usd?(z.open_interest_usd/a.open_interest_usd-1)*100:0;
+    const fr=Number(z.last_funding_rate||0)*100;
+    $('#cvdk').innerHTML=[
+      ['구간 순체결',sgn(cum,v=>num(v))+` <span class="sub">${esc(C.sym)}</span>`],
+      ['순체결 (USD 환산)',sgn(cum*mp,usd)],
+      ['미결제약정',usd(z.open_interest_usd||0)+` <span class="sub">${oiChg>=0?'+':''}${oiChg.toFixed(1)}%</span>`],
+      ['펀딩비',sgn(fr,v=>v.toFixed(4)+'%')],
+      ['롱 청산 합계',usd(liqL)],['숏 청산 합계',usd(liqS)],
+      ['상위 트레이더 롱/숏',Number(z.top_lsr_size||0).toFixed(2)]
+    ].map(([l,v])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+  }catch(e){empty('#f-cvd',`Gate.io에 ${esc(C.sym)}_USDT 선물이 없거나 불러오지 못했어요 (${esc(e.message)})`)}
+}
+
+let CH=null;
+
+/* unlocks via DefiLlama datasets */
+let llamaList=null;
+async function findUnlock(){
+  if(!llamaList)llamaList=await j('https://defillama-datasets.llama.fi/emissionsBreakdown').catch(()=>({}));
+  const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const keys=Object.keys(llamaList),id=norm(C.id),nm=norm(C.name);
+  const addrs=Object.values(C.platforms||{}).filter(Boolean).map(a=>String(a).toLowerCase());
+  const cands=[...new Set([C.id,...keys.filter(k=>norm(llamaList[k].name)===nm),...keys.filter(k=>{const n=norm(k);return n.startsWith(id)||n.startsWith(nm)})])].slice(0,5);
+  for(const slug of cands){
+    try{const e=await j('https://defillama-datasets.llama.fi/emissions/'+encodeURIComponent(slug));
+      if(!e.documentedData?.data?.length)continue;
+      const tok=String(e.metadata?.token||'').toLowerCase();
+      if(tok&&addrs.length&&!addrs.some(a=>tok.includes(a))&&slug!==C.id)continue;
+      return e}catch(er){}
+  }
+  return null;
+}
+async function loadUnlock(){
+  empty('#unlock','불러오는 중…');
+  try{
+    const e=await findUnlock();
+    if(!e){empty('#unlock',`DefiLlama에 ${esc(C.name)} 언락 데이터가 없어요. 언락이 없거나 아직 등록되지 않은 토큰입니다.`);return}
+    const now=Date.now()/1000;
+    const series=e.documentedData?.data||[];
+    const totals=new Map();for(const s of series)for(const p of s.data)totals.set(p.timestamp,(totals.get(p.timestamp)||0)+(p.unlocked||0));
+    const tl=[...totals.entries()].sort((a,b)=>a[0]-b[0]);
+    if(!tl.length)throw new Error('일정 데이터 없음');
+    const at=t=>{let v=0;for(const [ts,u] of tl){if(ts<=t)v=u;else break}return v};
+    const cur=at(now),in30=at(now+30*86400)-cur,in90=at(now+90*86400)-cur;
+    const maxS=e.supplyMetrics?.maxSupply||C.max||tl.at(-1)[1]||0;
+    const evs=(e.metadata?.events||[]).filter(v=>v.timestamp>now).sort((a,b)=>a.timestamp-b.timestamp).slice(0,8);
+    const txt=v=>esc(v.description||'').replace(/\{tokens\[(\d+)\]\}/g,(_,i)=>esc(num(v.noOfTokens?.[i]||0)+' '+C.sym)).replace('{timestamp}',esc(ddate(v.timestamp*1000)));
+    const pv=n=>C.price?` · ${usd(n*C.price)}`:'';
+    const pc=n=>C.circ?(n/C.circ*100).toFixed(2)+'% of 유통':'';
+    $('#unlock').innerHTML=`<div class="kpis" style="margin-top:0">
+      <div class="kpi"><div class="l">현재 언락 비율</div><div class="v">${maxS?(cur/maxS*100).toFixed(1)+'%':'–'}</div></div>
+      <div class="kpi"><div class="l">30일 내 언락</div><div class="v">${num(in30)}</div><div class="sub">${pc(in30)}${pv(in30)}</div></div>
+      <div class="kpi"><div class="l">90일 내 언락</div><div class="v">${num(in90)}</div><div class="sub">${pc(in90)}${pv(in90)}</div></div></div>
+      <div class="fig sm" id="f-unlock" style="margin-top:12px"></div>
+      <h3 style="font-size:16px;margin:14px 0 4px">다가오는 이벤트</h3>
+      ${evs.length?`<ul class="ev">${evs.map(v=>`<li><time>${esc(ddate(v.timestamp*1000))}</time><span>${txt(v)}</span></li>`).join('')}</ul>`:'<p class="err">예정된 이벤트 없음</p>'}`;
+    const k=Math.ceil(tl.length/300);
+    const pts=tl.filter((p,i)=>i%k===0||i===tl.length-1).map(p=>[p[0]*1000,p[1]]);
+    chart($('#f-unlock'),[{pts,color:'var(--acc)',name:'누적 언락',area:true,mark:now*1000}],(v,f)=>num(v)+(f?' '+C.sym:''),(t,f)=>f?ddate(t):String(new Date(t).getFullYear()));
+  }catch(er){empty('#unlock','언락 데이터를 불러오지 못했어요: '+esc(er.message))}
+}
+
+/* top holders via Ethplorer */
+async function loadHolders(){
+  if(!C.eth||C.eth==='native'){empty('#holders',`${esc(C.name)}은(는) 이더리움 메인넷 토큰이 아니라 지금은 보유자 조회가 안 돼요. 솔라나 등은 Helius 키를 연결하면 추가할 수 있어요.`);return}
+  empty('#holders','불러오는 중…');
+  const key=store.get('k-ethp')||'freekey';
+  try{
+    const d=await j(`https://api.ethplorer.io/getTopTokenHolders/${encodeURIComponent(C.eth)}?apiKey=${encodeURIComponent(key)}&limit=20`);
+    const hs=d.holders||[];if(!hs.length)throw new Error('보유자 없음');
+    const mx=hs[0].share||1;
+    $('#holders').innerHTML=`<div class="scroll"><table><thead><tr><th class="l">#</th><th class="l">주소</th><th>보유량</th><th>가치</th><th>비중</th><th class="l" style="width:28%"></th></tr></thead><tbody>${
+      hs.map((h,i)=>{const amt=Number(h.rawBalance||h.balance)/10**C.decimals;const a=String(h.address).toLowerCase().replace(/[^0-9a-fx]/g,'');
+      return `<tr><td class="l">${i+1}</td><td class="l"><a class="addr" href="https://intel.arkm.com/explorer/address/${a}" target="_blank" rel="noopener">${a.slice(0,8)}…${a.slice(-6)}</a> <a class="sub" href="https://etherscan.io/address/${a}" target="_blank" rel="noopener">etherscan</a></td><td>${num(amt)}</td><td>${C.price?usd(amt*C.price):''}</td><td>${Number(h.share).toFixed(2)}%</td><td class="l"><div class="meter" style="width:${(h.share/mx*100).toFixed(1)}%"></div></td></tr>`}).join('')}</tbody></table></div>`;
+  }catch(er){empty('#holders','보유자를 불러오지 못했어요: '+esc(er.message)+(key==='freekey'?' · 무료 공용 키라 제한에 걸렸을 수 있어요. 아래에서 Ethplorer 키를 넣어보세요.':''))}
+}
+
+/* exchange flows via Dune */
+const DUNE_CHAIN={'ethereum':'ethereum','arbitrum-one':'arbitrum','base':'base','binance-smart-chain':'bnb','polygon-pos':'polygon','optimistic-ethereum':'optimism','avalanche':'avalanche_c'};
+function flowTarget(){
+  if(C.id==='ethereum')return{chain:'ethereum',native:true};
+  for(const [p,ch] of Object.entries(DUNE_CHAIN)){const a=C.platforms[p];if(a&&/^0x[0-9a-fA-F]{40}$/.test(a))return{chain:ch,addr:a.toLowerCase()}}
+  return null;
+}
+function flowSQL(t){
+  const tok=t.native?"token_standard = 'native'":`contract_address = ${t.addr}`;
+  return `WITH cex AS (SELECT address, max(cex_name) AS cex_name FROM cex.addresses WHERE blockchain = '${t.chain}' GROUP BY 1),
+t AS (SELECT block_time, "from", "to", amount, amount_usd FROM tokens.transfers
+  WHERE blockchain = '${t.chain}' AND ${tok} AND block_date >= current_date - interval '30' day)
+SELECT date_trunc('day', t.block_time) AS day, coalesce(ci.cex_name, co.cex_name) AS cex,
+  sum(CASE WHEN ci.address IS NOT NULL AND co.address IS NULL THEN amount ELSE 0 END) AS inflow,
+  sum(CASE WHEN co.address IS NOT NULL AND ci.address IS NULL THEN amount ELSE 0 END) AS outflow
+FROM t LEFT JOIN cex ci ON t."to" = ci.address LEFT JOIN cex co ON t."from" = co.address
+WHERE ci.address IS NOT NULL OR co.address IS NOT NULL
+GROUP BY 1, 2 ORDER BY 1`;
+}
+const flowKey=t=>'flow:'+t.chain+':'+(t.native?'native':t.addr);
+function renderFlow(rows,ts){
+  const days=new Map(),ex=new Map();
+  for(const r of rows){const d=Date.parse(String(r.day).replace(' UTC','Z').replace(' ','T'));const i=Number(r.inflow)||0,o=Number(r.outflow)||0;
+    const x=days.get(d)||{i:0,o:0};x.i+=i;x.o+=o;days.set(d,x);
+    const e=ex.get(r.cex)||{i:0,o:0};e.i+=i;e.o+=o;ex.set(r.cex,e)}
+  const ds=[...days.entries()].filter(d=>!isNaN(d[0])).sort((a,b)=>a[0]-b[0]);
+  if(!ds.length){$('#flow').innerHTML='<div class="empty">최근 30일 거래소 지갑과의 이동이 없어요.</div>';return}
+  const ti=ds.reduce((s,d)=>s+d[1].i,0),to=ds.reduce((s,d)=>s+d[1].o,0),net=ti-to;
+  const n7=ds.filter(d=>d[0]>=Date.now()-7*864e5).reduce((s,d)=>s+d[1].i-d[1].o,0);
+  const exs=[...ex.entries()].sort((a,b)=>(b[1].i+b[1].o)-(a[1].i+a[1].o)).slice(0,10);
+  const P=C.price||0;
+  $('#flow').innerHTML=`<div class="kpis" style="margin-top:0">
+    <div class="kpi"><div class="l">30일 순유입</div><div class="v">${sgn(net,v=>num(v))}</div><div class="sub">${P?usd(net*P):''}</div></div>
+    <div class="kpi"><div class="l">7일 순유입</div><div class="v">${sgn(n7,v=>num(v))}</div><div class="sub">${P?usd(n7*P):''}</div></div>
+    <div class="kpi"><div class="l">30일 유입 / 유출</div><div class="v" style="font-size:20px">${num(ti)} / ${num(to)}</div></div></div>
+    <div class="legend" style="margin-top:10px"><span><i style="background:var(--acc)"></i>거래소로 유입</span><span><i style="background:var(--blue)"></i>거래소에서 유출</span></div>
+    <div class="fig sm" id="f-flow"></div>
+    <div class="scroll"><table><thead><tr><th class="l">거래소</th><th>유입</th><th>유출</th><th>순유입</th></tr></thead><tbody>${
+      exs.map(([n,v])=>`<tr><td class="l">${esc(n)}</td><td>${num(v.i)}</td><td>${num(v.o)}</td><td>${sgn(v.i-v.o,x=>num(x))}</td></tr>`).join('')}</tbody></table></div>
+    <p class="sub">${esc(C.sym)} 수량 기준 · 계산 시각 ${esc(new Date(ts).toLocaleString('ko-KR'))}</p>`;
+  chart($('#f-flow'),[{type:'bar',name:'유입',color:'var(--acc)',pts:ds.map(d=>[d[0],d[1].i])},{type:'bar',name:'유출',color:'var(--blue)',pts:ds.map(d=>[d[0],-d[1].o])}],(v,f)=>num(Math.abs(v))+(f?' '+C.sym:''),(t,f)=>f?ddate(t):dfmt(t));
+}
+async function showFlowCache(){
+  const t=flowTarget();
+  if(!t){empty('#flow',`${esc(C.name)}은(는) Dune에서 추적할 수 있는 EVM 토큰 주소가 없어요. (BTC·솔라나 계열은 추후 추가)`);$('#flowbtn').hidden=true;return}
+  $('#flowbtn').hidden=false;
+  try{const c=JSON.parse(store.get(flowKey(t))||'null');if(c){renderFlow(c.rows,c.ts);return}}catch(e){}
+  empty('#flow',store.get('k-dune')?`<b>Dune으로 계산</b>을 누르면 최근 30일 ${esc(t.chain)} 체인의 거래소 유입·유출을 계산해요. 30초~2분 걸리고 무료 크레딧을 조금 씁니다.`:'아래 <b>API 키 설정</b>에서 Dune 키를 넣으면 볼 수 있어요.');
+}
+$('#flowbtn').addEventListener('click',async e=>{
+  const b=e.currentTarget;if(!C)return;const t=flowTarget();if(!t)return;
+  const key=store.get('k-dune');if(!key){$('#keys').open=true;$('#k-dune').focus();return}
+  b.disabled=true;const H={'X-Dune-Api-Key':key};
+  try{
+    empty('#flow','Dune에 쿼리를 보내는 중…');
+    const ex=await j('https://api.dune.com/api/v1/sql/execute',{method:'POST',headers:{...H,'Content-Type':'application/json'},body:JSON.stringify({sql:flowSQL(t),performance:'medium'})});
+    const id=ex.execution_id;let st='',n=0;
+    while(n++<100){await new Promise(r=>setTimeout(r,3000));const s=await j(`https://api.dune.com/api/v1/execution/${encodeURIComponent(id)}/status`,{headers:H});st=s.state||'';
+      empty('#flow',`Dune 계산 중… ${n*3}초`);
+      if(st==='QUERY_STATE_COMPLETED')break;if(/FAILED|CANCELLED|EXPIRED/.test(st))throw new Error(s.error?.message||st)}
+    if(st!=='QUERY_STATE_COMPLETED')throw new Error('시간 초과');
+    const res=await j(`https://api.dune.com/api/v1/execution/${encodeURIComponent(id)}/results?limit=5000`,{headers:H});
+    const rows=res.result?.rows||[],ts=Date.now();
+    store.set(flowKey(t),JSON.stringify({rows,ts}));renderFlow(rows,ts);
+  }catch(er){empty('#flow','Dune 계산 실패: '+esc(er.message))}
+  finally{b.disabled=false}
+});
+
+/* keys */
+$('#k-dune').value=store.get('k-dune')||'';$('#k-ethp').value=store.get('k-ethp')||'';
+$('#keyform').addEventListener('submit',e=>{e.preventDefault();store.set('k-dune',$('#k-dune').value.trim());store.set('k-ethp',$('#k-ethp').value.trim());$('#keymsg').textContent='저장했어요';if(C){showFlowCache();loadHolders()}});
+$('#gokeys').addEventListener('click',()=>{$('#keys').open=true;$('#keys').scrollIntoView({behavior:'smooth'})});
+$('#search').addEventListener('submit',e=>{e.preventDefault();const q=$('#q').value.trim();if(q)loadCoin(q)});
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h&&(!C||h!==C.sym))loadCoin(h)});
+const start=decodeURIComponent(location.hash.slice(1))||store.get('coin')||'ARB';$('#q').value=start;loadCoin(start);
+}
+</script>
+</body>
+</html>

@@ -70,8 +70,8 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 <body>
 <nav class="top"><div class="band">
   <div class="brand"><em>Onchain</em> Desk</div>
-  <a href="./">코인 분석</a>
-  <a href="./setup.html">급등 준비</a>
+  <a href="./">급등 준비</a>
+  <a href="./coin.html">코인 분석</a>
   <a href="./watch.html">호가 감시</a>
   <a href="./scan.html" aria-current="page">스캐너</a>
   <a href="./liq.html">실시간 청산</a>
@@ -160,7 +160,7 @@ function render(){
   $('#chips').innerHTML=`<button class="chip" data-s="" aria-pressed="${!fSig}">전체<b>${KD.length}</b></button>`+Object.entries(SIG).map(([k,s])=>`<button class="chip" data-s="${k}" aria-pressed="${fSig===k}">${s.n}<b>${cnt[k]||0}</b></button>`).join('');
   const f=KD.filter(d=>d.score>=MINSC&&(!fSig||d.tags.includes(fSig)));
   f.sort((a,b)=>sortK==='sym'?sortD*a.sym.localeCompare(b.sym):sortD*((a[sortK]??-1e18)-(b[sortK]??-1e18)));
-  $('#rows').innerHTML=f.length?f.map((d,i)=>`<tr data-s="${esc(d.base)}" data-k="${esc(d.kind)}"><td class="l sym"><a href="./#${encodeURIComponent(d.base)}">${esc(d.base)}</a><span class="kb">${esc(d.kind)}</span></td><td class="hide-sm">${px(d.p)}</td><td>${pc(d.c24)}</td><td>${pc(d.c1)}</td><td class="hide-sm">${pc(d.rs)}</td><td>${d.vx!=null?d.vx.toFixed(1)+'x':'–'}</td><td>${pc(d.fr,3)}</td><td class="hide-sm">${pc(d.doi,1)}</td><td>${d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–'}</td><td><span class="score"><i style="width:${(d.score*.5).toFixed(0)}px"></i>${d.score}</span></td><td class="tags">${d.tags.map(t=>`<span class="tag ${SIG[t].b>0?'b':SIG[t].b<0?'s':''}">${SIG[t].n}</span>`).join('')}</td></tr>`).join(''):`<tr><td colspan="11" class="l tags">${DATA.length?'조건에 맞는 종목이 없어요.':'스캔 대기 중…'}</td></tr>`;
+  $('#rows').innerHTML=f.length?f.map((d,i)=>`<tr data-s="${esc(d.base)}" data-k="${esc(d.kind)}"><td class="l sym"><a href="./coin.html#${encodeURIComponent(d.base)}">${esc(d.base)}</a><span class="kb">${esc(d.kind)}</span></td><td class="hide-sm">${px(d.p)}</td><td>${pc(d.c24)}</td><td>${pc(d.c1)}</td><td class="hide-sm">${pc(d.rs)}</td><td>${d.vx!=null?d.vx.toFixed(1)+'x':'–'}</td><td>${pc(d.fr,3)}</td><td class="hide-sm">${pc(d.doi,1)}</td><td>${d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–'}</td><td><span class="score"><i style="width:${(d.score*.5).toFixed(0)}px"></i>${d.score}</span></td><td class="tags">${d.tags.map(t=>`<span class="tag ${SIG[t].b>0?'b':SIG[t].b<0?'s':''}">${SIG[t].n}</span>`).join('')}</td></tr>`).join(''):`<tr><td colspan="11" class="l tags">${DATA.length?'조건에 맞는 종목이 없어요.':'스캔 대기 중…'}</td></tr>`;
 }
 $('#chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;fSig=b.dataset.s;render()});
 
