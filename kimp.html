@@ -61,6 +61,13 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 .arow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
 .arow label{width:11em;font-size:14px}
 .arow input,.arow select{flex:1 1 200px;max-width:320px}
+td.ws{white-space:nowrap}
+.wx{display:inline-flex;align-items:center;gap:2px;margin-left:8px;font-size:11px;color:var(--mute);font-family:var(--sans)}
+.wx:first-child{margin-left:0}
+.wx i{font-style:normal;display:inline-grid;place-items:center;width:18px;height:18px;font-size:11px;color:#fff;border-radius:2px}
+.wx i.ok{background:#2e9b5f}.wx i.no{background:#d23b3b}.wx i.na{background:transparent;color:var(--mute);border:1px dashed var(--line)}
+tr.lock td:first-child{box-shadow:inset 3px 0 0 #d23b3b}
+.wleg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--mute);margin:8px 0 0;align-items:center}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;font-weight:600;display:none;z-index:9;max-width:92vw}
 @media(max-width:600px){table{font-size:13px}th,td{padding:6px}.arow label{width:100%}.hide-sm{display:none}}
 </style>
@@ -103,7 +110,8 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
       <div class="seg" id="kmin"></div>
       <label class="sub" style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="usdt" style="min-height:auto;width:18px;height:18px"> 테더 가격 기준으로 계산</label>
     </div>
-    <div class="tbl"><table><thead><tr id="hd"></tr></thead><tbody id="rows"><tr><td colspan="7" class="l nm">불러오는 중…</td></tr></tbody></table></div>
+    <div class="tbl"><table><thead><tr id="hd"></tr></thead><tbody id="rows"><tr><td colspan="8" class="l nm">불러오는 중…</td></tr></tbody></table></div>
+    <div class="wleg"><span>입출금:</span><span class="wx">업<i class="ok">입</i><i class="no">출</i></span> 순서로 업비트·빗썸·게이트(해외) <span class="wx"><i class="ok">입</i></span>가능 <span class="wx"><i class="no">입</i></span>막힘 <span class="wx"><i class="na">?</i></span>정보 없음 · 5분마다 갱신 <span id="wst"></span></div>
     <p class="sub">김프 = 국내 원화 가격 ÷ (해외 USDT 가격 × 환율) − 1. 환율 기준이 기본이고, 체크하면 업비트 테더(USDT) 가격으로 환산해요. 같은 심볼이 다른 코인인 경우가 있어 ±40%가 넘는 값은 숨겨요.</p>
   </div>
 </section>
@@ -117,7 +125,16 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
       <div class="arow"><label for="a-vol">업비트 거래대금 최소</label><select id="a-vol"><option value="0">제한 없음</option><option value="1e9">10억원</option><option value="1e10">100억원</option><option value="1e11">1000억원</option></select></div>
       <div class="arow"><span style="width:11em"></span><button type="submit">저장하고 켜기</button><span class="sub" id="amsg"></span></div>
     </form>
-    <p class="sub">페이지가 열려 있는 동안만 알려요. 같은 코인은 10분에 한 번만 울려요.</p>
+    <p class="sub">페이지가 열려 있는 동안만 알려요. 같은 코인은 10분에 한 번만 울려요. 입출금이 막힌 코인은 알림에 같이 표시돼요.</p>
+  </details>
+  <details id="upk" style="margin-top:12px">
+    <summary>업비트 입출금 상태 보기 (API 키 필요)</summary>
+    <p class="sub">빗썸·게이트는 키 없이 되지만, 업비트는 입출금 상태를 로그인한 키로만 알려줘요. 업비트 → 마이페이지 → Open API 관리에서 '자산조회'만 체크한 키를 만들어 넣으세요. 업비트는 키를 쓸 IP 주소를 등록해야 해서, 지금 쓰는 인터넷의 IP를 등록해야 돼요(폰 데이터처럼 IP가 자주 바뀌면 안 될 수 있어요). 키는 이 기기 브라우저에만 저장돼요.</p>
+    <form id="ukf">
+      <div class="arow"><label for="uk-a">Access key</label><input id="uk-a" autocomplete="off" spellcheck="false"></div>
+      <div class="arow"><label for="uk-s">Secret key</label><input id="uk-s" type="password" autocomplete="off" spellcheck="false"></div>
+      <div class="arow"><span style="width:11em"></span><button type="submit">저장</button><span class="sub" id="ukmsg"></span></div>
+    </form>
   </details>
 </section>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -157,7 +174,7 @@ function rows(){
     out.push({s,n:names[s]||'',up:u.p,g,kimp:k,bk:b!=null&&Math.abs(b)<=40?b:null,c:u.c,v:u.v})}
   return out;
 }
-const COLS=[['s','코인','l'],['up','업비트'],['g','해외 (원화 환산)','hide-sm'],['kimp','업비트 김프'],['bk','빗썸 김프'],['c','24시간','hide-sm'],['v','거래대금']];
+const COLS=[['s','코인','l'],['up','업비트'],['g','해외 (원화 환산)','hide-sm'],['kimp','업비트 김프'],['bk','빗썸 김프'],['ws','입출금'],['c','24시간','hide-sm'],['v','거래대금']];
 function head(){$('#hd').innerHTML=COLS.map(([k,l,c])=>`<th class="${c||''}" data-k="${k}" aria-sort="${sortK===k?(sortD<0?'descending':'ascending'):'none'}" tabindex="0">${l}</th>`).join('')}
 $('#hd').addEventListener('click',e=>{const th=e.target.closest('th');if(!th)return;const k=th.dataset.k;if(sortK===k)sortD=-sortD;else{sortK=k;sortD=k==='s'?1:-1}head();render()});
 let last=[];
@@ -166,7 +183,7 @@ function render(){
   const f=rs.filter(r=>(!q||r.s.includes(q)||r.n.includes(q))&&Math.abs(r.kimp)>=KMIN);
   f.sort((a,b)=>{const x=a[sortK],y=b[sortK];if(sortK==='s')return sortD*String(x).localeCompare(String(y));return sortD*((x??-1e18)-(y??-1e18))});
   const mx=Math.max(1,...f.map(r=>Math.abs(r.kimp)));
-  $('#rows').innerHTML=f.length?f.map(r=>`<tr class="${Math.abs(r.kimp)>=5?'hot':''}"><td class="l nm"><b>${esc(r.s)}</b><small>${esc(r.n)}</small></td><td>${krw(r.up)}</td><td class="hide-sm">${krw(r.g)}</td><td>${kp(r.kimp)}<span class="kbar" style="width:${(Math.abs(r.kimp)/mx*40).toFixed(0)}px;background:${r.kimp>=0?'var(--long)':'var(--blue)'}"></span></td><td>${kp(r.bk)}</td><td class="hide-sm">${kp(r.c)}</td><td>${won(r.v)}</td></tr>`).join(''):'<tr><td colspan="7" class="l nm">조건에 맞는 코인이 없어요.</td></tr>';
+  $('#rows').innerHTML=f.length?f.map(r=>`<tr class="${Math.abs(r.kimp)>=5?'hot':''} ${locked(r.s)?'lock':''}"><td class="l nm"><b>${esc(r.s)}</b><small>${esc(r.n)}</small></td><td>${krw(r.up)}</td><td class="hide-sm">${krw(r.g)}</td><td>${kp(r.kimp)}<span class="kbar" style="width:${(Math.abs(r.kimp)/mx*40).toFixed(0)}px;background:${r.kimp>=0?'var(--long)':'var(--blue)'}"></span></td><td>${kp(r.bk)}</td><td class="ws">${wcell(r.s)}</td><td class="hide-sm">${kp(r.c)}</td><td>${won(r.v)}</td></tr>`).join(''):'<tr><td colspan="8" class="l nm">조건에 맞는 코인이 없어요.</td></tr>';
   // summary
   const btc=rs.find(r=>r.s==='BTC'),eth=rs.find(r=>r.s==='ETH');
   const tk=up.USDT&&FX?(up.USDT.p/FX-1)*100:null;
@@ -219,9 +236,31 @@ let A=JSON.parse(store.get('kimp-alert')||'{"th":0,"coins":"","vol":0}');const f
 $('#a-th').value=String(A.th);$('#a-coins').value=A.coins;$('#a-vol').value=String(A.vol);
 function beep(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=660;g.gain.setValueAtTime(.08,actx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+.4);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.4)}catch(e){}}
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',6000)}
+/* ---- 입출금 상태 ---- */
+const W={up:null,bt:null,gt:null};let wAt=0,wErr='';
+function wcell(sym){const one=(lab,m)=>{const x=m&&m[sym];const c=v=>v==null?'na':v?'ok':'no';
+    return`<span class="wx" title="${lab} 입금 ${x?x.d?'가능':'막힘':'정보 없음'} · 출금 ${x?x.w?'가능':'막힘':'정보 없음'}">${lab[0]}<i class="${c(x?.d)}">입</i><i class="${c(x?.w)}">출</i></span>`};
+  return one('업비트',W.up)+one('빗썸',W.bt)+one('게이트',W.gt)}
+function locked(sym){for(const m of [W.up,W.bt,W.gt]){const x=m&&m[sym];if(x&&(!x.d||!x.w))return true}return false}
+function lockText(sym){const o=[];for(const [l,m] of [['업비트',W.up],['빗썸',W.bt],['게이트',W.gt]]){const x=m&&m[sym];if(!x)continue;const b=[!x.d&&'입금',!x.w&&'출금'].filter(Boolean);if(b.length)o.push(`${l} ${b.join('·')} 막힘`)}return o.join(', ')}
+const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');
+const b64s=t=>b64u(new TextEncoder().encode(t));
+async function upbitJWT(a,sec){const h=b64s(JSON.stringify({alg:'HS256',typ:'JWT'})),p=b64s(JSON.stringify({access_key:a,nonce:crypto.randomUUID()}));
+  const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(sec),{name:'HMAC',hash:'SHA-256'},false,['sign']);const sig=await crypto.subtle.sign('HMAC',k,new TextEncoder().encode(h+'.'+p));return h+'.'+p+'.'+b64u(sig)}
+async function loadWallets(){const errs=[];
+  await Promise.all([
+    (async()=>{try{const d=await j('https://api.bithumb.com/public/assetsstatus/ALL');const m={};for(const [k,v] of Object.entries(d.data||{}))m[k]={d:v.deposit_status==1,w:v.withdrawal_status==1};W.bt=m}catch(e){errs.push('빗썸')}})(),
+    (async()=>{try{const d=await j('https://api.gateio.ws/api/v4/spot/currencies');const m={};for(const c of d){if(c.delisted)continue;const k=c.currency.toUpperCase();if(k.includes('_'))continue;m[k]={d:!c.deposit_disabled,w:!c.withdraw_disabled}}W.gt=m}catch(e){errs.push('게이트')}})(),
+    (async()=>{const a=store.get('uk-a'),sec=store.get('uk-s');if(!a||!sec){W.up=null;return}
+      try{const t=await upbitJWT(a,sec);const r=await fetch('https://api.upbit.com/v1/status/wallet',{headers:{Authorization:'Bearer '+t}});const d=await r.json();if(!r.ok)throw new Error(d.error?.message||('HTTP '+r.status));
+        const m={};for(const x of d){const s=x.wallet_state;m[x.currency]={d:s==='working'||s==='deposit_only',w:s==='working'||s==='withdraw_only'}}W.up=m}catch(e){errs.push('업비트('+e.message+')')}})()]);
+  wAt=Date.now();wErr=errs.join(', ');$('#wst').textContent=`· ${hm(wAt)} 확인`+(wErr?` · 못 받은 곳: ${wErr}`:'')+(W.up?'':' · 업비트는 키를 넣으면 보여요');render()}
+$('#uk-a').value=store.get('uk-a')||'';$('#uk-s').value=store.get('uk-s')||'';
+$('#ukf').addEventListener('submit',async e=>{e.preventDefault();store.set('uk-a',$('#uk-a').value.trim());store.set('uk-s',$('#uk-s').value.trim());$('#ukmsg').textContent='확인 중…';await loadWallets();$('#ukmsg').textContent=W.up?'업비트 입출금 상태를 받았어요':'업비트에서 거절했어요. 키 권한과 등록한 IP를 확인하세요'});
+setTimeout(loadWallets,1500);setInterval(()=>{if(!document.hidden)loadWallets()},300e3);
 function checkAlerts(rs){if(!A.th)return;const w=A.coins?A.coins.toUpperCase().split(/[\s,]+/).filter(Boolean):null;
   for(const r of rs){if(w&&!w.includes(r.s))continue;if(r.v<A.vol)continue;if(Math.abs(r.kimp)<A.th)continue;if(Date.now()-(fired[r.s]||0)<600e3)continue;
-    fired[r.s]=Date.now();const m=`${r.s} 김프 ${r.kimp>=0?'+':''}${r.kimp.toFixed(2)}%`;beep();OD.notify(m,`업비트 ${krw(r.up)}원 · 해외 ${krw(r.g)}원`,{side:r.kimp>=0?'B':'S',href:'./kimp.html'});
+    fired[r.s]=Date.now();const m=`${r.s} 김프 ${r.kimp>=0?'+':''}${r.kimp.toFixed(2)}%`;beep();OD.notify(m,`업비트 ${krw(r.up)}원 · 해외 ${krw(r.g)}원`+(lockText(r.s)?` · ⚠ ${lockText(r.s)}`:''),{side:r.kimp>=0?'B':'S',href:'./kimp.html'});
     if('Notification' in window&&Notification.permission==='granted'){try{new Notification(m,{body:`업비트 ${krw(r.up)}원 · 해외 ${krw(r.g)}원`,tag:'kimp-'+r.s})}catch(e){}}}}
 $('#aform').addEventListener('submit',async e=>{e.preventDefault();A={th:Number($('#a-th').value),coins:$('#a-coins').value.trim(),vol:Number($('#a-vol').value)};store.set('kimp-alert',JSON.stringify(A));
   try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();await actx.resume()}catch(er){}
