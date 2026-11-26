@@ -117,7 +117,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   </details>
 </section>
 
-<script src="./common.js?v=13"></script>
+<script src="./common.js?v=14"></script>
 <script>if(location.hash.length>1)location.replace("./coin.html"+location.hash);</script>
 <script>
 {
@@ -159,7 +159,7 @@ async function run(){
     if(!Object.keys(gm).length){const cs=await j('https://api.gateio.ws/api/v4/futures/usdt/contracts');for(const c of cs)gm[c.name]=Number(c.quanto_multiplier)||1}
     const t=await j('https://api.bybit.com/v5/market/tickers?category=linear');
     const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')).sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,TOPN)
-      .map(x=>({sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),p:+x.lastPrice,c24:+x.price24hPcnt*100,fr:+x.fundingRate*100}));
+      .map(x=>({sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),p:+x.lastPrice,sc:+(x.symbol.match(/^(1000000|10000|1000)/)||[0,1])[1],c24:+x.price24hPcnt*100,fr:+x.fundingRate*100}));
     await OD.loadTypes();for(const d of top)d.kind=OD.kindOf(d.sym);
     DATA=top;
     await pool(top,6,async d=>{
@@ -170,8 +170,8 @@ async function run(){
         hasG?j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`):Promise.reject()]);
       if(oi.status==='fulfilled'){const l=oi.value.result.list;if(l.length>1){const n=+l[0].openInterest,o=+l.at(-1).openInterest;d.doi=o?(n/o-1)*100:null}}
       if(st.status==='fulfilled'&&st.value.length>4){const s=st.value,m=gm[g];let c=0,c4=0;s.slice(-24).forEach((a,i,arr)=>{const v=((a.long_taker_size||0)-(a.short_taker_size||0))*m*(+a.mark_price||0);c+=v;if(i>=arr.length-4)c4+=v});d.cvd=c;d.cvd4=c4;
-        if(cs.status==='fulfilled'&&cs.value.length){const k=clusters(s,cs.value,d.p);d.up=k.up;d.dn=k.dn;
-          const H=Math.max(...cs.value.map(x=>+x.h)),L=Math.min(...cs.value.map(x=>+x.l));d.pos=H>L?(d.p-L)/(H-L):null}}
+        if(cs.status==='fulfilled'&&cs.value.length){const pg=d.p/d.sc,k=clusters(s,cs.value,pg);d.up=k.up;d.dn=k.dn;
+          const H=Math.max(...cs.value.map(x=>+x.h)),L=Math.min(...cs.value.map(x=>+x.l));d.pos=H>L?(pg-L)/(H-L):null}}
       const C=[];
       C[0]=d.doi!=null?(Math.abs(d.c24)<=3&&d.doi>=8):null;
       C[1]=d.fr<0;

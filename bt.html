@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<script>try{const t=localStorage.getItem("od-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>신호 검증 · 온체인 데스크</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{color-scheme:light dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5;overflow-x:clip}
+.band{padding:clamp(14px,2.4vw,32px) max(4vw,14px);max-width:1240px;margin:0 auto}
+h1,h2{margin:0;line-height:1.02}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+button{font:inherit;font-size:15px;min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button[disabled]{opacity:.5;cursor:wait}
+input,select{font:inherit;min-height:44px;padding:0 12px;color:var(--ink);border:1px solid var(--line);background:transparent}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:14px 0 10px}
+.lab{font-size:13px;color:var(--mute);margin-right:4px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:middle}
+th{font-weight:500;color:var(--mute);font-size:13px;position:sticky;top:0;background:var(--bg)}
+td{font-family:var(--mono)}td.l,th.l{text-align:left}td.l{font-family:var(--sans)}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
+details{border:1px solid var(--line);padding:12px 16px;margin-top:18px}
+summary{cursor:pointer;font-weight:600;min-height:28px}
+details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
+.empty{padding:28px 10px;color:var(--mute);text-align:center}
+.prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+button{font:inherit;font-size:16px;min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap}
+button[disabled]{opacity:.5;cursor:wait}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.cdet{margin-top:14px;padding:10px 14px}.cdet summary{font-size:14px}.cdet .conds{margin-top:10px}
+.conds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:1px solid var(--line);border-left:1px solid var(--line);margin-top:16px}
+.conds div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 14px;font-size:14px}
+.conds b{display:block;font-family:var(--sans);font-weight:700;font-size:16px}
+.conds span{color:var(--mute)}
+@media(max-width:700px){.conds{grid-template-columns:1fr}}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:4px 0 10px}
+.lab{font-size:13px;color:var(--mute);margin-right:4px}
+.prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.tbl{max-height:75vh;overflow:auto;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right}
+th{position:sticky;top:0;font-size:12px;color:var(--mute);font-weight:600;z-index:1;font-family:var(--sans)}
+th.l,td.l{text-align:left}
+tbody tr:hover td{background:var(--flash)}
+td.c{text-align:center;font-family:var(--sans);font-size:13px}
+.on{display:inline-block;min-width:3.4em;padding:2px 6px;background:var(--ink);color:var(--bg)}
+.off{display:inline-block;min-width:3.4em;padding:2px 6px;color:var(--mute);border:1px solid var(--line)}
+.na{color:var(--mute)}
+.hit{font-family:var(--mono);font-size:18px}
+.up{color:var(--up)}.dn{color:var(--dn)}
+details{border:1px solid var(--line);padding:12px 16px}
+summary{cursor:pointer;font-weight:600;min-height:28px}
+details p{font-size:14px;color:var(--mute);margin:8px 0 0}
+td{font-family:var(--mono)}td.l{font-family:var(--sans)}
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);margin:12px 0 6px}
+.kp div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 14px}
+.kp small{display:block;font-size:12px;color:var(--mute)}.kp b{font-family:var(--mono);font-weight:400;font-size:20px}
+.kp i{display:block;font-style:normal;font-size:12px;color:var(--mute)}
+h2.s{margin:26px 0 4px}
+p.d{margin:0 0 8px;color:var(--mute);font-size:14px}
+td .wb{display:inline-block;width:70px;height:7px;background:var(--line);vertical-align:middle;margin-left:8px;position:relative}
+td .wb i{position:absolute;left:0;top:0;bottom:0;background:var(--up)}
+td .wb s{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--ink)}
+tr.base td{background:color-mix(in srgb,var(--ink) 5%,transparent)}
+td.l small{color:var(--mute);margin-left:6px;font-size:12px}
+.few{color:var(--mute)}
+.warn{border:1px solid var(--line);padding:10px 14px;font-size:14px;margin:10px 0}
+.ev td{font-size:13px}
+</style>
+<link rel="stylesheet" href="./theme.css?v=15">
+</head>
+<body>
+<nav class="top"><div class="band"></div></nav>
+<header class="band" style="padding-bottom:4px">
+  <h1>신호 검증</h1>
+  <p style="margin:8px 0 0;font-size:15px">급등 준비 조건을 지난 기간에 그대로 적용해서, 신호가 뜬 뒤 실제로 얼마나 올랐는지 확인해요. 충족 개수, CVD 동반 여부, 미결제약정 변화, 무효화 청산에 따라 결과가 어떻게 달라지는지 봐요.</p>
+  <div class="ctl">
+    <span><span class="lab">대상</span><span class="seg" id="topn"></span></span>
+    <span><span class="lab">기간</span><span class="seg" id="days"></span></span>
+    <span><span class="lab">보유</span><span class="seg" id="hz"></span></span>
+    <span><span class="lab">신호 기준</span><span class="seg" id="kmin"></span></span>
+    <button type="button" id="go">검증 시작</button>
+  </div>
+  <div class="prog"><i id="pg"></i></div>
+  <p class="sub" id="stat">검증 시작을 누르면 과거 데이터를 받아 계산해요. 처음엔 1~2분 걸리고, 받은 데이터는 6시간 저장해요.</p>
+</header>
+<section class="band" style="padding-top:0" id="out" hidden>
+  <div class="kp" id="kp"></div>
+  <div class="warn" id="warn"></div>
+
+  <h2 class="s">충족 개수별</h2>
+  <p class="d">조건이 k개 이상 맞는 순간을 신호로 봤을 때의 결과예요. 맨 위 '기준선'은 아무 때나 샀을 때의 결과예요. 기준선보다 나아야 의미가 있어요.</p>
+  <div class="tbl"><table><thead><tr><th class="l">그룹</th><th>신호 수</th><th>승률</th><th>평균 수익</th><th>중앙값</th><th title="보유 기간 안에 +10%가 -5%보다 먼저 온 비율">+10% 먼저</th><th title="보유 중 가장 많이 빠졌던 폭의 평균">평균 최대 하락</th></tr></thead><tbody id="t-hits"></tbody></table></div>
+
+  <h2 class="s">조건별: 있을 때 vs 없을 때</h2>
+  <p class="d">'신호 기준' 이상 충족한 신호만 놓고, 각 조건이 함께 맞았는지에 따라 나눴어요. CVD 동반 효과는 ③ 줄에서 봐요.</p>
+  <div class="tbl"><table><thead><tr><th class="l">조건</th><th>신호 수</th><th>승률</th><th>평균 수익</th><th>중앙값</th><th>+10% 먼저</th><th>평균 최대 하락</th></tr></thead><tbody id="t-cond"></tbody></table></div>
+
+  <h2 class="s">미결제약정 24시간 변화별</h2>
+  <p class="d">신호 시점의 Bybit 미결제약정 24시간 변화로 나눴어요.</p>
+  <div class="tbl"><table><thead><tr><th class="l">미결제약정 변화</th><th>신호 수</th><th>승률</th><th>평균 수익</th><th>중앙값</th><th>+10% 먼저</th><th>평균 최대 하락</th></tr></thead><tbody id="t-oi"></tbody></table></div>
+
+  <h2 class="s">무효화 청산 효과</h2>
+  <p class="d">신호 뒤 조건이 깨지면 바로 판다고 했을 때와, 보유 기간 끝까지 들고 갔을 때를 비교해요. 청산은 그 시간 봉의 종가 기준이에요.</p>
+  <div class="tbl"><table><thead><tr><th class="l">청산 규칙</th><th>신호 수</th><th>승률</th><th>평균 수익</th><th>중앙값</th><th title="보유 기간 끝까지 가기 전에 청산된 비율">중간 청산</th><th>평균 보유</th></tr></thead><tbody id="t-inv"></tbody></table></div>
+
+  <h2 class="s">최근 신호</h2>
+  <p class="d">'신호 기준' 이상으로 뜬 최근 신호 40개예요. 보유 기간이 아직 안 끝난 건 '진행 중'이에요.</p>
+  <div class="tbl" style="max-height:60vh"><table class="ev"><thead><tr><th class="l">시각</th><th class="l">코인</th><th>충족</th><th class="l">조건</th><th>미결제약정 24h</th><th>진입가</th><th>1일</th><th>3일</th><th>7일</th></tr></thead><tbody id="t-ev"></tbody></table></div>
+
+  <details><summary>계산 방법과 한계</summary><ul>
+    <li>조건은 급등 준비 페이지와 같은 출처·같은 기준이에요. ① 가격 24시간 ±3% 안 + Bybit 미결제약정 24시간 +8% 이상, ② 펀딩비 0% 미만, ③ Gate 체결 기준 24시간·4시간 CVD 모두 플러스, ④ 위 +8% 안 숏 청산 추정 물량이 아래 롱 청산의 1.3배 이상(청산 압력 맵과 같은 모델), ⑤ 48시간 고저 범위 아래 40% 안. ⑥ 거래소 순유출은 과거 데이터를 무료로 못 받아서 빠져 있어요.</li>
+    <li>매시 정각마다 점검해서, 충족 개수가 '신호 기준' 이상이 되면 신호로 기록해요. 같은 코인은 24시간 안에 다시 신호로 세지 않아요(같은 상승을 여러 번 세지 않으려고).</li>
+    <li>진입가는 신호 시점 Bybit 1시간 봉 종가, 수익은 보유 기간 뒤 종가 기준이에요. 수수료·슬리피지·펀딩비 지불은 빼지 않았어요.</li>
+    <li>펀딩비는 실시간 예상값 대신 그 시점 직전에 정산된 값을 썼어요.</li>
+    <li><b>생존 편향</b>: 대상은 '지금' 거래대금 상위 코인이에요. 그 사이 상장폐지됐거나 거래가 줄어든 코인은 빠져 있어서, 결과가 실제보다 좋게 나올 수 있어요.</li>
+    <li><b>표본 수</b>: 신호 수가 30개 미만인 줄은 흐리게 표시했어요. 그런 줄은 우연일 가능성이 커요. 과거 결과가 앞으로도 같다는 보장은 없어요.</li>
+    <li>데이터: Bybit(가격·미결제약정·펀딩비), Gate.io(체결 CVD·롱숏 비율·미결제약정 달러값·캔들).</li>
+  </ul></details>
+</section>
+<script src="./common.js?v=14"></script>
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms)),H=3600e3;
+async function j(u){for(let n=0;;n++){const r=await fetch(u);if((r.status===429||r.status>=500)&&n<4){await sleep(1500*(n+1));continue}if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}}
+async function pool(items,n,fn,prog){let i=0,d=0;await Promise.all(Array.from({length:n},async()=>{while(i<items.length){const x=items[i++];try{await fn(x)}catch(e){x.err=e.message}d++;prog&&prog(d,items.length)}}))}
+let TOPN=store.get('bt-top',30),DAYS=store.get('bt-days',90),HZ=store.get('bt-hz',72),KMIN=store.get('bt-k',3);
+function seg(sel,opts,get,set){const el=$(sel),r=()=>{el.innerHTML=opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${v===get()}">${l}</button>`).join('')};r();el.onclick=e=>{const b=e.target.closest('button');if(!b)return;set(+b.dataset.v);r()}}
+seg('#topn',[[30,'상위 30'],[50,'상위 50']],()=>TOPN,v=>{TOPN=v;store.set('bt-top',v)});
+seg('#days',[[30,'30일'],[90,'90일'],[180,'180일']],()=>DAYS,v=>{DAYS=v;store.set('bt-days',v)});
+seg('#hz',[[24,'1일'],[72,'3일'],[168,'7일']],()=>HZ,v=>{HZ=v;store.set('bt-hz',v);if(RES)render()});
+seg('#kmin',[[2,'2개+'],[3,'3개+'],[4,'4개+']],()=>KMIN,v=>{KMIN=v;store.set('bt-k',v);if(RES)render()});
+
+/* ---- 과거 데이터 받기 (코인마다 6시간 저장) ---- */
+async function cached(key,fn){try{const c=await caches.open('od-bt-v1');const h=await c.match(key);if(h){const o=await h.json();if(Date.now()-o.t<6*H)return o.d}
+  const d=await fn();try{await c.put(key,new Response(JSON.stringify({t:Date.now(),d}),{headers:{'content-type':'application/json'}}))}catch(e){}return d}catch(e){return fn()}}
+async function bybitKlines(sym,from,to){const out=new Map();for(let s=from;s<to;s+=1000*H){const r=await j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${sym}&interval=60&start=${s}&end=${Math.min(to,s+1000*H-1)}&limit=1000`);for(const a of r.result.list)out.set(+a[0],[+a[0],+a[1],+a[2],+a[3],+a[4]])}return [...out.values()].sort((a,b)=>a[0]-b[0])}
+async function bybitOI(sym,from,to){const out=new Map();for(let s=from;s<to;s+=200*H){const r=await j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${sym}&intervalTime=1h&startTime=${s}&endTime=${Math.min(to,s+200*H-1)}&limit=200`);for(const a of r.result.list)out.set(+a.timestamp,+a.openInterest)}return [...out.entries()].sort((a,b)=>a[0]-b[0])}
+async function bybitFunding(sym,from,to){const out=new Map();let end=to;for(let n=0;n<60;n++){const r=await j(`https://api.bybit.com/v5/market/funding/history?category=linear&symbol=${sym}&startTime=${from}&endTime=${end}&limit=200`);const l=r.result.list;for(const a of l)out.set(+a.fundingRateTimestamp,+a.fundingRate*100);if(l.length<200)break;const oldest=Math.min(...l.map(a=>+a.fundingRateTimestamp));if(oldest<=from)break;end=oldest-1}return [...out.entries()].sort((a,b)=>a[0]-b[0])}
+async function gateStats(c,from,to){const out=new Map();let s=Math.floor(from/1000);const end=Math.floor(to/1000);while(s<end){const r=await j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${c}&interval=1h&from=${s}&limit=1000`);if(!r.length)break;for(const a of r)out.set(a.time,{time:a.time,oiu:+a.open_interest_usd||0,lsr:+a.lsr_account||1,mp:+a.mark_price||0,lt:+a.long_taker_size||0,stk:+a.short_taker_size||0});const last=r.at(-1).time;if(last<=s||r.length<2)break;s=last+3600}return [...out.values()].sort((a,b)=>a.time-b.time)}
+async function gateCandles(c,from,to){const out=new Map();for(let s=Math.floor(from/1000);s<to/1000;s+=1999*3600){const r=await j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${c}&interval=1h&from=${s}&to=${Math.min(Math.floor(to/1000),s+1999*3600)}`);for(const a of r)out.set(+a.t,{t:+a.t,h:+a.h,l:+a.l})}return [...out.values()].sort((a,b)=>a.t-b.t)}
+
+/* ---- 지금과 같은 청산 추정 모델 ---- */
+const LEV=[[10,.25],[20,.25],[25,.2],[50,.2],[100,.1]],MMR=.005;
+function clusters(st,cs,price){const n=cs.length,smn=new Float64Array(n+1).fill(Infinity),smx=new Float64Array(n+1).fill(-Infinity);
+  for(let k=n-1;k>=0;k--){smn[k]=Math.min(smn[k+1],cs[k].l);smx[k]=Math.max(smx[k+1],cs[k].h)}
+  let up=0,dn=0,ci=0;for(let i=1;i<st.length;i++){const a=st[i],d=a.oiu-st[i-1].oiu;if(d<=0)continue;const p=a.mp;if(!p)continue;
+    while(ci<n&&cs[ci].t<a.time)ci++;const mn=smn[ci],mx=smx[ci],ls=a.lsr/(1+a.lsr);
+    for(const [lev,w] of LEV){const lp=p*(1-1/lev+MMR),sp=p*(1+1/lev-MMR);
+      if(!(mn<=lp)&&lp>=price*.92&&lp<price)dn+=d*ls*w;if(!(mx>=sp)&&sp<=price*1.08&&sp>price)up+=d*(1-ls)*w}}
+  return{up,dn}}
+
+/* ---- 코인 하나: 매시 조건 계산 ---- */
+function series(c,mult){const K=c.k;if(K.length<60)return null;const n=K.length;
+  const oiAt=(()=>{let p=0;return T=>{while(p+1<c.oi.length&&c.oi[p+1][0]<=T)p++;return c.oi[p]&&c.oi[p][0]<=T?c.oi[p][1]:null}})();
+  const oiAt2=(()=>{let p=0;return T=>{while(p+1<c.oi.length&&c.oi[p+1][0]<=T)p++;return c.oi[p]&&c.oi[p][0]<=T?c.oi[p][1]:null}})();
+  let fp=0,sp=0,cp=0;const S=[];
+  for(let i=0;i<n;i++){const T=K[i][0]+H,price=K[i][4];const r={T,price,hi:K[i][2],lo:K[i][3]};S.push(r);if(i<48)continue;
+    r.c24=(price/K[i-24][4]-1)*100;const o=oiAt(T),o0=oiAt2(T-24*H);r.doi=o&&o0?(o/o0-1)*100:null;
+    while(fp+1<c.fr.length&&c.fr[fp+1][0]<=T)fp++;r.fr=c.fr[fp]&&c.fr[fp][0]<=T?c.fr[fp][1]:null;
+    if(c.st&&c.st.length){while(sp<c.st.length&&c.st[sp].time*1000<=T)sp++;
+      if(sp>=24){let s24=0,s4=0;for(let q=sp-24;q<sp;q++){const a=c.st[q],v=(a.lt-a.stk)*mult*a.mp;s24+=v;if(q>=sp-4)s4+=v}r.cvd=s24;r.cvd4=s4}
+      while(cp<c.cs.length&&c.cs[cp].t*1000<T)cp++;
+      if(cp>=48&&sp>=48){const cs=c.cs.slice(cp-48,cp),st=c.st.slice(sp-48,sp);const pg=price/(c.scale||1),k=clusters(st,cs,pg);r.up=k.up;r.dn=k.dn;
+        let Hh=-Infinity,Ll=Infinity;for(const x of cs){if(x.h>Hh)Hh=x.h;if(x.l<Ll)Ll=x.l}r.pos=Hh>Ll?(pg-Ll)/(Hh-Ll):null}}
+    const C=[r.doi!=null?(Math.abs(r.c24)<=3&&r.doi>=8):null,r.fr!=null?r.fr<0:null,r.cvd!=null?(r.cvd>0&&r.cvd4>0):null,r.up!=null?(r.up>0&&r.up>=r.dn*1.3):null,r.pos!=null?r.pos<=.4:null];
+    r.C=C;r.hits=C.filter(x=>x===true).length}
+  return S}
+/* 보유 결과: 수익, 최대 하락, +10%/-5% 중 먼저 */
+function outcome(S,i,h){const e=S[i].price;if(i+h>=S.length)return null;let mae=0,first=null;
+  for(let q=i+1;q<=i+h;q++){const hi=(S[q].hi/e-1)*100,lo=(S[q].lo/e-1)*100;if(lo<mae)mae=lo;if(first==null){if(lo<=-5)first='dn';else if(hi>=10)first='up'}}
+  return{ret:(S[i+h].price/e-1)*100,mae,up10:first==='up'}}
+function exitRule(S,i,h,rule){const e=S[i].price;if(i+h>=S.length)return null;
+  for(let q=i+1;q<=i+h;q++){const r=S[q];let x=false;
+    if(rule==='cvd')x=r.cvd4!=null&&r.cvd4<0;else if(rule==='oi')x=r.doi!=null&&r.doi<0;else if(rule==='hits')x=r.hits<2;else if(rule==='stop')x=(r.lo/e-1)*100<=-5;
+    if(x){const px=rule==='stop'?e*.95:r.price;return{ret:(px/e-1)*100,held:q-i,early:q<i+h}}}
+  return{ret:(S[i+h].price/e-1)*100,held:h,early:false}}
+
+let RES=null;
+async function run(){const b=$('#go');b.disabled=true;$('#pg').style.width='2%';
+  try{$('#stat').textContent='대상 코인 고르는 중…';
+    const [t,gc]=await Promise.all([j('https://api.bybit.com/v5/market/tickers?category=linear'),j('https://api.gateio.ws/api/v4/futures/usdt/contracts')]);
+    const gm={};for(const x of gc)gm[x.name]=+x.quanto_multiplier||1;
+    const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')).sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,TOPN).map(x=>{const m=x.symbol.match(/^(1000000|10000|1000)/);return{sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),scale:m?+m[1]:1}});
+    const to=Math.floor(Date.now()/H)*H,from=to-(DAYS+2)*24*H,tag=`${DAYS}d-${Math.floor(to/(6*H))}`;
+    await pool(top,4,async c=>{const g=c.base+'_USDT',has=!!gm[g];
+      const d=await cached(`https://bt.local/${c.sym}/${tag}`,async()=>{const [k,oi,fr,st,cs]=await Promise.all([bybitKlines(c.sym,from,to),bybitOI(c.sym,from,to),bybitFunding(c.sym,from-3*24*H,to),has?gateStats(g,from,to):[],has?gateCandles(g,from,to):[]]);return{k,oi,fr,st,cs}});
+      Object.assign(c,d);c.S=series(c,gm[g]||1)},(n,m)=>{$('#pg').style.width=(2+n/m*90)+'%';$('#stat').textContent=`과거 데이터 받는 중… ${n}/${m}개 코인`});
+    RES={top:top.filter(c=>c.S),fail:top.filter(c=>!c.S).map(c=>c.base),from,to};$('#pg').style.width='100%';render();$('#out').hidden=false;
+    $('#stat').textContent=`${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} 계산 · ${RES.top.length}개 코인 · 최근 ${DAYS}일`+(RES.fail.length?` · 데이터 부족으로 뺀 코인: ${RES.fail.join(', ')}`:'');
+  }catch(e){$('#stat').textContent='검증 실패: '+e.message}finally{b.disabled=false}}
+$('#go').onclick=run;
+
+/* ---- 집계 ---- */
+const pct=(v,d=1)=>v==null||!isFinite(v)?'–':`<span class="${v>0?'up':v<0?'dn':''}">${v>0?'+':''}${v.toFixed(d)}%</span>`;
+const med=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+function agg(list){const o=list.filter(Boolean);const n=o.length;if(!n)return{n:0};const r=o.map(x=>x.ret);
+  return{n,win:o.filter(x=>x.ret>0).length/n*100,avg:r.reduce((a,b)=>a+b,0)/n,med:med(r),up10:o.some(x=>'up10'in x)?o.filter(x=>x.up10).length/n*100:null,mae:o.some(x=>'mae'in x)?o.reduce((a,x)=>a+x.mae,0)/n:null,early:o.some(x=>'early'in x)?o.filter(x=>x.early).length/n*100:null,held:o.some(x=>'held'in x)?o.reduce((a,x)=>a+x.held,0)/n:null}}
+function row(label,a,base,cls='',extra){const few=a.n<30?' few':'';const bar=a.win!=null?`<span class="wb"><i style="width:${a.win}%"></i>${base?`<s style="left:${base.win}%"></s>`:''}</span>`:'';
+  return`<tr class="${cls}${few}"><td class="l">${label}</td><td>${a.n}</td><td>${a.n?a.win.toFixed(0)+'%':'–'}${a.n?bar:''}</td><td>${pct(a.avg,2)}</td><td>${pct(a.med,2)}</td><td>${extra?extra(a):a.up10!=null?a.up10.toFixed(0)+'%':'–'}</td><td>${extra?(a.held!=null?(a.held/24).toFixed(1)+'일':'–'):a.mae!=null?pct(a.mae,1):'–'}</td></tr>`}
+function render(){if(!RES)return;const h=HZ,start=RES.from+2*24*H;
+  const BASE=[],EVK={};
+  for(const c of RES.top){const S=c.S;for(let i=48;i<S.length;i++)if(S[i].T>=start&&i%24===0){const o=outcome(S,i,h);if(o)BASE.push(o)}}
+  /* 신호 = 충족 개수가 k개 이상이 된 시점 (같은 코인 24시간 안 재신호는 안 셈) */
+  const evs=k=>EVK[k]||(EVK[k]=RES.top.flatMap(c=>{const S=c.S,out=[];let last=-1e9;
+    for(let i=48;i<S.length;i++){if(S[i].T<start)continue;if(S[i].hits>=k&&i-last>=24){last=i;out.push({c,S,i,r:S[i],o:outcome(S,i,h),o1:outcome(S,i,24),o3:outcome(S,i,72),o7:outcome(S,i,168)})}}return out}));
+  const EV=evs(KMIN),K=EV.filter(e=>e.o),base=agg(BASE),kA=agg(K.map(e=>e.o));
+  const hz={24:'1일',72:'3일',168:'7일'}[h];
+  $('#kp').innerHTML=[[`${KMIN}개+ 신호`,EV.length+'개',`보유 끝난 것 ${K.length}개 · ${RES.top.length}개 코인`],[`${KMIN}개+ 신호 승률`,kA.n?kA.win.toFixed(0)+'%':'–',`${kA.n}개 · ${hz} 보유`],[`${KMIN}개+ 평균 수익`,kA.n?(kA.avg>0?'+':'')+kA.avg.toFixed(2)+'%':'–',`중앙값 ${kA.med!=null?(kA.med>0?'+':'')+kA.med.toFixed(2)+'%':'–'}`],['기준선 승률',base.n?base.win.toFixed(0)+'%':'–',`아무 때나 ${hz} 보유 · 평균 ${base.n?(base.avg>0?'+':'')+base.avg.toFixed(2)+'%':'–'}`]].map(([a,b,c])=>`<div><small>${a}</small><b>${b}</b><i>${c}</i></div>`).join('');
+  const edge=kA.n&&base.n?kA.win-base.win:null;
+  $('#warn').innerHTML=kA.n<30?`<b>표본이 적어요.</b> ${KMIN}개+ 신호가 ${kA.n}개뿐이라 결과를 믿기 어려워요. 기간을 늘리거나(180일) 대상을 넓혀(상위 50) 보세요.`:
+    `<b>요약:</b> ${KMIN}개+ 신호는 ${hz} 뒤 승률 ${kA.win.toFixed(0)}%로, 아무 때나 산 기준선(${base.win.toFixed(0)}%)보다 <b>${edge>=0?edge.toFixed(0)+'%p 높았어요':(-edge).toFixed(0)+'%p 낮았어요'}</b>. 평균 수익은 ${kA.avg>0?'+':''}${kA.avg.toFixed(2)}% (기준선 ${base.avg>0?'+':''}${base.avg.toFixed(2)}%). 수수료·생존 편향은 반영 안 됐어요.`;
+  // 충족 개수별
+  $('#t-hits').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+[2,3,4,5].map(k=>row(`${k}개 이상 충족`,agg(evs(k).filter(e=>e.o).map(e=>e.o)),base)).join('');
+  // 조건별
+  const NM=['① 포지션 누적','② 펀딩 음수','③ 체결 매수 우위 (CVD)','④ 상단 숏 클러스터','⑤ 바닥권'];
+  $('#t-cond').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+NM.map((nm,ci)=>row(`${nm} <small>있음</small>`,agg(K.filter(e=>e.r.C[ci]===true).map(e=>e.o)),base)+row(`${nm} <small>없음</small>`,agg(K.filter(e=>e.r.C[ci]===false).map(e=>e.o)),base)).join('');
+  // OI 변화별
+  const OB=[['감소 (0% 미만)',x=>x<0],['0 ~ +8%',x=>x>=0&&x<8],['+8 ~ +20%',x=>x>=8&&x<20],['+20% 이상',x=>x>=20]];
+  $('#t-oi').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+OB.map(([l,f])=>row(l,agg(K.filter(e=>e.r.doi!=null&&f(e.r.doi)).map(e=>e.o)),base)).join('');
+  // 무효화
+  const RU=[['hold','보유 기간 끝까지'],['cvd','4시간 CVD가 마이너스로 바뀌면 청산'],['oi','미결제약정 24h가 감소로 바뀌면 청산'],['hits','충족 개수가 2개 밑으로 떨어지면 청산'],['stop','-5% 손절']];
+  $('#t-inv').innerHTML=RU.map(([k,l])=>{const a=agg(K.map(e=>k==='hold'?(e.o?{ret:e.o.ret,held:h,early:false}:null):exitRule(e.S,e.i,h,k)));return row(l,a,base,'',x=>x.early!=null?x.early.toFixed(0)+'%':'–')}).join('');
+  // 최근 신호
+  const tm=T=>{const d=new Date(T);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}시`};
+  const cf=C=>C.map((v,i)=>v===true?'①②③④⑤'[i]:'').join('');
+  const rs=o=>o?pct(o.ret,1):'<span class="mu">진행 중</span>';
+  $('#t-ev').innerHTML=EV.slice().sort((a,b)=>b.r.T-a.r.T).slice(0,40).map(e=>`<tr><td class="l">${tm(e.r.T)}</td><td class="l">${OD.coinIcon(e.c.base,18)} <a href="./coin.html#${encodeURIComponent(e.c.base)}">${esc(e.c.base)}</a></td><td>${e.r.hits}/5</td><td class="l">${cf(e.r.C)}</td><td>${pct(e.r.doi,1)}</td><td>${e.r.price.toPrecision(5)}</td><td>${rs(e.o1)}</td><td>${rs(e.o3)}</td><td>${rs(e.o7)}</td></tr>`).join('')||'<tr><td colspan="9" class="empty">신호가 없어요</td></tr>';
+}
+}
+</script>
+</body>
+</html>
