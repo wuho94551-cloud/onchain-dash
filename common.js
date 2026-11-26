@@ -50,7 +50,13 @@ const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.par
 function pushHist(a){const h=LS.get('od-alerts',[]);h.unshift(a);LS.set('od-alerts',h.slice(0,50));bellBadge()}
 function bellBadge(){const b=document.getElementById('od-bell');if(!b)return;const seen=LS.get('od-alerts-seen',0),n=LS.get('od-alerts',[]).filter(a=>a.t>seen).length;
   let g=b.querySelector('.badge');if(n){if(!g){g=document.createElement('span');g.className='badge';b.appendChild(g)}g.textContent=n>9?'9+':n}else if(g)g.remove()}
-const shcss=`.od-hist{position:fixed;z-index:65;top:56px;right:12px;width:min(360px,calc(100vw - 24px));max-height:min(520px,75vh);overflow:auto;background:var(--bg);border:1px solid var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.25);font-family:var(--sans);font-size:13px}
+const shcss=`.od-sync{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:12px}
+.od-sync .box{background:var(--bg);color:var(--ink);border:1px solid var(--ink);width:min(460px,100%);padding:14px 16px;font-family:var(--sans);font-size:14px;max-height:90vh;overflow:auto}
+.od-sync header{display:flex;justify-content:space-between;align-items:center}.od-sync header b{font-size:16px}.od-sync header button{background:transparent;color:var(--ink);border:0;min-height:32px;font-size:16px}
+.od-sync p{color:var(--mute);font-size:13px;margin:8px 0}.od-sync .h{display:block;margin:12px 0 6px}
+.od-sync textarea{width:100%;font:12px/1.4 var(--mono);color:var(--ink);background:transparent;border:1px solid var(--line);padding:8px;resize:vertical;word-break:break-all}
+.od-sync button[data-copy],.od-sync button[data-apply]{margin-top:6px;min-height:38px;padding:0 14px}
+.od-hist{position:fixed;z-index:65;top:56px;right:12px;width:min(360px,calc(100vw - 24px));max-height:min(520px,75vh);overflow:auto;background:var(--bg);border:1px solid var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.25);font-family:var(--sans);font-size:13px}
 .od-hist header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg)}
 .od-hist header b{font-size:15px}.od-hist header button{background:transparent;color:var(--mute);border:0;font:inherit;font-size:12px;cursor:pointer;min-height:32px}
 .od-hist a{display:block;padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;border-left:3px solid var(--line)}
@@ -66,8 +72,9 @@ function shellStyle(){if(document.getElementById('od-shcss'))return;const st=doc
 function openHist(){shellStyle();let p=document.querySelector('.od-hist');if(p){p.remove();return}
   const seen=LS.get('od-alerts-seen',0),h=LS.get('od-alerts',[]);p=document.createElement('div');p.className='od-hist';p.setAttribute('role','dialog');p.setAttribute('aria-label','알림 기록');
   const tm=t=>{const d=new Date(t);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
-  p.innerHTML=`<header><b>알림 기록</b><span><a href="./alert.html" style="font-size:12px;color:var(--ink);margin-right:10px">📱 폰 알림 설정</a><button type="button" data-clear>모두 지우기</button></span></header>`+(h.length?h.map(a=>`<a href="${esc(a.href||'#')}" class="${esc(a.side)} ${a.t>seen?'new':''}"><small>${tm(a.t)}${a.from?' · '+esc(a.from):''}</small><b>${esc(a.title)}</b>${a.body?`<p>${esc(a.body)}</p>`:''}</a>`).join(''):'<div class="empty">아직 알림이 없어요. 실시간 청산·김프·호가 감시·급등 준비 페이지가 열려 있을 때 생겨요.</div>');
+  p.innerHTML=`<header><b>알림 기록</b><span><a href="./alert.html" style="font-size:12px;color:var(--ink);margin-right:10px">📱 폰 알림 설정</a><button type="button" data-sync style="margin-right:8px">⇄ 기기 옮기기</button><button type="button" data-clear>모두 지우기</button></span></header>`+(h.length?h.map(a=>`<a href="${esc(a.href||'#')}" class="${esc(a.side)} ${a.t>seen?'new':''}"><small>${tm(a.t)}${a.from?' · '+esc(a.from):''}</small><b>${esc(a.title)}</b>${a.body?`<p>${esc(a.body)}</p>`:''}</a>`).join(''):'<div class="empty">아직 알림이 없어요. 실시간 청산·김프·호가 감시·급등 준비 페이지가 열려 있을 때 생겨요.</div>');
   document.body.appendChild(p);LS.set('od-alerts-seen',Date.now());bellBadge();
+  p.querySelector('[data-sync]').onclick=()=>{p.remove();openSync()};
   p.querySelector('[data-clear]').onclick=()=>{LS.set('od-alerts',[]);p.remove();bellBadge()};
   setTimeout(()=>document.addEventListener('pointerdown',function off(e){if(!p.contains(e.target)&&!e.target.closest('#od-bell')){p.remove();document.removeEventListener('pointerdown',off)}}));
 }
@@ -88,7 +95,8 @@ function coinLinks(host,base,here){shellStyle();const b=encodeURIComponent(base)
 /* ---- 메뉴 도구 (🔔, 테마) ---- */
 function shell(){const t=document.getElementById('od-tools');if(!t||t.dataset.ok)return;t.dataset.ok=1;shellStyle();
   const cur=()=>document.documentElement.dataset.theme||'';
-  t.innerHTML=`<button type="button" id="od-theme" title="화면 테마"></button><button type="button" id="od-bell" title="알림 기록" aria-label="알림 기록">🔔</button>`;
+  t.innerHTML=`<button type="button" id="od-sync" title="다른 기기로 설정 옮기기" aria-label="다른 기기로 설정 옮기기">⇄</button><button type="button" id="od-theme" title="화면 테마"></button><button type="button" id="od-bell" title="알림 기록" aria-label="알림 기록">🔔</button>`;
+  t.querySelector('#od-sync').onclick=openSync;
   const tb=t.querySelector('#od-theme'),paint=()=>{const th=THEMES.find(x=>x[0]===cur())||THEMES[0];tb.textContent=th[1];tb.title='화면 테마: '+th[2]+' (누르면 바뀜)';tb.setAttribute('aria-label',tb.title)};paint();
   tb.onclick=()=>{const i=THEMES.findIndex(x=>x[0]===cur());setTheme(THEMES[(i+1)%THEMES.length][0]);paint()};
   t.querySelector('#od-bell').onclick=openHist;bellBadge();
@@ -101,6 +109,25 @@ function coinIcon(sym,px=20){sym=String(sym||'').toUpperCase().replace(/^1000+/,
   const alt=`https://assets.coincap.io/assets/icons/${encodeURIComponent(sym.toLowerCase())}@2x.png`;
   const first=ICN[sym]||alt;
   return `<img class="od-ic" style="${s}" src="${esc(first)}" alt="" loading="lazy" data-alt="${ICN[sym]?esc(alt):''}" data-b="${esc(t)}" onerror="if(this.dataset.alt){this.src=this.dataset.alt;this.dataset.alt=''}else{const b=document.createElement('span');b.className='od-ic od-icb';b.style.cssText=this.style.cssText+';font-size:${Math.round(px*.38)}px';b.textContent=this.dataset.b;this.replaceWith(b)}">`}
+/* ---- 설정 옮기기: 관심 코인·저장 지갑·알림 조건 등을 코드 한 줄로 내보내고 다른 기기에서 붙여넣기 ----
+   API 키(업비트·Dune 등)와 캐시·알림 기록은 넣지 않아요 */
+const SKIP=/^(cg:|k-|uk-|od-alerts?$|od-alerts-seen$|kimp-names$|od-icons$)/;
+function syncKeys(){const o={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!k||SKIP.test(k))continue;if(!/^(od-|odc-|scvd-|liq-|kimp-|lm-|sc-|su-|ul-|w-|coin$|tf$)/.test(k))continue;o[k]=localStorage.getItem(k)}return o}
+const b64e=s=>btoa(String.fromCharCode(...new TextEncoder().encode(s))),b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s),c=>c.charCodeAt(0)));
+function openSync(){shellStyle();document.querySelector('.od-sync')?.remove();const o=syncKeys(),code='OD1:'+b64e(JSON.stringify(o));
+  const fav=JSON.parse(o['od-fav']||'[]').length,wal=JSON.parse(o['od-wallets']||'[]').length;
+  const p=document.createElement('div');p.className='od-sync';p.setAttribute('role','dialog');p.setAttribute('aria-label','설정 옮기기');
+  p.innerHTML=`<div class="box"><header><b>다른 기기로 설정 옮기기</b><button type="button" data-x aria-label="닫기">✕</button></header>
+  <p>이 기기 설정: 관심 코인 ${fav}개 · 저장 지갑 ${wal}개 · 알림 조건·테마·차트 색 등 ${Object.keys(o).length}항목. API 키는 넣지 않아요.</p>
+  <b class="h">1. 이 기기에서 내보내기</b><textarea readonly rows="3">${esc(code)}</textarea><button type="button" data-copy>코드 복사</button>
+  <b class="h">2. 다른 기기에서 붙여넣기</b><textarea rows="3" placeholder="OD1:로 시작하는 코드를 붙여넣으세요" data-in></textarea><button type="button" data-apply>이 기기에 적용</button><p data-msg></p></div>`;
+  document.body.appendChild(p);const q=s=>p.querySelector(s);
+  q('[data-x]').onclick=()=>p.remove();p.onclick=e=>{if(e.target===p)p.remove()};
+  q('[data-copy]').onclick=async()=>{try{await navigator.clipboard.writeText(code);toast('코드를 복사했어요','다른 기기에서 ⇄ 버튼을 눌러 붙여넣으세요')}catch(e){p.querySelector('textarea').select();toast('복사가 막혀 있어요','선택된 글자를 직접 복사해 주세요')}};
+  q('[data-apply]').onclick=()=>{const v=q('[data-in]').value.trim();try{if(!v.startsWith('OD1:'))throw 0;const d=JSON.parse(b64d(v.slice(4)));const ks=Object.keys(d).filter(k=>!SKIP.test(k)&&typeof d[k]==='string');if(!ks.length)throw 0;
+      if(!confirmApply(ks.length))return;for(const k of ks)localStorage.setItem(k,d[k]);q('[data-msg]').textContent=`${ks.length}항목을 적용했어요. 새로고침할게요.`;setTimeout(()=>location.reload(),900)}
+    catch(e){q('[data-msg]').textContent='코드가 올바르지 않아요. OD1:로 시작하는 코드 전체를 붙여넣어 주세요.'}};
+  function confirmApply(n){const b=q('[data-apply]');if(b.dataset.sure)return true;b.dataset.sure=1;b.textContent=`덮어쓰기 확인 (${n}항목) · 한 번 더 누르세요`;q('[data-msg]').textContent='이 기기의 관심 코인·지갑·설정이 붙여넣은 내용으로 바뀌어요.';return false}}
 /* ---- 공통 메뉴: 4묶음 + 지금 묶음의 페이지 줄. 모든 페이지가 같은 메뉴를 쓰도록 여기서 그림 ---- */
 const NAV=[['시장',[['./','급등 준비'],['./scan.html','스캐너'],['./kimp.html','김프']]],
   ['코인',[['./fav.html','★ 관심'],['./coin.html','코인 분석'],['./watch.html','호가 감시'],['./cvd.html','CVD']]],

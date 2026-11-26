@@ -67,7 +67,7 @@ details{border:1px solid var(--line);padding:12px 16px}
 summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:700px){.hide-sm{display:none}table{font-size:13px}dl.leg{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=14">
+<link rel="stylesheet" href="./theme.css?v=15">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -116,7 +116,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   </details>
 </section>
 
-<script src="./common.js?v=12"></script>
+<script src="./common.js?v=13"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -194,9 +194,12 @@ async function scan(){
     await OD.loadTypes();for(const r of rows)r.kind=OD.kindOf(r.sym);
     $('#stat').textContent=`${rows.length}개 종목 세부 분석 중…`;
     await pool(rows,6,async r=>{
-      const [k,g]=await Promise.allSettled([
+      const [k,g,oi]=await Promise.allSettled([
         j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${r.sym}&interval=60&limit=25`),
-        j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${r.base}_USDT&interval=1h&limit=24`)]);
+        j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${r.base}_USDT&interval=1h&limit=24`),
+        j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${r.sym}&intervalTime=1h&limit=25`)]);
+      // 미결제약정 24시간 변화: 다른 페이지와 같게 Bybit 계약 수량 기준 (지금 vs 24시간 전)
+      if(oi.status==='fulfilled'){const l=oi.value.result?.list||[];if(l.length>=25){const n=+l[0].openInterest,o=+l[24].openInterest;r.doi=o?(n/o-1)*100:null}}
       if(k.status==='fulfilled'){const ks=k.value.result.list.map(a=>({t:+a[0],o:+a[1],h:+a[2],l:+a[3],c:+a[4],v:+a[6]})).sort((a,b)=>a.t-b.t);
         if(ks.length>=13){const lastC=ks.at(-1),prev=ks.slice(0,-1);
           r.c1=(lastC.c/lastC.o-1)*100;const avg=prev.reduce((s,a)=>s+a.v,0)/prev.length;
@@ -204,7 +207,7 @@ async function scan(){
           const w=ks.slice(-12);r.rng=(Math.max(...w.map(a=>a.h))/Math.min(...w.map(a=>a.l))-1)*100}}
       if(g.status==='fulfilled'&&g.value.length>4){const s=g.value;let cvd=0,c4=0;s.forEach((a,i)=>{const d=((a.long_taker_size||0)-(a.short_taker_size||0))*(Number(a.mark_price)||0);cvd+=d;if(i>=s.length-4)c4+=d});
         const m=gateMult[r.base+'_USDT']||1;r.cvd=cvd*m;r.cvd4=c4*m;
-        const o0=s[0].open_interest_usd,o1=s.at(-1).open_interest_usd;r.doi=o0?(o1/o0-1)*100:null}
+        }
     },(d,n)=>{$('#bar').style.width=(d/n*100)+'%'});
     // signals + score
     const grp={};for(const r of rows)(grp[r.kind]=grp[r.kind]||[]).push(r.c24);

@@ -45,8 +45,18 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 .cvdc{display:inline-block;width:52px;height:8px;background:var(--line);position:relative;vertical-align:middle;margin-left:6px}
 .cvdc i{position:absolute;top:0;bottom:0}
 .addw{display:inline-block;position:relative}
+@media(max-width:700px){
+.wl thead{display:none}
+.wl,.wl tbody{display:block}
+.wl tr{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;border:1px solid var(--line);padding:10px 12px;margin-bottom:10px}
+.wl td{border:0;padding:3px 0;text-align:left;white-space:normal;display:flex;flex-direction:column;gap:1px}
+.wl td[data-l]::before{content:attr(data-l);font-family:var(--sans);font-size:11px;color:var(--mute)}
+.wl td.l:first-child{grid-column:1/-1;flex-direction:row;align-items:center;padding-bottom:4px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.wl td.go{grid-column:1/-1;flex-direction:row;align-items:center;gap:4px}
+.wl td.ws{flex-direction:row;flex-wrap:wrap;align-items:center}.wl td.ws::before{width:100%}
+}
 </style>
-<link rel="stylesheet" href="./theme.css?v=14">
+<link rel="stylesheet" href="./theme.css?v=15">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -82,7 +92,7 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
     <li>입출금: 빗썸·게이트 공개 API. 업비트는 키가 필요해서 김프 페이지에서 따로 봐요.</li>
   </ul></details>
 </section>
-<script src="./common.js?v=12"></script>
+<script src="./common.js?v=13"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -122,10 +132,10 @@ async function load(){
     const ws=(lab,x)=>{const c=v=>v==null?'na':v?'ok':'no';return`<span>${lab}</span><i class="${c(x?.d)}">입</i><i class="${c(x?.w)}">출</i>`};
     const bar=(v,vol)=>{if(v==null||!vol)return'';const f=Math.max(-1,Math.min(1,v/vol*8));return`<span class="cvdc" title="24시간 거래대금 대비 ${(v/vol*100).toFixed(1)}%"><i style="${f>=0?'left:50%':'right:50%'};width:${Math.abs(f)*50}%;background:var(${f>=0?'--up':'--dn'})"></i></span>`};
     $('#rows').innerHTML=R.map(r=>`<tr><td class="l"><b style="display:inline-flex;align-items:center;gap:8px">${OD.coinIcon(r.b,22)}<a href="./coin.html#${encodeURIComponent(r.b)}">${esc(r.b)}</a></b></td>
-      <td>${px(r.p)}</td><td>${pc(r.c)}</td><td>${r.fr==null?'<span class="mu">–</span>':pc(r.fr,4)}</td>
-      <td>${usd(r.oiv)} ${pc(r.doi,1)}</td><td>${pc(r.kimp)}</td>
-      <td title="${esc(r.cvdm?'Binance '+r.cvdm:'')}">${r.cvd==null?'<span class="mu">Binance 없음</span>':`<span class="${r.cvd>=0?'up':'dn'}">${usd(r.cvd)}</span> / <span class="${r.cvd4>=0?'up':'dn'}">${usd(r.cvd4)}</span>${bar(r.cvd,r.vol)}`}</td>
-      <td class="l ws">${ws('빗',r.wb)}${ws('게',r.wg)}</td>
+      <td data-l="가격">${px(r.p)}</td><td data-l="24시간">${pc(r.c)}</td><td data-l="펀딩비">${r.fr==null?'<span class="mu">–</span>':pc(r.fr,4)}</td>
+      <td data-l="미결제약정 · 24h">${usd(r.oiv)} ${pc(r.doi,1)}</td><td data-l="김프">${pc(r.kimp)}</td>
+      <td data-l="CVD 24h / 4h" title="${esc(r.cvdm?'Binance '+r.cvdm:'')}">${r.cvd==null?'<span class="mu">Binance 없음</span>':`<span class="${r.cvd>=0?'up':'dn'}">${usd(r.cvd)}</span> / <span class="${r.cvd4>=0?'up':'dn'}">${usd(r.cvd4)}</span>${bar(r.cvd,r.vol)}`}</td>
+      <td class="l ws" data-l="입출금">${ws('빗',r.wb)}${ws('게',r.wg)}</td>
       <td class="l go"><a href="./watch.html#${encodeURIComponent(r.b)}">호가</a><a href="./cvd.html#${encodeURIComponent(r.b)}">CVD</a><a href="#" data-ch="${esc(r.b)}">차트</a><button type="button" class="rm" data-rm="${esc(r.b)}" title="관심 해제" aria-label="${esc(r.b)} 관심 해제">✕</button></td></tr>`).join('');
     const d=new Date();$('#stat').textContent=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 갱신 · ${R.length}개 · 1분마다 자동`+(R.some(r=>!r.t)?' · 일부 코인은 Bybit 선물이 없어 가격·펀딩·OI가 비어요':'');
   }catch(e){$('#stat').textContent='불러오지 못했어요: '+e.message}

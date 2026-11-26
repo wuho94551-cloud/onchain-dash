@@ -93,7 +93,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:600px){table{font-size:13px}.fig{min-height:240px}.kpi .v{font-size:22px}.keyrow label{width:100%}}
 @media(prefers-reduced-motion:no-preference){.panel{animation:in .35s ease both}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=14">
+<link rel="stylesheet" href="./theme.css?v=15">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -180,7 +180,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   </details>
 </section>
 
-<script src="./common.js?v=12"></script>
+<script src="./common.js?v=13"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -242,13 +242,17 @@ renderTF();
 $('#tf').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;TF=b.dataset.tf;store.set('tf',TF);renderTF();if(C)loadCVD()});
 
 /* coin lookup via CoinGecko */
+/* CoinGecko 무료 API는 1분에 몇 번만 허용해요. 검색 결과(코인 id)는 7일, 코인 정보는 2분 동안 저장해 두고, 막히면(429) 잠깐 기다렸다 다시 해요 */
+const CG={get(k,ms){try{const v=JSON.parse(localStorage.getItem('cg:'+k)||'null');return v&&Date.now()-v.t<ms?v.d:null}catch(e){return null}},set(k,d){try{localStorage.setItem('cg:'+k,JSON.stringify({t:Date.now(),d}))}catch(e){}}};
+async function cg(url,key,ms,slim){const c=CG.get(key,ms);if(c)return c;
+  for(let n=0;;n++){try{let d=await j(url);if(slim)d=slim(d);CG.set(key,d);return d}catch(e){if(!/429|rate|limit/i.test(e.message)||n>=3)throw e;const w=[8,15,30][n];$('#stamp').textContent=`CoinGecko 요청 제한, ${w}초 뒤 다시 시도…`;await new Promise(r=>setTimeout(r,w*1e3))}}}
 async function findCoin(q){
-  const s=await j('https://api.coingecko.com/api/v3/search?query='+encodeURIComponent(q));
+  const s=await cg('https://api.coingecko.com/api/v3/search?query='+encodeURIComponent(q),'s:'+q.trim().toLowerCase(),7*864e5,d=>({coins:(d.coins||[]).slice(0,25).map(c=>({id:c.id,symbol:c.symbol,name:c.name,market_cap_rank:c.market_cap_rank}))}));
   const qq=q.trim().toLowerCase();
   const list=s.coins||[];if(!list.length)throw new Error('코인을 찾지 못했어요');
   const exact=list.filter(c=>c.symbol.toLowerCase()===qq).sort((a,b)=>(a.market_cap_rank||1e9)-(b.market_cap_rank||1e9));
   const pick=exact[0]||list.find(c=>c.id===qq||c.name.toLowerCase()===qq)||list[0];
-  const d=await j(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(pick.id)}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`);
+  const d=await cg(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(pick.id)}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`,'c:'+pick.id,120e3,d=>{const m=d.market_data||{};return{id:d.id,symbol:d.symbol,name:d.name,image:d.image,platforms:d.platforms,detail_platforms:d.detail_platforms,market_data:{current_price:{usd:m.current_price?.usd},price_change_percentage_24h:m.price_change_percentage_24h,market_cap:{usd:m.market_cap?.usd},fully_diluted_valuation:{usd:m.fully_diluted_valuation?.usd},circulating_supply:m.circulating_supply,max_supply:m.max_supply,total_supply:m.total_supply}}});
   const m=d.market_data||{};const dp=d.detail_platforms||{};
   return {id:d.id,sym:(d.symbol||'').toUpperCase(),name:d.name,price:m.current_price?.usd,chg:m.price_change_percentage_24h,mcap:m.market_cap?.usd,fdv:m.fully_diluted_valuation?.usd,circ:m.circulating_supply,max:m.max_supply||m.total_supply,
     eth:d.id==='ethereum'?'native':(d.platforms?.ethereum||''),decimals:dp.ethereum?.decimal_place??18,platforms:d.platforms||{},img:d.image?.large||d.image?.small||''};

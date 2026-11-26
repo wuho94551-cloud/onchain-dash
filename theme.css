@@ -95,3 +95,7 @@ nav.top .od-sub a[aria-current]{background:var(--ink);color:var(--bg);border-col
 .od-ic{border-radius:50%;object-fit:cover;vertical-align:middle;flex:none;background:var(--line);display:inline-block}
 .od-icb{display:inline-grid;place-items:center;font-family:var(--sans);font-weight:700;color:var(--mute);letter-spacing:-.04em}
 .ctl>span{display:inline-flex;align-items:center;flex-wrap:nowrap;gap:2px}
+/* 링크: 기본 파랑 대신 글자색 + 얇은 밑줄 */
+a{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:3px}
+a:visited{color:var(--ink)}
+@media(max-width:700px){#od-sync{display:none}}

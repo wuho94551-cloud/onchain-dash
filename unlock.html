@@ -43,7 +43,7 @@ td.l small{display:block;color:var(--mute);font-size:12px;white-space:normal;max
 .pill.f{border-color:var(--ink);color:var(--ink)}
 .bar{display:inline-block;height:8px;background:#d23b3b;vertical-align:middle;margin-left:6px;opacity:.8}
 </style>
-<link rel="stylesheet" href="./theme.css?v=14">
+<link rel="stylesheet" href="./theme.css?v=15">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -71,7 +71,7 @@ td.l small{display:block;color:var(--mute);font-size:12px;white-space:normal;max
     <label class="sub" style="margin:0;display:inline-flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="fav" style="width:18px;height:18px;min-height:0;accent-color:var(--ink)"> ★ 관심 코인만</label>
   </div>
   <div class="prog"><i id="pg"></i></div>
-  <p class="sub" id="stat">불러오는 중… (처음엔 데이터가 커서 10초쯤 걸려요)</p>
+  <p class="sub" id="stat">불러오는 중…</p>
 </header>
 <section class="band" style="padding-top:0">
   <div class="tbl"><table><thead><tr><th class="l">코인</th><th>풀리는 수량</th><th>가치</th><th title="현재 유통량 대비">유통량 대비</th><th class="l">받는 쪽</th></tr></thead><tbody id="rows"></tbody></table></div>
@@ -82,7 +82,7 @@ td.l small{display:block;color:var(--mute);font-size:12px;white-space:normal;max
     <li>데이터는 6시간 동안 브라우저에 저장해서 다시 열 때 빨라요.</li>
   </ul></details>
 </section>
-<script src="./common.js?v=12"></script>
+<script src="./common.js?v=13"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -99,7 +99,9 @@ $('#fut').checked=LS.get('ul-fut',false);$('#fav').checked=LS.get('ul-fav',false
 for(const id of ['fut','fav'])$('#'+id).addEventListener('change',()=>{LS.set('ul-'+id,$('#'+id).checked);render()});
 async function getIndex(){const U='https://defillama-datasets.llama.fi/emissionsIndex';
   try{const c=await caches.open('od-unlock-v1');const hit=await c.match(U);if(hit&&Date.now()-(+hit.headers.get('x-saved')||0)<6*3600e3)return hit.json();
-    const r=await fetch(U);if(!r.ok)throw new Error('HTTP '+r.status);const txt=await r.text();try{await c.put(U,new Response(txt,{headers:{'x-saved':String(Date.now()),'content-type':'application/json'}}))}catch(e){}return JSON.parse(txt)}
+    $('#stat').textContent='언락 데이터 받는 중… 처음 한 번은 약 23MB예요 (폰 데이터면 와이파이 권장). 받은 뒤 6시간은 저장본을 써요.';
+    const r=await fetch(U);if(!r.ok)throw new Error('HTTP '+r.status);
+    let txt='';if(r.body&&r.body.getReader){const rd=r.body.getReader(),dec=new TextDecoder();let got=0,last=0;for(;;){const {value,done}=await rd.read();if(done)break;got+=value.length;txt+=dec.decode(value,{stream:true});if(got-last>1e6){last=got;$('#stat').textContent=`언락 데이터 받는 중… ${(got/1e6).toFixed(0)}MB / 약 23MB (받은 뒤 6시간은 저장본을 써요)`;$('#pg').style.width=(20+Math.min(45,got/23e6*45))+'%'}}txt+=dec.decode()}else txt=await r.text();try{await c.put(U,new Response(txt,{headers:{'x-saved':String(Date.now()),'content-type':'application/json'}}))}catch(e){}return JSON.parse(txt)}
   catch(e){const r=await fetch(U);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}}
 async function load(){
   $('#pg').style.width='20%';
