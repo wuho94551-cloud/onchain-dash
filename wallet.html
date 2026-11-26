@@ -145,7 +145,8 @@ const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'';
 const tm=s=>{const d=new Date(s);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
 const isCex=a=>{const t=a?.metadata?.tags||[];return t.some(x=>/^(exchange|cex|hot-wallet)$/.test(x.slug)||/exchange/i.test(x.name))};
 const label=a=>{if(!a)return'';const t=a.metadata?.tags||[];return t.find(x=>x.tagType==='name')?.name||a.name||a.ens_domain_name||''};
-const spam=t=>!t||t.is_scam||t.reputation==='scam';
+/* 스팸: 스팸 표시 + 가격 없는데 기호에 보이지 않는 글자·비슷하게 생긴 외국 글자가 섞인 토큰(가짜 ETH·USDT 같은 주소 오염용) */
+const spam=t=>!t||t.is_scam||t.reputation==='scam'||(!t.exchange_rate&&/[^\x20-\x7E]/.test((t.symbol||'')+(t.name||'')));
 
 /* 저장 지갑: {addr,label,chains:[활동 있는 체인],last:{체인:시각}}. 예전 형식(chain 하나)은 바꿔줌 */
 let W=LS.get('od-wallets',[]).map(w=>w.chain&&!w.chains?{addr:w.addr,label:w.label||'',chains:[w.chain],last:{[w.chain]:w.last||0}}:w);
@@ -257,6 +258,7 @@ async function poll(){for(const w of W){for(const c of (w.chains?.length?w.chain
     w.last=w.last||{};if(items[0])w.last[c]=Math.max(last,Date.parse(items[0].timestamp))}catch(e){}}}
   save();const d=new Date();$('#stat').textContent=`저장 지갑 ${W.length}개 · ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 확인 · 2분마다 (이 페이지가 열려 있을 때)`}
 wlist();
+addEventListener('hashchange',()=>{const a=location.hash.slice(1);if(/^0x[0-9a-fA-F]{40}$/.test(a))view(a)});
 const h=location.hash.slice(1);if(/^0x[0-9a-fA-F]{40}$/.test(h))view(h);else if(mine())view(mine(),'내 지갑');else if(W.length)view(W[0].addr);
 setTimeout(poll,4000);setInterval(()=>{if(W.length)poll()},120e3);
 }
