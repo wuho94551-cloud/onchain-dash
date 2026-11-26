@@ -116,7 +116,7 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
   <div class="tbl"><table><thead><tr><th class="l">미결제약정 변화</th><th>신호 수</th><th>승률</th><th>평균 수익</th><th>중앙값</th><th>+10% 먼저</th><th>평균 최대 하락</th></tr></thead><tbody id="t-oi"></tbody></table></div>
 
   <h2 class="s">무효화 청산 효과</h2>
-  <p class="d">신호 뒤 조건이 깨지면 바로 판다고 했을 때와, 보유 기간 끝까지 들고 갔을 때를 비교해요. 청산은 그 시간 봉의 종가 기준이에요.</p>
+  <p class="d">신호 뒤 조건이 깨지면 바로 판다고 했을 때와, 보유 기간 끝까지 들고 갔을 때를 비교해요. 청산은 그 시간 봉의 종가 기준이에요. 조건은 시간마다 자주 바뀌어서, 무효화 규칙을 쓰면 대부분 하루 안에 청산돼요. 짧게 들고 나온 결과와 비교하는 셈이라는 점을 같이 봐 주세요.</p>
   <div class="tbl"><table><thead><tr><th class="l">청산 규칙</th><th>신호 수</th><th>승률</th><th>평균 수익</th><th>중앙값</th><th title="보유 기간 끝까지 가기 전에 청산된 비율">중간 청산</th><th>평균 보유</th></tr></thead><tbody id="t-inv"></tbody></table></div>
 
   <h2 class="s">최근 신호</h2>
@@ -127,6 +127,7 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
     <li>조건은 급등 준비 페이지와 같은 출처·같은 기준이에요. ① 가격 24시간 ±3% 안 + Bybit 미결제약정 24시간 +8% 이상, ② 펀딩비 0% 미만, ③ Gate 체결 기준 24시간·4시간 CVD 모두 플러스, ④ 위 +8% 안 숏 청산 추정 물량이 아래 롱 청산의 1.3배 이상(청산 압력 맵과 같은 모델), ⑤ 48시간 고저 범위 아래 40% 안. ⑥ 거래소 순유출은 과거 데이터를 무료로 못 받아서 빠져 있어요.</li>
     <li>매시 정각마다 점검해서, 충족 개수가 '신호 기준' 이상이 되면 신호로 기록해요. 같은 코인은 24시간 안에 다시 신호로 세지 않아요(같은 상승을 여러 번 세지 않으려고).</li>
     <li>진입가는 신호 시점 Bybit 1시간 봉 종가, 수익은 보유 기간 뒤 종가 기준이에요. 수수료·슬리피지·펀딩비 지불은 빼지 않았어요.</li>
+    <li>Gate 체결 데이터는 시간 구간이 끝난 것만 써요(미래 데이터가 섞이지 않게). 실시간 페이지는 진행 중인 구간까지 보기 때문에, 신호가 최대 1시간 일찍 뜰 수 있어요.</li>
     <li>펀딩비는 실시간 예상값 대신 그 시점 직전에 정산된 값을 썼어요.</li>
     <li><b>생존 편향</b>: 대상은 '지금' 거래대금 상위 코인이에요. 그 사이 상장폐지됐거나 거래가 줄어든 코인은 빠져 있어서, 결과가 실제보다 좋게 나올 수 있어요.</li>
     <li><b>표본 수</b>: 신호 수가 30개 미만인 줄은 흐리게 표시했어요. 그런 줄은 우연일 가능성이 커요. 과거 결과가 앞으로도 같다는 보장은 없어요.</li>
@@ -176,7 +177,7 @@ function series(c,mult){const K=c.k;if(K.length<60)return null;const n=K.length;
   for(let i=0;i<n;i++){const T=K[i][0]+H,price=K[i][4];const r={T,price,hi:K[i][2],lo:K[i][3]};S.push(r);if(i<48)continue;
     r.c24=(price/K[i-24][4]-1)*100;const o=oiAt(T),o0=oiAt2(T-24*H);r.doi=o&&o0?(o/o0-1)*100:null;
     while(fp+1<c.fr.length&&c.fr[fp+1][0]<=T)fp++;r.fr=c.fr[fp]&&c.fr[fp][0]<=T?c.fr[fp][1]:null;
-    if(c.st&&c.st.length){while(sp<c.st.length&&c.st[sp].time*1000<=T)sp++;
+    if(c.st&&c.st.length){while(sp<c.st.length&&c.st[sp].time*1000+H<=T)sp++;/* Gate 행은 그 시각부터 1시간 구간: 끝난 구간만 */
       if(sp>=24){let s24=0,s4=0;for(let q=sp-24;q<sp;q++){const a=c.st[q],v=(a.lt-a.stk)*mult*a.mp;s24+=v;if(q>=sp-4)s4+=v}r.cvd=s24;r.cvd4=s4}
       while(cp<c.cs.length&&c.cs[cp].t*1000<T)cp++;
       if(cp>=48&&sp>=48){const cs=c.cs.slice(cp-48,cp),st=c.st.slice(sp-48,sp);const pg=price/(c.scale||1),k=clusters(st,cs,pg);r.up=k.up;r.dn=k.dn;
