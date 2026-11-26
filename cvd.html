@@ -236,8 +236,8 @@ async function load(){
       D.size=true;D.tot.fill(0);D.mode='sample';D.arcSample=true;CACHED=0;
       const days=[];for(const f of plan){if(f.days)days.push(...f.days);else days.push(f)}
       const dn=new Map();for(const k of kl){const d=Math.floor(k.t/864e5)*864e5;dn.set(d,(dn.get(d)||0)+(k.n||0))}
-      const budget=$('#prec').checked?8e6:2.5e6,cost=a=>a.reduce((x,d)=>x+(dn.get(d.start)||0),0);
-      let sel=days;for(let n=days.length;n>1&&cost(sel)>budget;){n=Math.max(1,Math.floor(n*.8));const st=days.length/n;sel=Array.from({length:n},(_,i)=>days[Math.min(days.length-1,Math.floor(i*st+st/2))])}
+      const budget=$('#prec').checked?40e6:12e6,cost=a=>a.reduce((x,d)=>x+(dn.get(d.start)||0),0),minN=Math.min(days.length,$('#prec').checked?8:3);
+      let sel=days;for(let n=days.length;n>minN&&cost(sel)>budget;){n=Math.max(minN,Math.floor(n*.8));const st=days.length/n;sel=Array.from({length:n},(_,i)=>days[Math.min(days.length-1,Math.floor(i*st+st/2))])}
       let ix=0,done=0;const ends=[];
       const worker=async()=>{while(ix<sel.length&&my===run){const f=sel[ix++];const M=merger(1);const ok=await eachArchive(f.url,x=>{if(x.T>=D.t0)M.push(x)});M.flush();if(ok)ends.push(f.end);done++;
           if(my!==run)return;$('#pg').style.width=(3+done/sel.length*80)+'%';$('#stat').textContent=`${base} 선물 체결 표본 받는 중… ${done}/${sel.length}일 (전체 ${days.length}일 중)`;draw()}};
