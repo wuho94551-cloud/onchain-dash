@@ -94,3 +94,4 @@ nav.top .od-sub a[aria-current]{background:var(--ink);color:var(--bg);border-col
 @media(max-width:700px){nav.top .band{gap:0 14px!important;padding-inline:12px!important}nav.top a.g{font-size:15px}nav.top a.od-ph{display:none}nav.top a.brand{font-size:20px!important;padding-right:4px}.od-tools button{min-width:34px;min-height:34px;padding:0 6px}nav.top .od-sub{padding-inline:12px}}
 .od-ic{border-radius:50%;object-fit:cover;vertical-align:middle;flex:none;background:var(--line);display:inline-block}
 .od-icb{display:inline-grid;place-items:center;font-family:var(--sans);font-weight:700;color:var(--mute);letter-spacing:-.04em}
+.ctl>span{display:inline-flex;align-items:center;flex-wrap:nowrap;gap:2px}
