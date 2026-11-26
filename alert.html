@@ -130,10 +130,10 @@ $('fav').onclick=()=>{$('coins').value=(OD.favs()||[]).join(', ');upd()};
 $('cp').onclick=async()=>{try{await navigator.clipboard.writeText($('cfg').value);OD.toast('설정값을 복사했어요')}catch(e){$('cfg').select();OD.toast('복사가 막혀 있어요. 선택된 글자를 직접 복사해 주세요')}};
 $('pvb').onclick=async()=>{
   const b=$('pvb');b.disabled=true;$('pvs').textContent='확인 중…';
-  try{const m=await import('./worker/odesk-alert.js?v=1');const mem=new Map();
+  try{const m=await import('./worker/odesk-alert.js?v=2');const mem=new Map();
     const r=await m.default.run({DRY:true,SINCE:Date.now()-864e5,CONFIG:cfg(),STATE:{get:async k=>mem.get(k),put:async(k,v)=>mem.set(k,v)}});
     $('pv').textContent=r.out.length?r.out.join('\n'):'지금은 조건에 맞는 알림이 없어요.';
-    $('pvs').textContent=`${new Date().toLocaleTimeString('ko-KR')} 기준 ${r.out.length}건`+(r.errs.length?` · 오류: ${r.errs.join(', ')}`:'');
+    $('pvs').textContent=`${new Date().toLocaleTimeString('ko-KR')} 기준 ${r.count}건`+(r.errs.length?` · 오류: ${r.errs.join(', ')}`:'');
   }catch(e){$('pvs').textContent='오류: '+e.message}
   b.disabled=false};
 

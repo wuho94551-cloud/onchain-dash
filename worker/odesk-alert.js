@@ -7,7 +7,8 @@
      · Trigger  Cron     : * * * * *
    - 브라우저로 https://<워커주소>/test 를 열면 테스트 메시지를 보냄 */
 const UA = typeof document === 'undefined' ? { 'user-agent': 'odesk-alert/1.0' } : {}; // 브라우저 미리보기에선 헤더 생략
-async function j(u) { const r = await fetch(u, { headers: UA }); if (!r.ok) throw new Error(u.split('?')[0] + ' HTTP ' + r.status); return r.json(); }
+async function j(u, n = 0) { const r = await fetch(u, { headers: UA });
+  if (r.status === 429 && n < 2) { await new Promise(f => setTimeout(f, 1500 * (n + 1))); return j(u, n + 1); } /* 업비트 초당 제한: 잠깐 쉬고 다시 */ if (!r.ok) throw new Error(u.split('?')[0] + ' HTTP ' + r.status); return r.json(); }
 const fmt = n => { const a = Math.abs(n); return a >= 1e9 ? (n / 1e9).toFixed(2) + 'B' : a >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : a >= 1e3 ? (n / 1e3).toFixed(1) + 'K' : a >= 1 ? n.toFixed(2) : n.toPrecision(4); };
 
 async function tg(env, cfg, text) {
@@ -81,7 +82,7 @@ async function checkWallets(env, cfg, out, errs) {
         const tags = o?.metadata?.tags || [];
         const cex = tags.some(t => /^(exchange|cex|hot-wallet)$/.test(t.slug));
         const nm = tags.find(t => t.tagType === 'name')?.name || o?.name || o.hash.slice(0, 8);
-        if (outg || cfg.walletIn)
+        if (outg || (cfg.walletIn && p)) // 받은 것은 가격 있는 토큰만 (스팸 에어드랍 제외)
           out.push(`${outg ? (cex ? '🚨 거래소 입금' : '↗ 보냄') : '↙ 받음'} ${w.label || w.addr.slice(0, 8)}: ${fmt(q)} ${x.token?.symbol || ''}${p ? ` ($${fmt(q * p)})` : ''} ${outg ? '→' : '←'} ${nm}`);
       }
     } catch (e) { errs.push((w.label || w.addr) + ': ' + e.message); }
@@ -92,7 +93,7 @@ async function run(env) {
   const cfg = typeof env.CONFIG === 'object' ? env.CONFIG : JSON.parse(env.CONFIG || '{}'); const out = [], errs = [];
   for (const f of [checkPrice, checkKimp, checkWallets]) { try { await f(env, cfg, out, errs); } catch (e) { errs.push(e.message); } }
   if (out.length && !env.DRY) await tg(env, cfg, out.join('\n'));
-  return { sent: out.length, out, errs };
+  return { count: out.length, sent: out.length > 0 && !env.DRY, out, errs };
 }
 
 const txt = (s, status = 200) => new Response(s, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } });
