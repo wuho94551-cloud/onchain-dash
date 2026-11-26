@@ -280,11 +280,18 @@ $('#aform').addEventListener('submit',async e=>{e.preventDefault();A={th:Number(
   let m='저장했어요';if('Notification' in window){const p=await Notification.requestPermission().catch(()=>'denied');if(p!=='granted')m+=' · 브라우저 알림은 꺼져 있어서 소리와 화면 안내로만 알려요'}$('#amsg').textContent=m});
 
 /* loop */
-let wait=5000,lastOk=0;
-function stat(){$('#stat').textContent=`업비트·빗썸 vs ${REFS.find(r=>r[0]===REF)[1]} 현물 · ${lastOk?hm(lastOk)+' 갱신':'불러오는 중'} · 5초마다 자동 갱신`}
+/* 업비트가 요청을 막아도(429) 마지막 값은 그대로 두고, 빗썸·해외 가격은 계속 갱신 */
+let wait=8000,lastOk=0,upOk=0,fails=0;
+const hms=t=>{const d=new Date(t);return [d.getHours(),d.getMinutes(),d.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':')};
+function stat(note){$('#stat').textContent=`업비트·빗썸 vs ${REFS.find(r=>r[0]===REF)[1]} 현물 · ${lastOk?hm(lastOk)+' 갱신':'불러오는 중'} · 8초마다 자동 갱신`+(note?' · '+note:'')}
 async function tick(){
-  try{await Promise.all([loadUpbit(),loadBithumb(),loadRef()]);lastOk=Date.now();wait=5000;render();stat()}
-  catch(e){wait=e.message==='429'?(!lastOk&&wait===5000?1500:Math.min(60000,wait*2)):10000;$('#stat').textContent=(e.message==='429'?(lastOk?'업비트 요청 제한, 잠시 후 다시 시도':'업비트 시세 받는 중'):'불러오기 실패: '+e.message)+` (${Math.round(wait/1000)}초 뒤)`}
+  const [u,b,r]=await Promise.allSettled([loadUpbit(),loadBithumb(),loadRef()]);
+  if(u.status==='fulfilled'){upOk=Date.now();fails=0}else fails++;
+  if(r.status==='fulfilled'&&upOk){lastOk=Date.now();render()}
+  const lim=u.status==='rejected'&&u.reason?.message==='429';
+  wait=lim?Math.min(60000,(upOk?8000:1500)*2**Math.min(fails-1,3)):u.status==='rejected'?10000:8000;
+  if(u.status==='rejected')stat(upOk?`업비트 값은 ${hms(upOk)} 기준 (${lim?'요청 제한으로 잠시 대기':'불러오기 실패'})`:(lim?'업비트 시세 받는 중…':'업비트 불러오기 실패: '+u.reason?.message));
+  else stat(r.status==='rejected'?'해외 가격 불러오기 실패':'');
   setTimeout(tick,wait);
 }
 Promise.all([loadFX(),loadNames()]).then(tick);
