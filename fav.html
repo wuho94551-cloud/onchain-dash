@@ -98,19 +98,17 @@ async function load(){
   if(!F.length){$('#rows').innerHTML='<tr><td colspan="9" class="empty">아직 관심 코인이 없어요. 위 <b>+ 코인 추가</b>를 누르거나, 코인 선택 창·코인 분석·호가 감시·CVD에서 ☆를 누르세요.</td></tr>';$('#stat').textContent='';return}
   busy=true;$('#re').disabled=true;$('#pg').style.width='10%';$('#stat').textContent='받는 중…';
   try{
-    const [tk,fx,upm,bt,gt]=await Promise.all([
+    const [tk,fx,bt,gt]=await Promise.all([
       j('https://api.bybit.com/v5/market/tickers?category=linear'),
       once('fx',3600e3,()=>j('https://open.er-api.com/v6/latest/USD').then(d=>d.rates.KRW)).catch(()=>null),
-      once('upm',3600e3,()=>j('https://api.upbit.com/v1/market/all').then(d=>new Set(d.filter(m=>m.market.startsWith('KRW-')).map(m=>m.market.slice(4))))).catch(()=>new Set()),
       once('bt',300e3,()=>j('https://api.bithumb.com/public/assetsstatus/ALL').then(d=>d.data||{})).catch(()=>({})),
       once('gt',300e3,()=>j('https://api.gateio.ws/api/v4/spot/currencies').then(d=>{const m={};for(const c of d){if(!c.delisted)m[c.currency.toUpperCase()]={d:!c.deposit_disabled,w:!c.withdraw_disabled}}return m})).catch(()=>({}))]);
     $('#pg').style.width='40%';
     const bySym=new Map(tk.result.list.map(x=>[x.symbol,x]));
     const R=F.map(b=>{let t=null,mult=1;for(const [p,m] of [['',1],['1000',1e3],['10000',1e4],['1000000',1e6]]){const x=bySym.get(p+b+'USDT');if(x){t=x;mult=m;break}}
       return{b,t,mult,p:t?+t.lastPrice/mult:null,c:t?+t.price24hPcnt*100:null,fr:t?+t.fundingRate*100:null,oiv:t?+t.openInterestValue:null}});
-    const upList=R.map(r=>r.b).filter(b=>upm.has(b));
     const [up,...rest]=await Promise.all([
-      upList.length?j('https://api.upbit.com/v1/ticker?markets='+upList.map(b=>'KRW-'+b).join(',')).then(a=>Object.fromEntries(a.map(x=>[x.market.slice(4),x.trade_price]))).catch(()=>({})):{},
+      j('https://api.upbit.com/v1/ticker/all?quote_currencies=KRW').then(a=>Object.fromEntries(a.map(x=>[x.market.slice(4),x.trade_price]))).catch(()=>({})), // 원화마켓 전체 1번 요청 (업비트 초당 제한 회피)
       ...R.map(async r=>{
         // OI 24h change
         if(r.t){try{const o=await j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${r.t.symbol}&intervalTime=1h&limit=25`);const L=o.result.list;if(L.length>=25)r.doi=(+L[0].openInterest/+L[24].openInterest-1)*100}catch(e){}}
