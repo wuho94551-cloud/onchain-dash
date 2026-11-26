@@ -49,8 +49,8 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 .wl thead{display:none}
 .wl,.wl tbody{display:block}
 .wl tr{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;border:1px solid var(--line);padding:10px 12px;margin-bottom:10px}
-.wl td{border:0;padding:3px 0;text-align:left;white-space:normal;display:flex;flex-direction:column;gap:1px}
-.wl td[data-l]::before{content:attr(data-l);font-family:var(--sans);font-size:11px;color:var(--mute)}
+.wl td{border:0;padding:3px 0;text-align:left;white-space:normal;display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:1px 5px}
+.wl td[data-l]::before{content:attr(data-l);font-family:var(--sans);font-size:11px;color:var(--mute);width:100%}
 .wl td.l:first-child{grid-column:1/-1;flex-direction:row;align-items:center;padding-bottom:4px;border-bottom:1px solid var(--line);margin-bottom:4px}
 .wl td.go{grid-column:1/-1;flex-direction:row;align-items:center;gap:4px}
 .wl td.ws{flex-direction:row;flex-wrap:wrap;align-items:center}.wl td.ws::before{width:100%}
