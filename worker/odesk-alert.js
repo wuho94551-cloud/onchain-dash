@@ -47,14 +47,13 @@ async function checkPrice(env, cfg, out) {
 async function checkKimp(env, cfg, out) {
   if (!(cfg.kimp > 0)) return;
   const coins = cfg.kimpCoins?.length ? cfg.kimpCoins : cfg.coins || []; if (!coins.length) return;
-  const all = await j('https://api.upbit.com/v1/market/all');
-  const ok = new Set(all.filter(m => m.market.startsWith('KRW-')).map(m => m.market.slice(4)));
-  const list = coins.filter(b => ok.has(b)); if (!list.length) return;
-  const [up, fx, t] = await Promise.all([
-    j('https://api.upbit.com/v1/ticker?markets=' + list.map(b => 'KRW-' + b).join(',')),
+  const want = new Set(coins);
+  const [all, fx, t] = await Promise.all([
+    j('https://api.upbit.com/v1/ticker/all?quote_currencies=KRW'), // 원화마켓 전체를 한 번에 (요청 1번)
     j('https://open.er-api.com/v6/latest/USD').then(d => d.rates.KRW),
     j('https://api.bybit.com/v5/market/tickers?category=spot')
   ]);
+  const up = all.filter(u => want.has(u.market.slice(4)));
   const by = new Map(t.result.list.map(x => [x.symbol, +x.lastPrice]));
   for (const u of up) {
     const b = u.market.slice(4), g = by.get(b + 'USDT'); if (!g) continue;
