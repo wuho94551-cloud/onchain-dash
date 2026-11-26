@@ -122,7 +122,7 @@ details li{font-size:14px;color:var(--mute);margin:8px 0 0}
     <summary>계산 방법</summary>
     <ul>
       <li>Binance가 공개하는 일·월 단위 체결 아카이브(data.binance.vision)를 받아서 체결 하나하나를 금액(USD) 기준 5개 구간으로 나눠요. 시장가 매수는 +, 시장가 매도는 −로 쌓은 게 각 선이에요. 아카이브에 아직 없는 오늘 체결은 실시간 API로 채워요.</li>
-      <li>받을 아카이브가 120MB(정밀 켜면 400MB)를 넘으면, 1D·1W는 기간을 고르게 나눈 표본만 받아 환산하고('표본 추정' 표시), 그보다 긴 기간은 캔들의 시장가 매수 거래대금으로 전체 CVD 한 줄만 그려요. BTC·ETH 같은 대형 코인의 긴 기간이 여기에 해당해요. 작은 알트는 1년·3년도 전부 받아져요.</li>
+      <li>기간 안 체결이 500만 건(정밀 켜면 1,500만 건)을 넘으면, 1D·1W는 기간을 고르게 나눈 표본만 받아 환산하고('표본 추정' 표시), 그보다 긴 기간은 캔들의 시장가 매수 거래대금으로 전체 CVD 한 줄만 그려요. BTC·ETH 같은 대형 코인의 긴 기간이 여기에 해당해요. 작은 알트는 1년·3년도 전부 받아져요.</li>
       <li>히트맵: 시간·가격 칸마다 실제로 체결된 금액을 쌓아서, 고른 백분위 범위(기본 상위 4%)에 드는 칸만 검정→빨강→노랑→흰색으로 칠해요. 과거 호가창 기록은 공개 API로 받을 수 없어서, 대기 주문이 아니라 실제로 거래가 몰린 자리예요. 1주 이하는 체결 단위로, 그보다 길면 캔들 거래대금을 고가~저가에 고르게 나눠서 계산해요.</li>
       <li>열어 두는 동안은 실시간 체결이 계속 더해져요.</li>
     </ul>
@@ -198,20 +198,22 @@ async function load(){
     let K=[],st=t0;
     while(true){const r=await j(`${A}/klines?symbol=${sym}&interval=${iv}&startTime=${st}&limit=1000`);K=K.concat(r);if(r.length<1000)break;st=+r.at(-1)[0]+bk;if(st>=now)break}
     if(!K.length)throw new Error('캔들이 없어요');
-    const kl=K.map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],qv:+k[7],tb:+k[10]}));
+    const kl=K.map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],qv:+k[7],tb:+k[10],n:+k[8]}));
     let lo=Infinity,hi=-Infinity;for(const k of kl){if(k.l<lo)lo=k.l;if(k.h>hi)hi=k.h}const pad=(hi-lo)*.08||hi*.01;lo-=pad;hi+=pad;
     const realT0=Math.max(t0,kl[0].t),nb2=Math.ceil((now-realT0)/bk)||1;
-    D={base,sym,t0:realT0,bk,nb:nb2,kl,lo,hi,price:new Array(nb2).fill(null),del:CLS.map(()=>new Float64Array(nb2)),cnt:new Float64Array(CLS.length),vol:new Float64Array(CLS.length),tot:new Float64Array(nb2),heat:new Float64Array(nb2*PR),mode:'',w:1,size:false,restSample:false,arcBytes:0};
+    D={base,sym,t0:realT0,bk,nb:nb2,kl,lo,hi,price:new Array(nb2).fill(null),del:CLS.map(()=>new Float64Array(nb2)),cnt:new Float64Array(CLS.length),vol:new Float64Array(CLS.length),tot:new Float64Array(nb2),heat:new Float64Array(nb2*PR),mode:'',w:1,size:false,restSample:false,arcTrades:0};
     for(const k of kl){const i=Math.floor((k.t-D.t0)/bk);if(i>=0&&i<D.nb){D.price[i]=k.c;D.tot[i]=2*k.tb-k.qv}}
     // 1) Binance 공개 아카이브(일·월 단위 체결 파일)로 지난 기간 전체 체결을 받는다
     $('#stat').textContent=`${base} 체결 아카이브 크기 확인 중…`;draw();
-    const cap=($('#prec').checked?400:120)*1e6,plan=await archivePlan(sym,D.t0,my);if(my!==run)return;
-    let covered=D.t0;D.arcBytes=plan.bytes;
-    if(plan.files.length&&plan.bytes<=cap){
-      D.size=true;D.tot.fill(0);D.mode='archive';let got=0,ix=0;
-      const worker=async()=>{while(ix<plan.files.length&&my===run){const f=plan.files[ix++];await eachArchive(f.url,x=>{if(x.T>=D.t0)add(x,1)});if(my!==run)return;got+=f.bytes;
-          $('#pg').style.width=(3+got/plan.bytes*80)+'%';$('#stat').textContent=`${base} 체결 아카이브 받는 중… ${(got/1e6).toFixed(1)} / ${(plan.bytes/1e6).toFixed(1)}MB`;draw()}};
-      await Promise.all(Array.from({length:3},worker));if(my!==run)return;covered=plan.end;
+    const nTr=kl.reduce((a,k)=>a+(k.n||0),0),cap=($('#prec').checked?15e6:5e6),plan=archivePlan(sym,D.t0);
+    let covered=D.t0;D.arcTrades=nTr;
+    if(plan.length&&nTr<=cap){
+      D.size=true;D.tot.fill(0);D.mode='archive';let done=0,ix=0;const ends=[];const tot=plan.reduce((a,f)=>a+(f.days?f.days.length:1),0);
+      const one=async f=>{if(await eachArchive(f.url,x=>{if(x.T>=D.t0)add(x,1)})){ends.push(f.end);return true}return false};
+      const worker=async()=>{while(ix<plan.length&&my===run){const f=plan[ix++];
+          if(!(await one(f))&&f.days)for(const d of f.days){if(my!==run)return;await one(d);done++}else done+=f.days?f.days.length:1;
+          if(my!==run)return;$('#pg').style.width=(3+done/tot*80)+'%';$('#stat').textContent=`${base} 체결 아카이브 받는 중… ${Math.min(done,tot)}/${tot}일`;draw()}};
+      await Promise.all(Array.from({length:3},worker));if(my!==run)return;covered=ends.length?Math.max(...ends):D.t0;
     }else if(span>6048e5){D.size=false;D.mode='kline'}
     else{D.size=true;D.tot.fill(0)}
     // 2) 아카이브 이후(보통 오늘)는 REST aggTrades로: 적으면 전부, 많으면 표본
@@ -243,32 +245,23 @@ function add(x,w){const i=Math.floor((x.T-D.t0)/D.bk);if(i<0)return;grow(i);cons
   D.del[c][i]+=s*v*w;D.tot[i]+=s*v*w;D.cnt[c]+=w;D.vol[c]+=v*w;D.heat[i*PR+rowOf(p)]+=v*w}
 function grow(i){if(i<D.nb)return;const n=i+1;D.price.length=n;for(let k=D.nb;k<n;k++)D.price[k]=null;
   D.del=D.del.map(a=>{const b=new Float64Array(n);b.set(a);return b});let t=new Float64Array(n);t.set(D.tot);D.tot=t;t=new Float64Array(n*PR);t.set(D.heat);D.heat=t;D.nb=n}
-function status(){const lab={archive:' · Binance 체결 아카이브 전체 집계'+(D.restSample?' (오늘 체결만 표본 추정)':''),full:' · 전체 체결 집계',sample:` · 표본 추정 (실제 체결의 약 ${(100/D.w).toFixed(D.w>20?1:0)}%를 받아 환산)`,kline:` · 캔들 기반 전체 CVD (체결 아카이브가 ${(D.arcBytes/1e6).toFixed(0)}MB로 너무 커서 크기별 구분은 꺼요. '정밀'을 켜면 400MB까지 받아요)`};
+function status(){const lab={archive:' · Binance 체결 아카이브 전체 집계'+(D.restSample?' (오늘 체결만 표본 추정)':''),full:' · 전체 체결 집계',sample:` · 표본 추정 (실제 체결의 약 ${(100/D.w).toFixed(D.w>20?1:0)}%를 받아 환산)`,kline:` · 캔들 기반 전체 CVD (이 기간 체결이 약 ${(D.arcTrades/1e6).toFixed(0)}백만 건이라 너무 많아서 크기별 구분은 꺼요. '정밀'을 켜면 1,500만 건까지 받아요)`};
   $('#stat').textContent=`${D.base}_USDT · Binance ${MK==='spot'?'현물':'선물'} · ${WIN} · ${WINS.find(x=>x[0]===WIN)[3]} 간격`+(lab[D.mode]||'')+(ws?' · 실시간':'')}
 /* ---- Binance 공개 아카이브 (data.binance.vision) ---- */
 const ARC={spot:'https://data.binance.vision/data/spot',fut:'https://data.binance.vision/data/futures/um'};
 const ymd=t=>new Date(t).toISOString().slice(0,10),ym=t=>new Date(t).toISOString().slice(0,7);
-async function headSize(u){try{const r=await fetch(u,{method:'HEAD'});if(!r.ok)return-1;return+(r.headers.get('content-length')||0)}catch(e){return-1}}
-async function archivePlan(sym,t0,my){
-  const root=`${ARC[MK]}`,now=Date.now(),d0=new Date(),today=Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate()),curM=Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),1);
+function archivePlan(sym,t0){
+  const root=`${ARC[MK]}`,d0=new Date(),today=Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate()),curM=Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),1),day0=Math.floor(t0/864e5)*864e5;
   const daily=t=>({url:`${root}/daily/aggTrades/${sym}/${sym}-aggTrades-${ymd(t)}.zip`,start:t,end:t+864e5});
-  const cand=[];const s0=new Date(t0);let m=Date.UTC(s0.getUTCFullYear(),s0.getUTCMonth(),1);
+  const out=[];const s0=new Date(t0);let m=Date.UTC(s0.getUTCFullYear(),s0.getUTCMonth(),1);
   while(m<curM){const nd=new Date(m);const nx=Date.UTC(nd.getUTCFullYear(),nd.getUTCMonth()+1,1);
-    if(nx-t0>3*864e5&&(t0<=m||nx-t0>20*864e5))cand.push({url:`${root}/monthly/aggTrades/${sym}/${sym}-aggTrades-${ym(m)}.zip`,start:m,end:nx,month:true});
-    else for(let d=Math.max(m,Math.floor(t0/864e5)*864e5);d<nx;d+=864e5)cand.push(daily(d));m=nx}
-  for(let d=Math.max(curM,Math.floor(t0/864e5)*864e5);d<today;d+=864e5)cand.push(daily(d));
-  // sizes (missing month → its days)
-  const out=[];let ix=0;
-  const sizes=await Promise.all(cand.map(async c=>({c,b:await headSize(c.url)})));
-  for(const {c,b} of sizes){if(b>=0){out.push({...c,bytes:b});continue}
-    if(c.month)for(let d=Math.max(c.start,Math.floor(t0/864e5)*864e5);d<c.end;d+=864e5){const dc=daily(d),db=await headSize(dc.url);if(db<0)break;out.push({...dc,bytes:db})}}
-  out.sort((a,b)=>a.start-b.start);
-  // only a contiguous run from the start counts as covered
-  const files=[];let end=t0;for(const f of out){if(f.start>Math.max(end,Math.floor(t0/864e5)*864e5)+1&&files.length)break;files.push(f);end=f.end}
-  return{files,bytes:files.reduce((a,f)=>a+f.bytes,0),end:files.length?end:t0};
+    const days=[];for(let d=Math.max(m,day0);d<nx;d+=864e5)days.push(daily(d));
+    if(days.length>10)out.push({url:`${root}/monthly/aggTrades/${sym}/${sym}-aggTrades-${ym(m)}.zip`,start:m,end:nx,days});else out.push(...days);m=nx}
+  for(let d=Math.max(curM,day0);d<today;d+=864e5)out.push(daily(d));
+  return out;
 }
 async function eachArchive(url,fn){
-  const r=await fetch(url);if(!r.ok)return;const buf=await r.arrayBuffer(),dv=new DataView(buf);
+  let r;try{r=await fetch(url)}catch(e){return false}if(!r.ok)return false;const buf=await r.arrayBuffer(),dv=new DataView(buf);
   let e=buf.byteLength-22;while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;if(e<0)return;
   const cd=dv.getUint32(e+16,true),method=dv.getUint16(cd+10,true),cs=dv.getUint32(cd+20,true),lho=dv.getUint32(cd+42,true);
   const st=lho+30+dv.getUint16(lho+26,true)+dv.getUint16(lho+28,true);
@@ -276,7 +269,7 @@ async function eachArchive(url,fn){
   const rd=stream.pipeThrough(new TextDecoderStream()).getReader();let rest='';
   const line=l=>{const c=l.split(',');if(c.length<7)return;let T=+c[5];if(!(T>0))return;if(T>1e14)T=Math.floor(T/1000);const m=c[6].charCodeAt(0)===84||c[6].charCodeAt(0)===116;fn({p:c[1],q:c[2],T,m})};
   for(;;){const {value,done}=await rd.read();if(done)break;const s=rest+value;let i=0,nl;while((nl=s.indexOf('\n',i))>=0){line(s.slice(i,nl));i=nl+1}rest=s.slice(i)}
-  if(rest)line(rest);
+  if(rest)line(rest);return true;
 }
 
 let dq=0;
