@@ -231,7 +231,19 @@ async function load(){
           if(!(await one(f))&&f.days)for(const d of f.days){if(my!==run)return;await one(d);done++}else done+=f.days?f.days.length:1;
           if(my!==run)return;$('#pg').style.width=(3+done/tot*80)+'%';$('#stat').textContent=`${base} 체결 아카이브 받는 중… ${Math.min(done,tot)}/${tot}일`;draw()}};
       await Promise.all(Array.from({length:3},worker));if(my!==run)return;D.cached=CACHED;covered=ends.length?Math.max(...ends):D.t0;
-    }else{D.size=true;D.tot.fill(0)} // 체결이 너무 많아 아카이브를 못 받는 긴 기간도 표본으로 크기 비율을 추정하고 총액은 캔들 실측값에 맞춤
+    }else if(MK==='fut'&&plan.length){
+      // 선물 REST 체결 조회는 최근 2일만 돼요. 지난 기간은 하루치 아카이브 몇 개를 고르게 골라 표본으로 쓰고, 총액은 캔들 실측값에 맞춰요
+      D.size=true;D.tot.fill(0);D.mode='sample';D.arcSample=true;CACHED=0;
+      const days=[];for(const f of plan){if(f.days)days.push(...f.days);else days.push(f)}
+      const dn=new Map();for(const k of kl){const d=Math.floor(k.t/864e5)*864e5;dn.set(d,(dn.get(d)||0)+(k.n||0))}
+      const budget=$('#prec').checked?8e6:2.5e6,cost=a=>a.reduce((x,d)=>x+(dn.get(d.start)||0),0);
+      let sel=days;for(let n=days.length;n>1&&cost(sel)>budget;){n=Math.max(1,Math.floor(n*.8));const st=days.length/n;sel=Array.from({length:n},(_,i)=>days[Math.min(days.length-1,Math.floor(i*st+st/2))])}
+      let ix=0,done=0;const ends=[];
+      const worker=async()=>{while(ix<sel.length&&my===run){const f=sel[ix++];const M=merger(1);const ok=await eachArchive(f.url,x=>{if(x.T>=D.t0)M.push(x)});M.flush();if(ok)ends.push(f.end);done++;
+          if(my!==run)return;$('#pg').style.width=(3+done/sel.length*80)+'%';$('#stat').textContent=`${base} 선물 체결 표본 받는 중… ${done}/${sel.length}일 (전체 ${days.length}일 중)`;draw()}};
+      await Promise.all(Array.from({length:3},worker));if(my!==run)return;
+      D.cached=CACHED;D.sampDays=ends.length;D.allDays=days.length;covered=Math.max(D.t0,...days.map(d=>d.end));
+    }else{D.size=true;D.tot.fill(0)} // 현물은 REST로 기간 전체에서 표본을 뽑아 크기 비율을 추정하고 총액은 캔들 실측값에 맞춤
     // 2) 아카이브 이후(보통 오늘)는 REST aggTrades로: 적으면 전부, 많으면 표본
     if(D.size){
       $('#stat').textContent=`${base} 최근 체결 받는 중…`;
@@ -250,6 +262,7 @@ async function load(){
       await Promise.all(Array.from({length:conc},worker));
       if(my!==run)return;
     }
+    if(D.arcSample)D.mode='sample';
     if(D.size){const from=D.mode==='sample'?0:D.restSample?Math.max(0,Math.floor((D.restFrom-D.t0)/bk)):Infinity;if(from<Infinity)calibrate(from);verify()}
     if(D.mode==='kline')for(const k of kl){const i=Math.floor((k.t-D.t0)/bk);if(i<0||i>=D.nb)continue;const a=rowOf(k.l),b=rowOf(k.h),per=k.qv/(b-a+1);for(let r=a;r<=b;r++)D.heat[i*PR+r]+=per}
     $('#pg').style.width='100%';
@@ -272,13 +285,18 @@ async function loadOther(d,my,iv,now){const om=MK==='spot'?'fut':'spot',A=API[om
 function calibrate(from){const n=CLS.length,Gb=new Float64Array(n),Gs=new Float64Array(n);
   for(let c=0;c<n;c++)for(let i=from;i<D.nb;i++){Gb[c]+=D.bv[c][i];Gs[c]+=D.sv[c][i]}const gb=Gb.reduce((a,b)=>a+b,0)||1,gs=Gs.reduce((a,b)=>a+b,0)||1;
   let cnt=0;for(const k of D.kl){const i=Math.floor((k.t-D.t0)/D.bk);if(i<from||i>=D.nb)continue;const B=k.tb,S=k.qv-k.tb;let sb=0,ss=0;for(let c=0;c<n;c++){sb+=D.bv[c][i];ss+=D.sv[c][i]}
-    for(let c=0;c<n;c++){const fb=sb>0?D.bv[c][i]/sb:Gb[c]/gb,fs=ss>0?D.sv[c][i]/ss:Gs[c]/gs;D.del[c][i]=B*fb-S*fs}D.tot[i]=B-S;cnt++}
+    let rb=null,rs=null;if(D.arcSample&&(sb<=0||ss<=0)){const nd=nearDay(i);if(nd){rb=nd.b;rs=nd.s}}
+    for(let c=0;c<n;c++){const fb=sb>0?D.bv[c][i]/sb:rb?rb[c]:Gb[c]/gb,fs=ss>0?D.sv[c][i]/ss:rs?rs[c]:Gs[c]/gs;D.del[c][i]=B*fb-S*fs}D.tot[i]=B-S;cnt++}
   D.calib=cnt}
+/* 표본이 없는 구간은 가장 가까운 표본 날짜의 크기별 비율을 씀 */
+let ND=null;function nearDay(i){if(!ND||ND.d!==D){const n=CLS.length,days=new Map();for(let k=0;k<D.nb;k++){let b=0,s=0;for(let c=0;c<n;c++){b+=D.bv[c][k];s+=D.sv[c][k]}if(b+s<=0)continue;const day=Math.floor((D.t0+k*D.bk)/864e5);let o=days.get(day);if(!o){o={b:new Float64Array(n),s:new Float64Array(n)};days.set(day,o)}for(let c=0;c<n;c++){o.b[c]+=D.bv[c][k];o.s[c]+=D.sv[c][k]}}
+    const list=[...days.entries()].map(([d,o])=>{const tb=o.b.reduce((a,x)=>a+x,0)||1,ts=o.s.reduce((a,x)=>a+x,0)||1;return{d,b:o.b.map(x=>x/tb),s:o.s.map(x=>x/ts)}});ND={d:D,list}}
+  if(!ND.list.length)return null;const day=Math.floor((D.t0+i*D.bk)/864e5);let best=ND.list[0];for(const x of ND.list)if(Math.abs(x.d-day)<Math.abs(best.d-day))best=x;return best}
 /* 검증: 체결로 계산한 전체 CVD가 캔들의 시장가 매수·매도 합과 얼마나 맞는지 */
 function verify(){let a=0,b=0,v=0;for(const k of D.kl){const i=Math.floor((k.t-D.t0)/D.bk);if(i<0||i>=D.nb)continue;a+=D.tot[i];b+=2*k.tb-k.qv;v+=k.qv}D.chk=v?Math.abs(a-b)/v*100:null}
 function grow(i){if(i<D.nb)return;const n=i+1;D.price.length=n;for(let k=D.nb;k<n;k++)D.price[k]=null;
   const ext=a=>{const b=new Float64Array(n);b.set(a);return b};D.del=D.del.map(ext);D.bv=D.bv.map(ext);D.sv=D.sv.map(ext);let t=new Float64Array(n);t.set(D.tot);D.tot=t;t=new Float64Array(n*PR);t.set(D.heat);D.heat=t;D.nb=n}
-function status(){const lab={archive:' · Binance 체결 아카이브 전체 집계'+(D.restSample?' (오늘 체결은 표본으로 크기 비율만 추정하고 총액은 캔들 실측값에 맞춤)':'')+(D.cached?` · 저장된 파일 ${D.cached}개 재사용`:''),full:' · 전체 체결 집계',sample:` · 크기 비율은 표본 추정(체결의 약 ${(100/D.w).toFixed(D.w>20?1:0)}%), 매수·매도 총액은 캔들 실측값에 맞춤`,kline:` · 캔들 기반 전체 CVD (이 기간 체결이 약 ${(D.arcTrades/1e6).toFixed(0)}백만 건이라 너무 많아서 크기별 구분은 꺼요. '정밀'을 켜면 1,500만 건까지 받아요)`};
+function status(){const lab={archive:' · Binance 체결 아카이브 전체 집계'+(D.restSample?' (오늘 체결은 표본으로 크기 비율만 추정하고 총액은 캔들 실측값에 맞춤)':'')+(D.cached?` · 저장된 파일 ${D.cached}개 재사용`:''),full:' · 전체 체결 집계',sample:D.arcSample?` · 크기 비율은 하루치 체결 파일 ${D.sampDays}/${D.allDays}일 표본으로 추정, 매수·매도 총액은 캔들 실측값에 맞춤`:` · 크기 비율은 표본 추정(체결의 약 ${(100/(D.w||1)).toFixed((D.w||1)>20?1:0)}%), 매수·매도 총액은 캔들 실측값에 맞춤`,kline:` · 캔들 기반 전체 CVD (이 기간 체결이 약 ${(D.arcTrades/1e6).toFixed(0)}백만 건이라 너무 많아서 크기별 구분은 꺼요. '정밀'을 켜면 1,500만 건까지 받아요)`};
   $('#stat').textContent=`${D.base}_USDT · Binance ${MK==='spot'?'현물':'선물'} · ${WIN} · ${WINS.find(x=>x[0]===WIN)[3]} 간격`+(lab[D.mode]||'')+(D.chk!=null&&D.mode!=='kline'?` · 캔들 대조 차이 ${D.chk<0.05?'0.0':D.chk.toFixed(2)}%`:'')+(ws?' · 실시간':'')}
 /* ---- Binance 공개 아카이브 (data.binance.vision) ---- */
 const ARC={spot:'https://data.binance.vision/data/spot',fut:'https://data.binance.vision/data/futures/um'};
