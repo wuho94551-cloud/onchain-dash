@@ -83,7 +83,7 @@ details{border:1px solid var(--line);padding:12px 16px;margin-top:18px}
 summary{cursor:pointer;font-weight:600;min-height:28px}
 details li{font-size:14px;color:var(--mute);margin:8px 0 0}
 </style>
-<link rel="stylesheet" href="./theme.css">
+<link rel="stylesheet" href="./theme.css?v=12">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -102,20 +102,20 @@ details li{font-size:14px;color:var(--mute);margin:8px 0 0}
   <span class="od-tools" id="od-tools"></span>
 </div></nav>
 <header class="band" style="padding-bottom:10px">
-  <h1><em>Size</em> CVD</h1>
+  <h1>금액별 CVD</h1>
   <p style="margin:8px 0 0;font-size:15px">시장가 체결을 주문 크기별로 갈라서, 소액과 큰손 중 누가 사고 누가 파는지 따로 봐요. 항목에 마우스를 올리면(폰은 탭) 설명이 떠요.</p>
 </header>
 <section class="band" style="padding-top:0">
 <div class="obs">
   <div class="row">
-    <div><label class="t" for="q"><span class="hint" data-tip="ticker">Ticker</span></label>
+    <div><label class="t" for="q"><span class="hint" data-tip="ticker">코인</span></label>
       <div class="tkw"><button type="button" class="tk" id="tk"><span id="tkl">BTC_USDT</span> <span aria-hidden="true">▾</span></button><input type="hidden" id="q" value="BTC"><button class="go" type="button" id="go" title="다시 불러오기">↻</button></div></div>
-    <div><label class="t"><span class="hint" data-tip="pct">Volume Percentiles: <b id="pv">96 .. 99</b></span></label>
+    <div><label class="t"><span class="hint" data-tip="pct">히트맵 강도 범위: <b id="pv">96 .. 99</b></span></label>
       <div class="pct"><span class="trk"><i id="ptr"></i></span><input type="range" id="p1" min="50" max="100" step="1" aria-label="하한 백분위"><input type="range" id="p2" min="50" max="100" step="1" aria-label="상한 백분위"></div></div>
   </div>
   <div class="row" style="margin-top:12px">
     <div class="tabs" id="win" data-tip="win"></div>
-    <div class="tabs" id="mode" data-tip="mode"><button type="button" data-v="n">Normalized CVD</button><button type="button" data-v="a">Absolute CVD</button></div>
+    <div class="tabs" id="mode" data-tip="mode"><button type="button" data-v="n">방향 비교 (0~1)</button><button type="button" data-v="a">실제 금액</button></div>
   </div>
   <div class="opts">
     <span class="hint" data-tip="mk">시장</span><span class="mk" id="mk"><button type="button" data-v="spot">현물</button><button type="button" data-v="fut">선물</button></span>
@@ -168,7 +168,7 @@ const TIPS={
   ticker:['Ticker','Binance에 상장된 코인 심볼을 넣어요. BTC, SOL, PEPE처럼 USDT는 빼고 넣어도 돼요.'],
   pct:['Volume Percentiles','히트맵에 칠할 칸의 범위예요. 96..99면 체결 금액이 상위 4% 안에 드는 칸만 보여주고, 99% 이상은 흰색이에요. 왼쪽 손잡이를 내리면 더 많은 자리가 보여요.'],
   win:['기간','Binance 체결 아카이브를 받아 크기별로 나눠요. 거래가 아주 많은 코인의 긴 기간은 파일이 너무 커서 전체 CVD 한 줄만 그려요.'],
-  mode:['Normalized / Absolute','Normalized는 선마다 기간 안의 최저를 0, 최고를 1로 맞춰서 규모가 다른 구간끼리 방향만 비교해요. Absolute는 실제 달러 금액이에요.'],
+  mode:['방향 비교 / 실제 금액','방향 비교는 선마다 기간 안의 최저를 0, 최고를 1로 맞춰서 규모가 다른 구간끼리 방향만 비교해요. 실제 금액은 실제 달러 금액이에요.'],
   mk:['시장','현물은 실제 코인 매매, 선물은 무기한 선물 매매예요. 현물 CVD가 오르면 실수요 매수, 선물만 오르면 레버리지 매수일 가능성이 커요.'],
   prec:['정밀','거래가 많은 코인은 표본만 받아서 추정해요. 켜면 표본을 3배로 늘려 오차가 줄지만 더 오래 걸려요.'],
   verdict:['판정','최근 1/4 구간에서 $100K 이상 주문과 $10K 미만 주문의 순매수 방향을 비교해요. 큰손이 사고 소액이 팔면 매집 신호예요.'],
@@ -231,8 +231,7 @@ async function load(){
           if(!(await one(f))&&f.days)for(const d of f.days){if(my!==run)return;await one(d);done++}else done+=f.days?f.days.length:1;
           if(my!==run)return;$('#pg').style.width=(3+done/tot*80)+'%';$('#stat').textContent=`${base} 체결 아카이브 받는 중… ${Math.min(done,tot)}/${tot}일`;draw()}};
       await Promise.all(Array.from({length:3},worker));if(my!==run)return;D.cached=CACHED;covered=ends.length?Math.max(...ends):D.t0;
-    }else if(span>6048e5){D.size=false;D.mode='kline'}
-    else{D.size=true;D.tot.fill(0)}
+    }else{D.size=true;D.tot.fill(0)} // 체결이 너무 많아 아카이브를 못 받는 긴 기간도 표본으로 크기 비율을 추정하고 총액은 캔들 실측값에 맞춤
     // 2) 아카이브 이후(보통 오늘)는 REST aggTrades로: 적으면 전부, 많으면 표본
     if(D.size){
       $('#stat').textContent=`${base} 최근 체결 받는 중…`;

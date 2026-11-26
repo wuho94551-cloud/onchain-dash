@@ -45,7 +45,7 @@ ol.steps code,.note code{font-family:var(--mono);font-size:13px;border:1px solid
 .pv{border:1px solid var(--line);padding:12px 14px;margin-top:12px;font-size:14px;white-space:pre-line;min-height:48px}
 .note{font-size:14px;color:var(--mute)}
 </style>
-<link rel="stylesheet" href="./theme.css">
+<link rel="stylesheet" href="./theme.css?v=12">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -64,11 +64,11 @@ ol.steps code,.note code{font-family:var(--mono);font-size:13px;border:1px solid
   <span class="od-tools" id="od-tools"></span>
 </div></nav>
 <header class="band" style="padding-bottom:4px">
-  <h1><em>Phone</em> alerts</h1>
+  <h1>폰 알림</h1>
   <p style="margin:8px 0 0;font-size:15px">사이트를 꺼둬도 텔레그램으로 알림을 받는 설정이에요. 무료 Cloudflare 워커가 1분마다 확인해서 보내줘요. 처음 한 번만 아래 순서대로 만들면 돼요.</p>
 </header>
 <section class="band" style="padding-top:0">
-  <h2 style="font-size:22px;margin-top:10px">1. 알림 조건</h2>
+  <h2 style="margin-top:10px">1. 알림 조건</h2>
   <div class="grid">
     <label>텔레그램 chat id<input id="chat" inputmode="numeric" placeholder="예: 123456789"></label>
     <label>감시할 코인 (쉼표로 구분)<input id="coins" placeholder="BTC, SOL"></label>
@@ -82,12 +82,12 @@ ol.steps code,.note code{font-family:var(--mono);font-size:13px;border:1px solid
   <div class="ctl"><button type="button" class="ghost" id="fav">★ 관심 코인으로 채우기</button><button type="button" id="pvb">지금 조건으로 미리보기</button><span class="sub" id="pvs" style="margin:0"></span></div>
   <div class="pv" id="pv">미리보기를 누르면 지금 시점에 워커가 보낼 메시지를 여기 보여줘요. 지갑은 최근 24시간 이동을 보여줘요. 텔레그램으로 보내지는 않아요.</div>
 
-  <h2 style="font-size:22px;margin-top:26px">2. 워커에 넣을 설정값 (CONFIG)</h2>
+  <h2 style="margin-top:26px">2. 워커에 넣을 설정값 (CONFIG)</h2>
   <p class="note">위 조건을 바꾸면 자동으로 바뀌어요. 조건을 바꾼 뒤에는 Cloudflare의 CONFIG 값도 이걸로 바꿔줘야 해요.</p>
   <textarea id="cfg" readonly></textarea>
   <div class="ctl"><button type="button" id="cp">설정값 복사</button><a class="sub" href="./worker/odesk-alert.js" download style="margin:0">워커 코드 받기 (odesk-alert.js)</a></div>
 
-  <h2 style="font-size:22px;margin-top:26px">3. 처음 한 번 만들기</h2>
+  <h2 style="margin-top:26px">3. 처음 한 번 만들기</h2>
   <ol class="steps">
     <li><b>텔레그램 봇 만들기.</b> 텔레그램에서 <code>@BotFather</code>를 찾아 <code>/newbot</code>을 보내고 이름을 정하면 토큰(<code>123456:ABC…</code>)을 줘요. 이 토큰은 어디에도 붙여넣지 말고 6번에서 Cloudflare에만 넣어요.</li>
     <li><b>chat id 알아내기.</b> 만든 봇에게 아무 메시지나 보낸 뒤, 브라우저에서 <code>https://api.telegram.org/bot<i>토큰</i>/getUpdates</code>를 열면 <code>"chat":{"id":123456789</code> 숫자가 보여요. 위 칸에 넣어요.</li>

@@ -68,3 +68,16 @@ nav.top a.brand{color:var(--ink);margin-right:auto;padding-right:8px}
 .odtabs{display:inline-flex;border:1px solid var(--line);margin-bottom:14px}
 .odtabs a{padding:8px 16px;min-height:40px;display:flex;align-items:center;color:var(--mute);text-decoration:none;font-weight:600;font-size:15px}
 .odtabs a[aria-selected=true]{background:var(--ink);color:var(--bg)}
+/* ---- 글씨 통일 (모든 페이지 공통, 페이지 안 스타일보다 우선) ----
+   제목: 한글 산세리프 굵게 / 숫자: 고정폭 / 로고만 세리프 */
+h1,h2,h3{font-family:var(--sans)!important;font-style:normal!important;letter-spacing:-.02em!important;line-height:1.25!important;text-wrap:balance}
+h1{font-size:28px!important;font-weight:700!important}
+h1 em,h2 em{font-style:normal!important}
+h2{font-size:19px!important;font-weight:700!important}
+h3{font-size:16px!important;font-weight:600!important}
+h1 button{font:inherit!important;font-size:28px!important;font-weight:700!important;min-height:44px}
+.kpi .v,.tot .v,.coin .px,.nw span{font-family:var(--mono)!important;font-weight:400!important;letter-spacing:-.03em}
+.coin .px,.nw span{font-size:28px!important}
+.kpi .v,.tot .v{font-size:20px!important}
+tr.grp td{font-family:var(--sans)!important;font-size:15px!important;font-weight:700}
+@media(max-width:700px){h1,h1 button{font-size:23px!important}h2{font-size:17px!important}.coin .px,.nw span{font-size:24px!important}}

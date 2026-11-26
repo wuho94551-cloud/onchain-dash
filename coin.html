@@ -92,7 +92,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:600px){table{font-size:13px}.fig{min-height:240px}.kpi .v{font-size:22px}.keyrow label{width:100%}}
 @media(prefers-reduced-motion:no-preference){.panel{animation:in .35s ease both}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
 </style>
-<link rel="stylesheet" href="./theme.css">
+<link rel="stylesheet" href="./theme.css?v=12">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -113,7 +113,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 
 <header class="band">
   <div class="coin">
-    <div class="pk"><h1><button type="button" class="pkbtn" id="pick" aria-haspopup="listbox" aria-expanded="false" title="눌러서 코인 바꾸기"><span id="cname"><em>Coin</em> Report</span><span class="car" aria-hidden="true">▾</span></button></h1>
+    <div class="pk"><h1><button type="button" class="pkbtn" id="pick" aria-haspopup="listbox" aria-expanded="false" title="눌러서 코인 바꾸기"><span id="cname">코인</span><span class="car" aria-hidden="true">▾</span></button></h1>
       <div class="pkpop" id="pkpop" hidden>
         <input id="q" placeholder="코인 검색 (예: ARB, PEPE, ethereum)" autocomplete="off" spellcheck="false" aria-label="코인 검색" aria-controls="pklist">
         <div class="pkhd"><span>변동성 순 · 24시간 고저폭</span><span id="pkst"></span></div>
@@ -260,7 +260,7 @@ async function loadCoin(q){
   OD.coinLinks($('#clinks'),C.sym,'coin');
   store.set('coin',C.sym);try{history.replaceState(null,'','#'+C.sym.replace(/[^A-Za-z0-9-]/g,''))}catch(e){}
   document.title=C.sym+' · 온체인 데스크';
-  $('#cname').innerHTML=`<em>${esc(C.name)}</em> <span style="font-size:.45em;color:var(--mute)">${esc(C.sym)}</span>`;
+  $('#cname').innerHTML=`${esc(C.name)} <span style="font-size:.6em;color:var(--mute);font-weight:500">${esc(C.sym)}</span>`;
   $('#cpx').textContent=C.price!=null?price(C.price):'';
   $('#cch').innerHTML=C.chg!=null?pct(C.chg)+' <span class="sub">24시간</span>':'';
   const chainNames=Object.keys(C.platforms).filter(k=>k&&C.platforms[k]).slice(0,4).join(', ');

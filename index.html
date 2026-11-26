@@ -34,7 +34,7 @@ button[disabled]{opacity:.5;cursor:wait}
 :focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .conds{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0;border-top:1px solid var(--line);border-left:1px solid var(--line);margin-top:16px}
 .conds div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 14px;font-size:14px}
-.conds b{display:block;font-family:var(--serif);font-weight:400;font-size:20px}
+.conds b{display:block;font-family:var(--sans);font-weight:700;font-size:16px}
 .conds span{color:var(--mute)}
 .ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:4px 0 10px}
 .lab{font-size:13px;color:var(--mute);margin-right:4px}
@@ -49,14 +49,14 @@ td.c{text-align:center;font-family:var(--sans);font-size:13px}
 .on{display:inline-block;min-width:3.4em;padding:2px 6px;background:var(--ink);color:var(--bg)}
 .off{display:inline-block;min-width:3.4em;padding:2px 6px;color:var(--mute);border:1px solid var(--line)}
 .na{color:var(--mute)}
-.hit{font-family:var(--serif);font-size:22px}
+.hit{font-family:var(--mono);font-size:18px}
 .up{color:var(--up)}.dn{color:var(--dn)}
 details{border:1px solid var(--line);padding:12px 16px}
 summary{cursor:pointer;font-weight:600;min-height:28px}
 details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 @media(max-width:700px){table{font-size:13px}.hide-sm{display:none}}
 </style>
-<link rel="stylesheet" href="./theme.css">
+<link rel="stylesheet" href="./theme.css?v=12">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -77,7 +77,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 
 <header class="band">
   <div class="odtabs" role="tablist"><a href="./" role="tab" aria-selected="true">급등 준비</a><a href="./scan.html" role="tab">스캐너</a></div>
-  <h1><em>Pre-pump</em> Checklist</h1>
+  <h1>급등 준비</h1>
   <p style="margin:8px 0 0;font-size:15px">세력이 급등을 준비할 때 남기는 흔적이 몇 개나 겹쳤는지 종목별로 점검해요</p>
   <div class="conds">
     <div><b>① 포지션 누적</b><span>가격은 24시간 ±3% 안에서 횡보, 미결제약정은 +8% 이상 증가</span></div>
