@@ -24,7 +24,21 @@ h1{font-size:clamp(32px,5vw,52px)}h2{font-size:24px}
 .bar-top .band{padding-block:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .nav{color:var(--ink);font-weight:600;text-decoration:none;min-height:44px;display:flex;align-items:center;padding:0 6px}
 .brand{font-family:"Sofia Sans Condensed",sans-serif;font-weight:800;font-size:22px;margin-right:auto}
-form.search{display:flex;gap:8px;flex:1 1 340px;max-width:560px}
+.pk{position:relative}
+.pkbtn{background:transparent!important;border:0!important;padding:0!important;min-height:0!important;color:inherit!important;display:flex;align-items:baseline;gap:10px;cursor:pointer;text-align:left}
+.pkbtn{font:inherit!important}.pkbtn:hover em{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:6px}
+.pkbtn .car{font-size:22px;color:var(--mute)}
+.pkpop{position:absolute;z-index:20;top:calc(100% + 8px);left:0;width:min(420px,calc(100vw - 28px));background:var(--bg);border:1px solid var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.2);padding:10px}
+.pkpop input{width:100%;min-height:44px;font:inherit;padding:0 12px;border:1px solid var(--line);color:var(--ink)}
+.pkhd{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin:8px 2px 4px}
+#pklist{list-style:none;margin:0;padding:0;max-height:min(420px,55vh);overflow:auto}
+#pklist li{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:8px 6px;border-top:1px solid var(--line);cursor:pointer;font-size:14px}
+#pklist li b{font-weight:600}
+#pklist li span{font-family:var(--mono);font-size:13px;white-space:nowrap;text-align:right}
+#pklist li .vb{color:var(--mute)}
+#pklist li[aria-selected=true],#pklist li:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+#pklist li.srch{grid-template-columns:1fr;color:var(--mute)}
+
 button,input,select{font:inherit;font-size:16px}
 button{min-height:44px;padding:0 16px;border-radius:8px;border:0;background:var(--acc);color:#fff;font-weight:600;cursor:pointer;white-space:nowrap}
 button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
@@ -82,22 +96,24 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 <div class="bar-top"><div class="band">
   <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
   <a class="nav" href="./">급등 준비</a>
+  <a class="nav" href="./coin.html" aria-current="page">코인 분석</a>
   <a class="nav" href="./watch.html">호가 감시</a>
   <a class="nav" href="./scan.html">스캐너</a>
   <a class="nav" href="./liq.html">실시간 청산</a>
   <a class="nav" href="./liqmap.html">청산 압력</a>
   <a class="nav" href="./cvd.html">CVD</a>
   <a class="nav" href="./kimp.html">김프</a>
-  <form class="search" id="search">
-    <input id="q" placeholder="코인 심볼 또는 이름 (예: ARB, PEPE, ETH)" autocomplete="off" spellcheck="false" aria-label="코인 검색">
-    <button type="submit">조회</button>
-  </form>
-  <button class="ghost" id="gokeys">API 키</button>
+  <button class="ghost" id="gokeys" style="margin-left:auto">API 키</button>
 </div></div>
 
 <header class="band">
   <div class="coin">
-    <h1 id="cname"><em>Coin</em> Report</h1>
+    <div class="pk"><h1><button type="button" class="pkbtn" id="pick" aria-haspopup="listbox" aria-expanded="false" title="눌러서 코인 바꾸기"><span id="cname"><em>Coin</em> Report</span><span class="car" aria-hidden="true">▾</span></button></h1>
+      <div class="pkpop" id="pkpop" hidden>
+        <input id="q" placeholder="코인 검색 (예: ARB, PEPE, ethereum)" autocomplete="off" spellcheck="false" aria-label="코인 검색" aria-controls="pklist">
+        <div class="pkhd"><span>변동성 순 · 24시간 고저폭</span><span id="pkst"></span></div>
+        <ul id="pklist" role="listbox"></ul>
+      </div></div>
     <span class="px" id="cpx"></span>
     <span id="cch"></span>
   </div>
@@ -407,9 +423,33 @@ $('#flowbtn').addEventListener('click',async e=>{
 $('#k-dune').value=store.get('k-dune')||'';$('#k-ethp').value=store.get('k-ethp')||'';
 $('#keyform').addEventListener('submit',e=>{e.preventDefault();store.set('k-dune',$('#k-dune').value.trim());store.set('k-ethp',$('#k-ethp').value.trim());$('#keymsg').textContent='저장했어요';if(C){showFlowCache();loadHolders()}});
 $('#gokeys').addEventListener('click',()=>{$('#keys').open=true;$('#keys').scrollIntoView({behavior:'smooth'})});
-$('#search').addEventListener('submit',e=>{e.preventDefault();const q=$('#q').value.trim();if(q)loadCoin(q)});
+/* 코인 바꾸기: 이름을 누르면 변동성 순 목록 + 검색 */
+let PK=null,PKT=0,pkSel=0;
+async function pkData(){if(PK&&Date.now()-PKT<60e3)return PK;
+  try{await OD.loadTypes()}catch(e){}
+  const r=await j('https://api.bybit.com/v5/market/tickers?category=linear');
+  PK=r.result.list.filter(x=>x.symbol.endsWith('USDT')&&OD.kindOf(x.symbol)==='코인'&&+x.turnover24h>3e6).map(x=>{const b=x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,'');const hi=+x.highPrice24h,lo=+x.lowPrice24h;
+    return{b,p:+x.lastPrice,c:+x.price24hPcnt*100,rg:lo?(hi-lo)/lo*100:0,v:+x.turnover24h}}).sort((a,b)=>b.rg-a.rg);PKT=Date.now();return PK}
+function pkRender(){const q=$('#q').value.trim().toUpperCase();const all=PK||[];
+  const L=(q?all.filter(x=>x.b.includes(q)).sort((a,b)=>(b.b===q)-(a.b===q)||(b.b.startsWith(q))-(a.b.startsWith(q))||b.rg-a.rg):all).slice(0,40);
+  pkSel=Math.min(pkSel,L.length);
+  $('#pklist').innerHTML=L.map((x,i)=>`<li role="option" data-s="${esc(x.b)}" aria-selected="${i===pkSel}"><b>${esc(x.b)}</b><span>${price(x.p)}</span><span class="${x.c>=0?'up':'dn'}">${x.c>=0?'+':''}${x.c.toFixed(1)}%</span><span class="vb">폭 ${x.rg.toFixed(1)}%</span></li>`).join('')+
+    (q?`<li class="srch" role="option" data-q="${esc($('#q').value.trim())}" aria-selected="${pkSel===L.length}">"${esc($('#q').value.trim())}" 전체 검색 (선물 없는 코인 포함) ↵</li>`:'');
+  $('#pkst').textContent=all.length?`선물 ${all.length}개 중`:'불러오는 중…'}
+function pkOpen(){$('#pkpop').hidden=false;$('#pick').setAttribute('aria-expanded','true');$('#q').value='';pkSel=0;pkRender();$('#q').focus();pkData().then(pkRender).catch(()=>{$('#pkst').textContent='목록을 못 불러왔어요. 검색은 돼요.'})}
+function pkClose(){$('#pkpop').hidden=true;$('#pick').setAttribute('aria-expanded','false')}
+function pkGo(li){if(!li)return;pkClose();const s=li.dataset.s||li.dataset.q;if(s)loadCoin(s)}
+$('#pick').addEventListener('click',()=>$('#pkpop').hidden?pkOpen():pkClose());
+$('#q').addEventListener('input',()=>{pkSel=0;pkRender()});
+$('#q').addEventListener('keydown',e=>{const n=$('#pklist').children.length;
+  if(e.key==='ArrowDown'){e.preventDefault();pkSel=Math.min(n-1,pkSel+1);pkRender()}
+  else if(e.key==='ArrowUp'){e.preventDefault();pkSel=Math.max(0,pkSel-1);pkRender()}
+  else if(e.key==='Enter'){e.preventDefault();pkGo($('#pklist').children[pkSel]||null);if(!$('#pklist').children.length&&$('#q').value.trim()){pkClose();loadCoin($('#q').value.trim())}}
+  else if(e.key==='Escape'){pkClose();$('#pick').focus()}});
+$('#pklist').addEventListener('click',e=>pkGo(e.target.closest('li')));
+document.addEventListener('pointerdown',e=>{if(!$('#pkpop').hidden&&!e.target.closest('.pk'))pkClose()});
 window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h&&(!C||h!==C.sym))loadCoin(h)});
-const start=decodeURIComponent(location.hash.slice(1))||store.get('coin')||'ARB';$('#q').value=start;loadCoin(start);
+const start=decodeURIComponent(location.hash.slice(1))||store.get('coin')||'ARB';loadCoin(start);
 }
 </script>
 </body>
