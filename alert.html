@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<script>try{const t=localStorage.getItem("od-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>폰 알림 · 온체인 데스크</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{color-scheme:light dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5;overflow-x:clip}
+.band{padding:clamp(14px,2.4vw,32px) max(4vw,14px);max-width:1320px;margin:0 auto}
+h1,h2{margin:0;line-height:1.02}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+button{font:inherit;font-size:15px;min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button[disabled]{opacity:.5;cursor:wait}
+input,select{font:inherit;min-height:44px;padding:0 12px;color:var(--ink);border:1px solid var(--line);background:transparent}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:14px 0 10px}
+.lab{font-size:13px;color:var(--mute);margin-right:4px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:middle}
+th{font-weight:500;color:var(--mute);font-size:13px;position:sticky;top:0;background:var(--bg)}
+td{font-family:var(--mono)}td.l,th.l{text-align:left}td.l{font-family:var(--sans)}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
+details{border:1px solid var(--line);padding:12px 16px;margin-top:18px}
+summary{cursor:pointer;font-weight:600;min-height:28px}
+details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
+.empty{padding:28px 10px;color:var(--mute);text-align:center}
+.prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 22px;margin:16px 0}
+.grid label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute)}
+.grid label.ck{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px}
+.grid input[type=checkbox]{min-height:0;width:18px;height:18px}
+textarea{width:100%;min-height:150px;font:13px/1.45 var(--mono);color:var(--ink);background:transparent;border:1px solid var(--line);padding:10px}
+ol.steps{padding-left:20px}ol.steps li{margin:10px 0;font-size:15px}
+ol.steps code,.note code{font-family:var(--mono);font-size:13px;border:1px solid var(--line);padding:1px 5px}
+.pv{border:1px solid var(--line);padding:12px 14px;margin-top:12px;font-size:14px;white-space:pre-line;min-height:48px}
+.note{font-size:14px;color:var(--mute)}
+</style>
+<link rel="stylesheet" href="./theme.css">
+</head>
+<body>
+<nav class="top"><div class="band">
+  <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
+  <a href="./">급등·스캐너</a>
+  <a href="./fav.html">★ 관심</a>
+  <a href="./coin.html">코인 분석</a>
+  <a href="./watch.html">호가 감시</a>
+  <a href="./cvd.html">CVD</a>
+  <a href="./liq.html">실시간 청산</a>
+  <a href="./liqmap.html">청산 압력</a>
+  <a href="./kimp.html">김프</a>
+  <a href="./unlock.html">언락</a>
+  <a href="./wallet.html">지갑</a>
+  <a href="./alert.html" aria-current="page">폰 알림</a>
+  <span class="od-tools" id="od-tools"></span>
+</div></nav>
+<header class="band" style="padding-bottom:4px">
+  <h1><em>Phone</em> alerts</h1>
+  <p style="margin:8px 0 0;font-size:15px">사이트를 꺼둬도 텔레그램으로 알림을 받는 설정이에요. 무료 Cloudflare 워커가 1분마다 확인해서 보내줘요. 처음 한 번만 아래 순서대로 만들면 돼요.</p>
+</header>
+<section class="band" style="padding-top:0">
+  <h2 style="font-size:22px;margin-top:10px">1. 알림 조건</h2>
+  <div class="grid">
+    <label>텔레그램 chat id<input id="chat" inputmode="numeric" placeholder="예: 123456789"></label>
+    <label>감시할 코인 (쉼표로 구분)<input id="coins" placeholder="BTC, SOL"></label>
+    <label>24시간 변동 알림 (%) · 0이면 끔<input id="move" type="number" step="0.5" min="0" value="10"></label>
+    <label>펀딩비 알림 (절대값 %) · 0이면 끔<input id="fund" type="number" step="0.005" min="0" value="0.05"></label>
+    <label>김프 알림 (절대값 %) · 0이면 끔<input id="kimp" type="number" step="0.5" min="0" value="5"></label>
+    <label>같은 알림 다시 보내기까지 (분)<input id="cool" type="number" step="5" min="5" value="60"></label>
+    <label class="ck"><input type="checkbox" id="wal" checked> 지갑 페이지에 저장한 지갑 포함 (<span id="wn">0</span>개)</label>
+    <label class="ck"><input type="checkbox" id="win"> 지갑이 받은 것도 알림 (끄면 보낸 것만)</label>
+  </div>
+  <div class="ctl"><button type="button" class="ghost" id="fav">★ 관심 코인으로 채우기</button><button type="button" id="pvb">지금 조건으로 미리보기</button><span class="sub" id="pvs" style="margin:0"></span></div>
+  <div class="pv" id="pv">미리보기를 누르면 지금 시점에 워커가 보낼 메시지를 여기 보여줘요. 지갑은 최근 24시간 이동을 보여줘요. 텔레그램으로 보내지는 않아요.</div>
+
+  <h2 style="font-size:22px;margin-top:26px">2. 워커에 넣을 설정값 (CONFIG)</h2>
+  <p class="note">위 조건을 바꾸면 자동으로 바뀌어요. 조건을 바꾼 뒤에는 Cloudflare의 CONFIG 값도 이걸로 바꿔줘야 해요.</p>
+  <textarea id="cfg" readonly></textarea>
+  <div class="ctl"><button type="button" id="cp">설정값 복사</button><a class="sub" href="./worker/odesk-alert.js" download style="margin:0">워커 코드 받기 (odesk-alert.js)</a></div>
+
+  <h2 style="font-size:22px;margin-top:26px">3. 처음 한 번 만들기</h2>
+  <ol class="steps">
+    <li><b>텔레그램 봇 만들기.</b> 텔레그램에서 <code>@BotFather</code>를 찾아 <code>/newbot</code>을 보내고 이름을 정하면 토큰(<code>123456:ABC…</code>)을 줘요. 이 토큰은 어디에도 붙여넣지 말고 6번에서 Cloudflare에만 넣어요.</li>
+    <li><b>chat id 알아내기.</b> 만든 봇에게 아무 메시지나 보낸 뒤, 브라우저에서 <code>https://api.telegram.org/bot<i>토큰</i>/getUpdates</code>를 열면 <code>"chat":{"id":123456789</code> 숫자가 보여요. 위 칸에 넣어요.</li>
+    <li><b>Cloudflare 가입.</b> cloudflare.com에서 무료로 가입해요. 카드 등록은 필요 없어요.</li>
+    <li><b>워커 만들기.</b> 대시보드 → Workers &amp; Pages → Create → "Hello World" 워커를 만든 뒤 Edit code를 눌러 내용을 전부 지우고 <code>odesk-alert.js</code> 내용을 붙여넣고 Deploy.</li>
+    <li><b>KV 만들기.</b> Storage &amp; Databases → KV → Create namespace (이름 아무거나). 워커 → Settings → Bindings → Add → KV namespace, 변수 이름은 <code>STATE</code>.</li>
+    <li><b>비밀값 넣기.</b> 워커 → Settings → Variables and Secrets → Add: 종류 Secret, 이름 <code>TG_TOKEN</code>, 값은 봇 토큰. 다시 Add: 종류 Text, 이름 <code>CONFIG</code>, 값은 위 2번의 설정값.</li>
+    <li><b>1분마다 돌게 하기.</b> 워커 → Settings → Trigger Events → Add → Cron Triggers → <code>* * * * *</code>.</li>
+    <li><b>확인.</b> 워커 주소 뒤에 <code>/test</code>를 붙여 열면 텔레그램으로 "연결됐어요"가 와요. <code>/run</code>은 지금 한 번 확인한 결과를 보여줘요.</li>
+  </ol>
+  <details><summary>무엇을 확인하나요</summary><ul>
+    <li>24시간 변동·펀딩비: Bybit USDT 무기한 선물. 같은 방향으로 기준만큼 더 움직일 때마다 다시 알려요 (10%면 10, 20, 30%…).</li>
+    <li>김프: 업비트 원화 가격 ÷ (Bybit 현물 가격 × open.er-api.com 환율) − 1. 업비트에 원화 마켓이 있는 코인만.</li>
+    <li>지갑: Blockscout(Base·Ethereum·Arbitrum·Polygon) 토큰 이동. 받는 쪽이 거래소로 태그된 주소면 🚨 거래소 입금으로 보내요. 처음 1분은 기준점만 저장하고 그 뒤 이동부터 알려요.</li>
+    <li>무료 플랜은 하루 10만 번 실행까지라 1분마다 돌려도 충분해요.</li>
+    <li>봇 토큰은 Cloudflare 비밀값에만 있고, 이 사이트나 코드에는 들어가지 않아요.</li>
+  </ul></details>
+</section>
+<script src="./common.js?v=11"></script>
+<script>
+{
+
+const $=id=>document.getElementById(id),K='od-tg';
+const S=JSON.parse(localStorage.getItem(K)||'{}');
+for(const k of ['chat','coins','move','fund','kimp','cool'])if(S[k]!=null)$(k).value=S[k];
+if(S.wal!=null)$('wal').checked=S.wal;if(S.win!=null)$('win').checked=S.win;
+if(!S.coins)$('coins').value=(OD.favs()||[]).join(', ');
+const wallets=()=>JSON.parse(localStorage.getItem('od-wallets')||'[]');
+function cfg(){
+  const n=id=>Math.max(0,+$(id).value||0);
+  const c={chat:$('chat').value.trim(),coins:[...new Set($('coins').value.toUpperCase().split(/[\s,]+/).filter(Boolean))],move:n('move'),fund:n('fund'),kimp:n('kimp'),cool:Math.max(5,n('cool')||60)};
+  if($('wal').checked)c.wallets=wallets().map(w=>({chain:w.chain,addr:w.addr,label:w.label||''}));
+  if($('win').checked)c.walletIn=true;
+  return c}
+function upd(){
+  localStorage.setItem(K,JSON.stringify({chat:$('chat').value,coins:$('coins').value,move:$('move').value,fund:$('fund').value,kimp:$('kimp').value,cool:$('cool').value,wal:$('wal').checked,win:$('win').checked}));
+  $('wn').textContent=wallets().length;$('cfg').value=JSON.stringify(cfg())}
+document.querySelectorAll('input').forEach(i=>i.addEventListener('input',upd));upd();
+$('fav').onclick=()=>{$('coins').value=(OD.favs()||[]).join(', ');upd()};
+$('cp').onclick=async()=>{try{await navigator.clipboard.writeText($('cfg').value);OD.toast('설정값을 복사했어요')}catch(e){$('cfg').select();OD.toast('복사가 막혀 있어요. 선택된 글자를 직접 복사해 주세요')}};
+$('pvb').onclick=async()=>{
+  const b=$('pvb');b.disabled=true;$('pvs').textContent='확인 중…';
+  try{const m=await import('./worker/odesk-alert.js?v=1');const mem=new Map();
+    const r=await m.default.run({DRY:true,SINCE:Date.now()-864e5,CONFIG:cfg(),STATE:{get:async k=>mem.get(k),put:async(k,v)=>mem.set(k,v)}});
+    $('pv').textContent=r.out.length?r.out.join('\n'):'지금은 조건에 맞는 알림이 없어요.';
+    $('pvs').textContent=`${new Date().toLocaleTimeString('ko-KR')} 기준 ${r.out.length}건`+(r.errs.length?` · 오류: ${r.errs.join(', ')}`:'');
+  }catch(e){$('pvs').textContent='오류: '+e.message}
+  b.disabled=false};
+
+}
+</script>
+</body>
+</html>

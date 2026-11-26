@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<script>try{const t=localStorage.getItem("od-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>관심 코인 · 온체인 데스크</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{color-scheme:light dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5;overflow-x:clip}
+.band{padding:clamp(14px,2.4vw,32px) max(4vw,14px);max-width:1320px;margin:0 auto}
+h1,h2{margin:0;line-height:1.02}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+button{font:inherit;font-size:15px;min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button[disabled]{opacity:.5;cursor:wait}
+input,select{font:inherit;min-height:44px;padding:0 12px;color:var(--ink);border:1px solid var(--line);background:transparent}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:14px 0 10px}
+.lab{font-size:13px;color:var(--mute);margin-right:4px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:middle}
+th{font-weight:500;color:var(--mute);font-size:13px;position:sticky;top:0;background:var(--bg)}
+td{font-family:var(--mono)}td.l,th.l{text-align:left}td.l{font-family:var(--sans)}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
+details{border:1px solid var(--line);padding:12px 16px;margin-top:18px}
+summary{cursor:pointer;font-weight:600;min-height:28px}
+details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
+.empty{padding:28px 10px;color:var(--mute);text-align:center}
+.prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.wl td.l b{font-size:16px}
+.wl td.l a{color:var(--ink)}
+.wl .ws i{font-style:normal;display:inline-grid;place-items:center;width:18px;height:18px;font-size:11px;color:#fff;border-radius:2px;font-family:var(--sans)}
+.wl .ws i.ok{background:#2e9b5f}.wl .ws i.no{background:#d23b3b}.wl .ws i.na{background:transparent;color:var(--mute);border:1px dashed var(--line)}
+.wl .ws span{margin-left:6px;font-size:11px;color:var(--mute);font-family:var(--sans)}.wl .ws span:first-child{margin-left:0}
+.wl .rm{background:transparent;border:0;color:var(--mute);min-height:32px;padding:0 6px;font-size:16px}
+.wl .go a{font-family:var(--sans);font-size:13px;margin-left:8px;color:var(--ink)}
+.cvdc{display:inline-block;width:52px;height:8px;background:var(--line);position:relative;vertical-align:middle;margin-left:6px}
+.cvdc i{position:absolute;top:0;bottom:0}
+.addw{display:inline-block;position:relative}
+</style>
+<link rel="stylesheet" href="./theme.css">
+</head>
+<body>
+<nav class="top"><div class="band">
+  <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
+  <a href="./">급등·스캐너</a>
+  <a href="./fav.html" aria-current="page">★ 관심</a>
+  <a href="./coin.html">코인 분석</a>
+  <a href="./watch.html">호가 감시</a>
+  <a href="./cvd.html">CVD</a>
+  <a href="./liq.html">실시간 청산</a>
+  <a href="./liqmap.html">청산 압력</a>
+  <a href="./kimp.html">김프</a>
+  <a href="./unlock.html">언락</a>
+  <a href="./wallet.html">지갑</a>
+  <a href="./alert.html">폰 알림</a>
+  <span class="od-tools" id="od-tools"></span>
+</div></nav>
+<header class="band" style="padding-bottom:4px">
+  <h1><em>Watch</em>list</h1>
+  <p style="margin:8px 0 0;font-size:15px">★ 표시한 코인을 한 표에서 봐요. 가격·펀딩비·미결제약정·김프·CVD·입출금을 1분마다 새로 받아요.</p>
+  <div class="ctl"><span class="addw"><button type="button" id="add">+ 코인 추가</button></span><button type="button" class="ghost" id="re">↻ 새로고침</button><span class="sub" id="stat" style="margin:0">준비 중…</span></div>
+  <div class="prog"><i id="pg"></i></div>
+</header>
+<section class="band" style="padding-top:0">
+  <div class="tbl"><table class="wl"><thead><tr>
+    <th class="l">코인</th><th>가격</th><th>24시간</th><th title="Bybit 무기한 선물 현재 펀딩비 (8시간 기준이 아닌 코인도 있어요)">펀딩비</th><th title="Bybit 미결제약정(달러)과 24시간 변화">미결제약정 · 24h</th><th title="업비트 원화 가격 ÷ (해외 가격 × 환율) − 1">김프</th><th title="Binance 현물(없으면 선물) 캔들의 시장가 매수 − 매도. 24시간 / 최근 4시간">CVD 24h / 4h</th><th class="l" title="빗썸·게이트 입금/출금 가능 여부">입출금</th><th class="l"></th>
+  </tr></thead><tbody id="rows"><tr><td colspan="9" class="empty">불러오는 중…</td></tr></tbody></table></div>
+  <details><summary>데이터 출처</summary><ul>
+    <li>가격·24시간·펀딩비·미결제약정: Bybit USDT 무기한 선물. 1000PEPE처럼 1000개 단위 계약은 가격을 1개 기준으로 나눠서 보여줘요.</li>
+    <li>미결제약정 24시간 변화: Bybit 1시간 간격 미결제약정의 24시간 전 대비 변화(계약 수량 기준).</li>
+    <li>김프: 업비트 원화 가격과 Binance 현물 가격(없으면 Bybit 선물), open.er-api.com 환율.</li>
+    <li>CVD: Binance 1시간 캔들의 시장가 매수 거래대금(taker buy)으로 계산한 실측값. 현물이 없으면 선물.</li>
+    <li>입출금: 빗썸·게이트 공개 API. 업비트는 키가 필요해서 김프 페이지에서 따로 봐요.</li>
+  </ul></details>
+</section>
+<script src="./common.js?v=11"></script>
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function j(u){const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+const usd=n=>{if(n==null||!isFinite(n))return'–';const a=Math.abs(n),s=n<0?'−':'';return a>=1e9?s+'$'+(a/1e9).toFixed(2)+'B':a>=1e6?s+'$'+(a/1e6).toFixed(1)+'M':a>=1e3?s+'$'+(a/1e3).toFixed(0)+'K':s+'$'+a.toFixed(0)};
+const px=n=>n==null?'–':'$'+(n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:1}):n>=1?(+n.toFixed(4)).toString():(+n.toPrecision(4)).toString());
+const pc=(n,d=2)=>n==null||!isFinite(n)?'<span class="mu">–</span>':`<span class="${n>=0?'up':'dn'}">${n>=0?'+':''}${n.toFixed(d)}%</span>`;
+let busy=false,cache={};
+async function once(k,ms,f){const c=cache[k];if(c&&Date.now()-c.t<ms)return c.v;const v=await f();cache[k]={t:Date.now(),v};return v}
+async function load(){
+  if(busy)return;const F=OD.favs();
+  if(!F.length){$('#rows').innerHTML='<tr><td colspan="9" class="empty">아직 관심 코인이 없어요. 위 <b>+ 코인 추가</b>를 누르거나, 코인 선택 창·코인 분석·호가 감시·CVD에서 ☆를 누르세요.</td></tr>';$('#stat').textContent='';return}
+  busy=true;$('#re').disabled=true;$('#pg').style.width='10%';$('#stat').textContent='받는 중…';
+  try{
+    const [tk,fx,upm,bt,gt]=await Promise.all([
+      j('https://api.bybit.com/v5/market/tickers?category=linear'),
+      once('fx',3600e3,()=>j('https://open.er-api.com/v6/latest/USD').then(d=>d.rates.KRW)).catch(()=>null),
+      once('upm',3600e3,()=>j('https://api.upbit.com/v1/market/all').then(d=>new Set(d.filter(m=>m.market.startsWith('KRW-')).map(m=>m.market.slice(4))))).catch(()=>new Set()),
+      once('bt',300e3,()=>j('https://api.bithumb.com/public/assetsstatus/ALL').then(d=>d.data||{})).catch(()=>({})),
+      once('gt',300e3,()=>j('https://api.gateio.ws/api/v4/spot/currencies').then(d=>{const m={};for(const c of d){if(!c.delisted)m[c.currency.toUpperCase()]={d:!c.deposit_disabled,w:!c.withdraw_disabled}}return m})).catch(()=>({}))]);
+    $('#pg').style.width='40%';
+    const bySym=new Map(tk.result.list.map(x=>[x.symbol,x]));
+    const R=F.map(b=>{let t=null,mult=1;for(const [p,m] of [['',1],['1000',1e3],['10000',1e4],['1000000',1e6]]){const x=bySym.get(p+b+'USDT');if(x){t=x;mult=m;break}}
+      return{b,t,mult,p:t?+t.lastPrice/mult:null,c:t?+t.price24hPcnt*100:null,fr:t?+t.fundingRate*100:null,oiv:t?+t.openInterestValue:null}});
+    const upList=R.map(r=>r.b).filter(b=>upm.has(b));
+    const [up,...rest]=await Promise.all([
+      upList.length?j('https://api.upbit.com/v1/ticker?markets='+upList.map(b=>'KRW-'+b).join(',')).then(a=>Object.fromEntries(a.map(x=>[x.market.slice(4),x.trade_price]))).catch(()=>({})):{},
+      ...R.map(async r=>{
+        // OI 24h change
+        if(r.t){try{const o=await j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${r.t.symbol}&intervalTime=1h&limit=25`);const L=o.result.list;if(L.length>=25)r.doi=(+L[0].openInterest/+L[24].openInterest-1)*100}catch(e){}}
+        // Binance spot price + CVD (fallback futures)
+        for(const [api,lab] of [['https://data-api.binance.vision/api/v3','현물'],['https://fapi.binance.com/fapi/v1','선물']]){
+          try{const k=await j(`${api}/klines?symbol=${r.b}USDT&interval=1h&limit=24`);if(!k.length)continue;let a=0,b4=0;k.forEach((x,i)=>{const d=2*x[10]-x[7];a+=d;if(i>=k.length-4)b4+=d});r.cvd=a;r.cvd4=b4;r.cvdm=lab;r.bp=+k.at(-1)[4];r.vol=k.reduce((s,x)=>s+ +x[7],0);break}catch(e){}}
+      })]);
+    $('#pg').style.width='90%';
+    for(const r of R){const ref=r.bp??r.p;r.kimp=up[r.b]&&fx&&ref?(up[r.b]/(ref*fx)-1)*100:null;
+      const B=bt[r.b];r.wb=B?{d:B.deposit_status==1,w:B.withdrawal_status==1}:null;r.wg=gt[r.b]||null}
+    const ws=(lab,x)=>{const c=v=>v==null?'na':v?'ok':'no';return`<span>${lab}</span><i class="${c(x?.d)}">입</i><i class="${c(x?.w)}">출</i>`};
+    const bar=(v,vol)=>{if(v==null||!vol)return'';const f=Math.max(-1,Math.min(1,v/vol*8));return`<span class="cvdc" title="24시간 거래대금 대비 ${(v/vol*100).toFixed(1)}%"><i style="${f>=0?'left:50%':'right:50%'};width:${Math.abs(f)*50}%;background:var(${f>=0?'--up':'--dn'})"></i></span>`};
+    $('#rows').innerHTML=R.map(r=>`<tr><td class="l"><b><a href="./coin.html#${encodeURIComponent(r.b)}">${esc(r.b)}</a></b></td>
+      <td>${px(r.p)}</td><td>${pc(r.c)}</td><td>${r.fr==null?'<span class="mu">–</span>':pc(r.fr,4)}</td>
+      <td>${usd(r.oiv)} ${pc(r.doi,1)}</td><td>${pc(r.kimp)}</td>
+      <td title="${esc(r.cvdm?'Binance '+r.cvdm:'')}">${r.cvd==null?'<span class="mu">Binance 없음</span>':`<span class="${r.cvd>=0?'up':'dn'}">${usd(r.cvd)}</span> / <span class="${r.cvd4>=0?'up':'dn'}">${usd(r.cvd4)}</span>${bar(r.cvd,r.vol)}`}</td>
+      <td class="l ws">${ws('빗',r.wb)}${ws('게',r.wg)}</td>
+      <td class="l go"><a href="./watch.html#${encodeURIComponent(r.b)}">호가</a><a href="./cvd.html#${encodeURIComponent(r.b)}">CVD</a><a href="#" data-ch="${esc(r.b)}">차트</a><button type="button" class="rm" data-rm="${esc(r.b)}" title="관심 해제" aria-label="${esc(r.b)} 관심 해제">✕</button></td></tr>`).join('');
+    const d=new Date();$('#stat').textContent=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 갱신 · ${R.length}개 · 1분마다 자동`+(R.some(r=>!r.t)?' · 일부 코인은 Bybit 선물이 없어 가격·펀딩·OI가 비어요':'');
+  }catch(e){$('#stat').textContent='불러오지 못했어요: '+e.message}
+  finally{busy=false;$('#re').disabled=false;$('#pg').style.width='0'}
+}
+$('#rows').addEventListener('click',e=>{const rm=e.target.closest('[data-rm]');if(rm){OD.toggleFav(rm.dataset.rm);load();return}const ch=e.target.closest('[data-ch]');if(ch){e.preventDefault();OD.openChart(ch.dataset.ch)}});
+OD.picker($('#add'),s=>{const b=String(s).toUpperCase().replace(/USDT$/,'');if(!OD.isFav(b))OD.toggleFav(b);load()},{searchLabel:'추가하기'});
+$('#re').addEventListener('click',load);
+window.addEventListener('od-fav',()=>load());
+setInterval(()=>{if(!document.hidden)load()},60e3);
+load();
+}
+</script>
+</body>
+</html>
