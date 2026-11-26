@@ -66,7 +66,7 @@ function shellStyle(){if(document.getElementById('od-shcss'))return;const st=doc
 function openHist(){shellStyle();let p=document.querySelector('.od-hist');if(p){p.remove();return}
   const seen=LS.get('od-alerts-seen',0),h=LS.get('od-alerts',[]);p=document.createElement('div');p.className='od-hist';p.setAttribute('role','dialog');p.setAttribute('aria-label','알림 기록');
   const tm=t=>{const d=new Date(t);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
-  p.innerHTML=`<header><b>알림 기록</b><button type="button" data-clear>모두 지우기</button></header>`+(h.length?h.map(a=>`<a href="${esc(a.href||'#')}" class="${esc(a.side)} ${a.t>seen?'new':''}"><small>${tm(a.t)}${a.from?' · '+esc(a.from):''}</small><b>${esc(a.title)}</b>${a.body?`<p>${esc(a.body)}</p>`:''}</a>`).join(''):'<div class="empty">아직 알림이 없어요. 실시간 청산·김프·호가 감시·급등 준비 페이지가 열려 있을 때 생겨요.</div>');
+  p.innerHTML=`<header><b>알림 기록</b><span><a href="./alert.html" style="font-size:12px;color:var(--ink);margin-right:10px">📱 폰 알림 설정</a><button type="button" data-clear>모두 지우기</button></span></header>`+(h.length?h.map(a=>`<a href="${esc(a.href||'#')}" class="${esc(a.side)} ${a.t>seen?'new':''}"><small>${tm(a.t)}${a.from?' · '+esc(a.from):''}</small><b>${esc(a.title)}</b>${a.body?`<p>${esc(a.body)}</p>`:''}</a>`).join(''):'<div class="empty">아직 알림이 없어요. 실시간 청산·김프·호가 감시·급등 준비 페이지가 열려 있을 때 생겨요.</div>');
   document.body.appendChild(p);LS.set('od-alerts-seen',Date.now());bellBadge();
   p.querySelector('[data-clear]').onclick=()=>{LS.set('od-alerts',[]);p.remove();bellBadge()};
   setTimeout(()=>document.addEventListener('pointerdown',function off(e){if(!p.contains(e.target)&&!e.target.closest('#od-bell')){p.remove();document.removeEventListener('pointerdown',off)}}));
@@ -92,7 +92,28 @@ function shell(){const t=document.getElementById('od-tools');if(!t||t.dataset.ok
   const tb=t.querySelector('#od-theme'),paint=()=>{const th=THEMES.find(x=>x[0]===cur())||THEMES[0];tb.textContent=th[1];tb.title='화면 테마: '+th[2]+' (누르면 바뀜)';tb.setAttribute('aria-label',tb.title)};paint();
   tb.onclick=()=>{const i=THEMES.findIndex(x=>x[0]===cur());setTheme(THEMES[(i+1)%THEMES.length][0]);paint()};
   t.querySelector('#od-bell').onclick=openHist;bellBadge();
-  const a=document.querySelector('nav.top a[aria-current]');if(a&&a.scrollIntoView)a.scrollIntoView({block:'nearest',inline:'center'});window.scrollTo(0,0)}
+  }
+/* ---- 코인 아이콘: 코인 분석에서 본 코인은 CoinGecko 이미지를 저장해 쓰고, 없으면 공개 아이콘 모음, 그것도 없으면 글자 배지 ---- */
+const ICN=(()=>{try{return JSON.parse(localStorage.getItem('od-icons')||'{}')}catch(e){return{}}})();
+function setIcon(sym,url){if(!sym||!url||ICN[sym]===url)return;ICN[sym]=url;try{localStorage.setItem('od-icons',JSON.stringify(ICN))}catch(e){}}
+function coinIcon(sym,px=20){sym=String(sym||'').toUpperCase().replace(/^1000+/,'');const t=sym.slice(0,3),s=`width:${px}px;height:${px}px`;
+  const badge=`<span class="od-ic od-icb" style="${s};font-size:${Math.round(px*.38)}px">${esc(t)}</span>`;
+  const alt=`https://assets.coincap.io/assets/icons/${encodeURIComponent(sym.toLowerCase())}@2x.png`;
+  const first=ICN[sym]||alt;
+  return `<img class="od-ic" style="${s}" src="${esc(first)}" alt="" loading="lazy" data-alt="${ICN[sym]?esc(alt):''}" data-b="${esc(t)}" onerror="if(this.dataset.alt){this.src=this.dataset.alt;this.dataset.alt=''}else{const b=document.createElement('span');b.className='od-ic od-icb';b.style.cssText=this.style.cssText+';font-size:${Math.round(px*.38)}px';b.textContent=this.dataset.b;this.replaceWith(b)}">`}
+/* ---- 공통 메뉴: 4묶음 + 지금 묶음의 페이지 줄. 모든 페이지가 같은 메뉴를 쓰도록 여기서 그림 ---- */
+const NAV=[['시장',[['./','급등 준비'],['./scan.html','스캐너'],['./kimp.html','김프']]],
+  ['코인',[['./fav.html','★ 관심'],['./coin.html','코인 분석'],['./watch.html','호가 감시'],['./cvd.html','CVD']]],
+  ['청산',[['./liq.html','실시간 청산'],['./liqmap.html','청산 압력']]],
+  ['온체인',[['./unlock.html','언락'],['./wallet.html','지갑']]]];
+function buildNav(){const nav=document.querySelector('nav.top');if(!nav||nav.dataset.built)return;nav.dataset.built=1;
+  const f=(location.pathname.split('/').pop()||'index.html').toLowerCase(),here=f==='index.html'?'./':'./'+f;
+  const gi=NAV.findIndex(g=>g[1].some(p=>p[0]===here));
+  nav.innerHTML=`<div class="band"><a class="brand" href="./" aria-label="홈으로"><em>Onchain</em>Desk</a>`+
+    NAV.map((g,i)=>`<a class="g" href="${g[1][0][0]}"${i===gi?' aria-current="true"':''}>${g[0]}</a>`).join('')+
+    `<a class="g od-ph" href="./alert.html"${here==='./alert.html'?' aria-current="page"':''} title="사이트를 꺼도 텔레그램으로 알림">📱 폰 알림</a><span class="od-tools" id="od-tools"></span></div>`+
+    (gi>=0?`<div class="od-sub">${NAV[gi][1].map(p=>`<a href="${p[0]}"${p[0]===here?' aria-current="page"':''}>${p[1]}</a>`).join('')}</div>`:'')}
+buildNav();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',shell);else setTimeout(shell);
 
 /* ---- 코인 선택 창: 버튼을 누르면 변동성 순 목록 + 검색 ---- */
@@ -130,7 +151,7 @@ function picker(btn,onPick,opt={}){
     let L=(q?all.filter(x=>x.b.includes(q)).sort((a,b)=>(b.b===q)-(a.b===q)||(b.b.startsWith(q))-(a.b.startsWith(q))||b.rg-a.rg):all).slice(0,40);
     let fv=[];if(!q&&F.length){fv=F.map(b=>by.get(b)||{b,p:null,c:null,rg:null});L=L.filter(x=>!F.includes(x.b))}
     items=[...fv,...L];sel=Math.min(sel,items.length);
-    const row=(x,i)=>`<li role="option" data-s="${esc(x.b)}" aria-selected="${i===sel}"><button type="button" class="st ${F.includes(x.b)?'on':''}" data-star="${esc(x.b)}" aria-label="관심 코인">${F.includes(x.b)?'★':'☆'}</button><b>${esc(x.b)}</b><span>${x.p!=null?pfx(x.p):''}</span><span class="${x.c>=0?'u':'d'}">${x.c!=null?(x.c>=0?'+':'')+x.c.toFixed(1)+'%':''}</span><span class="vb">${x.rg!=null?'폭 '+x.rg.toFixed(1)+'%':''}</span></li>`;
+    const row=(x,i)=>`<li role="option" data-s="${esc(x.b)}" aria-selected="${i===sel}"><button type="button" class="st ${F.includes(x.b)?'on':''}" data-star="${esc(x.b)}" aria-label="관심 코인">${F.includes(x.b)?'★':'☆'}</button><b style="display:inline-flex;align-items:center;gap:7px">${coinIcon(x.b,18)}${esc(x.b)}</b><span>${x.p!=null?pfx(x.p):''}</span><span class="${x.c>=0?'u':'d'}">${x.c!=null?(x.c>=0?'+':'')+x.c.toFixed(1)+'%':''}</span><span class="vb">${x.rg!=null?'폭 '+x.rg.toFixed(1)+'%':''}</span></li>`;
     ul.innerHTML=(fv.length?'<li class="sep">★ 관심 코인</li>':'')+fv.map((x,i)=>row(x,i)).join('')+(fv.length?'<li class="sep">변동성 순</li>':'')+L.map((x,i)=>row(x,i+fv.length)).join('')+
       (q?`<li class="srch" role="option" data-q="${esc(inp.value.trim())}" aria-selected="${sel===items.length}">"${esc(inp.value.trim())}" ${esc(opt.searchLabel||'그대로 열기')} ↵</li>`:'');
     st.textContent=all.length?`선물 ${all.length}개 중`:'불러오는 중…'};
@@ -343,5 +364,5 @@ async function openChart(base,meta={}){
   try{inst=await mountChart(back.querySelector('[data-r="body"]'),base)}catch(e){back.querySelector('[data-r="body"]').innerHTML=`<p class="odc-note">${esc(e.message)}</p>`}
 }
 
-window.OD={picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
+window.OD={coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
 })();

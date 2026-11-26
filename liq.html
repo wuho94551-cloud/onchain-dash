@@ -54,8 +54,9 @@ input,select{min-height:44px;padding:0 12px;border:1px solid var(--line);border-
 @media(max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
 .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
 .filters input{flex:1 1 140px;max-width:220px}
-.chk{display:flex;align-items:center;gap:6px;font-size:14px;min-height:36px}
-.chk input{min-height:auto;width:18px;height:18px}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:14px;min-height:36px;flex:none;margin-right:10px}
+.chk label{width:auto!important;white-space:nowrap;cursor:pointer}
+.chk input{min-height:auto!important;width:18px!important;height:18px;flex:none!important;max-width:none!important;margin:0;padding:0}
 .feed{max-height:560px;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
 table{width:100%;border-collapse:collapse;font-size:15px}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right}
@@ -84,7 +85,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:600px){table{font-size:13px}th,td{padding:6px 6px}.tot .v{font-size:22px}.arow label{width:100%}}
 @media(prefers-reduced-motion:reduce){tr.new{animation:none}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=12">
+<link rel="stylesheet" href="./theme.css?v=13">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -116,7 +117,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 <section class="band" style="padding-top:0">
   <div class="panel">
     <div class="phead"><h2>분당 청산 (최근 60분)</h2>
-      <div class="sub" style="margin:0"><span class="L">■ 롱 청산 (위)</span> · <span class="S">■ 숏 청산 (아래)</span></div></div>
+      <div class="sub" style="margin:0"><span class="L">■ 롱 청산 (위 · 강제 매도)</span> · <span class="S">■ 숏 청산 (아래 · 강제 매수)</span></div></div>
     <div class="fig" id="f-min"></div>
   </div>
 </section>
@@ -155,7 +156,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 </section>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="./common.js?v=11"></script>
+<script src="./common.js?v=12"></script>
 <script>
 {
 const $=s=>document.querySelector(s);

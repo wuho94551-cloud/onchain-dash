@@ -28,6 +28,7 @@ h1{font-size:clamp(32px,5vw,52px)}h2{font-size:24px}
 .brand{font-family:"Sofia Sans Condensed",sans-serif;font-weight:800;font-size:22px;margin-right:auto}
 .pk{position:relative}
 .pkbtn{background:transparent!important;border:0!important;padding:0!important;min-height:0!important;color:inherit!important;display:flex;align-items:baseline;gap:10px;cursor:pointer;text-align:left}
+#cname{display:inline-flex;align-items:center;gap:10px}
 .pkbtn{font:inherit!important}.pkbtn:hover em{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:6px}
 .pkbtn .car{font-size:22px;color:var(--mute)}
 .pkpop{position:absolute;z-index:20;top:calc(100% + 8px);left:0;width:min(420px,calc(100vw - 28px));background:var(--bg);border:1px solid var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.2);padding:10px}
@@ -92,7 +93,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:600px){table{font-size:13px}.fig{min-height:240px}.kpi .v{font-size:22px}.keyrow label{width:100%}}
 @media(prefers-reduced-motion:no-preference){.panel{animation:in .35s ease both}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=12">
+<link rel="stylesheet" href="./theme.css?v=13">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -125,7 +126,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   <div class="chips" id="cinfo"></div>
   <div id="clinks"></div>
   <p class="sub" id="stamp"></p>
-  <button class="ghost" id="gokeys" style="min-height:36px;padding:0 12px;font-size:14px;margin-top:6px">API 키 설정</button>
+  <button class="ghost" id="gokeys" title="API 키 설정" aria-label="API 키 설정" style="min-height:32px;min-width:32px;padding:0 8px;font-size:15px;margin-top:6px">⚙</button>
 </header>
 
 <section class="band">
@@ -180,7 +181,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   </details>
 </section>
 
-<script src="./common.js?v=11"></script>
+<script src="./common.js?v=12"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -251,7 +252,7 @@ async function findCoin(q){
   const d=await j(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(pick.id)}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`);
   const m=d.market_data||{};const dp=d.detail_platforms||{};
   return {id:d.id,sym:(d.symbol||'').toUpperCase(),name:d.name,price:m.current_price?.usd,chg:m.price_change_percentage_24h,mcap:m.market_cap?.usd,fdv:m.fully_diluted_valuation?.usd,circ:m.circulating_supply,max:m.max_supply||m.total_supply,
-    eth:d.id==='ethereum'?'native':(d.platforms?.ethereum||''),decimals:dp.ethereum?.decimal_place??18,platforms:d.platforms||{}};
+    eth:d.id==='ethereum'?'native':(d.platforms?.ethereum||''),decimals:dp.ethereum?.decimal_place??18,platforms:d.platforms||{},img:d.image?.large||d.image?.small||''};
 }
 
 async function loadCoin(q){
@@ -260,7 +261,8 @@ async function loadCoin(q){
   OD.coinLinks($('#clinks'),C.sym,'coin');
   store.set('coin',C.sym);try{history.replaceState(null,'','#'+C.sym.replace(/[^A-Za-z0-9-]/g,''))}catch(e){}
   document.title=C.sym+' · 온체인 데스크';
-  $('#cname').innerHTML=`${esc(C.name)} <span style="font-size:.6em;color:var(--mute);font-weight:500">${esc(C.sym)}</span>`;
+  if(C.img)OD.setIcon(C.sym,C.img);
+  $('#cname').innerHTML=`${OD.coinIcon(C.sym,34)} ${esc(C.name)} <span style="font-size:.6em;color:var(--mute);font-weight:500">${esc(C.sym)}</span>`;
   $('#cpx').textContent=C.price!=null?price(C.price):'';
   $('#cch').innerHTML=C.chg!=null?pct(C.chg)+' <span class="sub">24시간</span>':'';
   const chainNames=Object.keys(C.platforms).filter(k=>k&&C.platforms[k]).slice(0,4).join(', ');

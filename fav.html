@@ -11,7 +11,7 @@
 :root{color-scheme:light dark}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5;overflow-x:clip}
-.band{padding:clamp(14px,2.4vw,32px) max(4vw,14px);max-width:1320px;margin:0 auto}
+.band{padding:clamp(14px,2.4vw,32px) max(4vw,14px);max-width:1240px;margin:0 auto}
 h1,h2{margin:0;line-height:1.02}
 .sub{color:var(--mute);font-size:14px;margin:4px 0 0}
 button{font:inherit;font-size:15px;min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap}
@@ -46,7 +46,7 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 .cvdc i{position:absolute;top:0;bottom:0}
 .addw{display:inline-block;position:relative}
 </style>
-<link rel="stylesheet" href="./theme.css?v=12">
+<link rel="stylesheet" href="./theme.css?v=13">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -82,7 +82,7 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
     <li>입출금: 빗썸·게이트 공개 API. 업비트는 키가 필요해서 김프 페이지에서 따로 봐요.</li>
   </ul></details>
 </section>
-<script src="./common.js?v=11"></script>
+<script src="./common.js?v=12"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -121,7 +121,7 @@ async function load(){
       const B=bt[r.b];r.wb=B?{d:B.deposit_status==1,w:B.withdrawal_status==1}:null;r.wg=gt[r.b]||null}
     const ws=(lab,x)=>{const c=v=>v==null?'na':v?'ok':'no';return`<span>${lab}</span><i class="${c(x?.d)}">입</i><i class="${c(x?.w)}">출</i>`};
     const bar=(v,vol)=>{if(v==null||!vol)return'';const f=Math.max(-1,Math.min(1,v/vol*8));return`<span class="cvdc" title="24시간 거래대금 대비 ${(v/vol*100).toFixed(1)}%"><i style="${f>=0?'left:50%':'right:50%'};width:${Math.abs(f)*50}%;background:var(${f>=0?'--up':'--dn'})"></i></span>`};
-    $('#rows').innerHTML=R.map(r=>`<tr><td class="l"><b><a href="./coin.html#${encodeURIComponent(r.b)}">${esc(r.b)}</a></b></td>
+    $('#rows').innerHTML=R.map(r=>`<tr><td class="l"><b style="display:inline-flex;align-items:center;gap:8px">${OD.coinIcon(r.b,22)}<a href="./coin.html#${encodeURIComponent(r.b)}">${esc(r.b)}</a></b></td>
       <td>${px(r.p)}</td><td>${pc(r.c)}</td><td>${r.fr==null?'<span class="mu">–</span>':pc(r.fr,4)}</td>
       <td>${usd(r.oiv)} ${pc(r.doi,1)}</td><td>${pc(r.kimp)}</td>
       <td title="${esc(r.cvdm?'Binance '+r.cvdm:'')}">${r.cvd==null?'<span class="mu">Binance 없음</span>':`<span class="${r.cvd>=0?'up':'dn'}">${usd(r.cvd)}</span> / <span class="${r.cvd4>=0?'up':'dn'}">${usd(r.cvd4)}</span>${bar(r.cvd,r.vol)}`}</td>

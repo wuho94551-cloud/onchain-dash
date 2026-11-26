@@ -61,7 +61,7 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
 .chk{display:flex;align-items:center;gap:6px;font-size:14px}
 .chk input{min-height:auto;width:18px;height:18px}
 </style>
-<link rel="stylesheet" href="./theme.css?v=12">
+<link rel="stylesheet" href="./theme.css?v=13">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -81,7 +81,7 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
 </div></nav>
 
 <header class="band">
-  <div><h1><button type="button" class="odp-btn" id="pick" title="눌러서 코인 바꾸기"><span id="sym">BTC</span><span class="car" aria-hidden="true">▾</span></button></h1></div>
+  <div><h1><button type="button" class="odp-btn" id="pick" title="눌러서 코인 바꾸기"><span id="sym" style="display:inline-flex;align-items:center;gap:10px">BTC</span><span class="car" aria-hidden="true">▾</span></button></h1></div>
   <div id="clinks"></div>
   <p class="sub" id="stat">코인 이름을 눌러 고르세요</p>
   <div class="verdict" id="vd"></div>
@@ -101,7 +101,7 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
 <section class="band">
   <div class="panel">
     <div class="phead"><h2>현물 vs 선물 CVD <span class="sub" style="font-size:14px">페이지를 연 뒤부터, 1분 단위, USD</span></h2>
-      <div class="legend"><span><i style="background:var(--ink)"></i>현물 (Bybit)</span><span><i style="background:var(--long)"></i>선물 (Bybit)</span></div></div>
+      <div class="legend"><span><i style="background:var(--ink)"></i>현물 (Bybit)</span><span><i style="background:var(--blue)"></i>선물 (Bybit)</span></div></div>
     <div class="fig" id="f-cvd"></div>
   </div>
 </section>
@@ -122,7 +122,7 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
   </div>
 </section>
 
-<script src="./common.js?v=11"></script>
+<script src="./common.js?v=12"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -200,7 +200,7 @@ function drawCVD(){
   let g=`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--mute)"/>`;
   if(!narrow){for(let i=0;i<=4;i++){const v=y0+(y1-y0)*i/4;g+=`<text x="${pl-6}" y="${Y(v)+4}" text-anchor="end" font-size="12" fill="var(--mute)">${usd(v)}</text>`}g+=`<text x="${pl}" y="${H-5}" font-size="12" fill="var(--mute)">${hm(t0)}</text><text x="${W-pr}" y="${H-5}" text-anchor="end" font-size="12" fill="var(--mute)">${hm(t1)}</text>`}
   const path=s=>s.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)).join('');
-  cs.innerHTML=g+`<path d="${path(P)}" fill="none" stroke="var(--long)" stroke-width="2"/><path d="${path(S)}" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
+  cs.innerHTML=g+`<path d="${path(P)}" fill="none" stroke="var(--blue)" stroke-width="2"/><path d="${path(S)}" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
   cs.onpointermove=e=>{const r=cs.getBoundingClientRect(),i=Math.max(0,Math.min(n-1,Math.round((e.clientX-r.left-pl)/(W-pl-pr)*(n-1))));ct.style.display='block';ct.style.left=Math.min(Math.max(X(S[i][0]),100),W-100)+'px';ct.style.top=(e.clientY-r.top)+'px';ct.textContent=`${hm(S[i][0])} · 현물 ${usd(S[i][1])} · 선물 ${usd(P[i][1])}`};
   cs.onpointerleave=()=>{ct.style.display='none'};
   return{s:S.at(-1)[1],p:P.at(-1)[1]};
@@ -231,7 +231,7 @@ function drawVP(){if(!vp)return;const W=vs.clientWidth,H=vs.clientHeight;if(!W||
   for(let i=0;i<NB;i++){const y=H-(i+1)*bh,w=bins[i]/mx*(W-pl-10);const inVA=i>=lo&&i<=hi;g+=`<rect x="${pl}" y="${(y+.5).toFixed(1)}" width="${Math.max(1,w).toFixed(1)}" height="${Math.max(1,bh-1).toFixed(1)}" fill="${i===poc?'var(--ink)':inVA?'var(--mute)':'var(--line)'}" opacity="${inVA?.75:1}"/>`}
   const yl=v=>H-((v-vp.L)/vp.st)*bh;
   const lab=(v,t,c)=>`<line x1="${pl-4}" x2="${W}" y1="${yl(v)}" y2="${yl(v)}" stroke="${c}" stroke-dasharray="${t==='현재가'?'':'4 3'}"/><text x="${pl-8}" y="${yl(v)+4}" text-anchor="end" font-size="12" fill="${c}">${t}</text>`;
-  g+=lab(vp.VAH,'VAH','var(--mute)')+lab(vp.VAL,'VAL','var(--mute)')+lab(vp.POC,'POC','var(--ink)')+lab(vp.price,'현재가','var(--long)');
+  g+=lab(vp.VAH,'VAH','var(--mute)')+lab(vp.VAL,'VAL','var(--mute)')+lab(vp.POC,'POC','var(--ink)')+lab(vp.price,'현재가','var(--blue)');
   vs.innerHTML=g}
 const vpRO=new ResizeObserver(drawVP);vpRO.observe(vs);
 function renderMS(){
@@ -264,7 +264,7 @@ async function startWatch(q){
   if(!sym){$('#stat').textContent=`Bybit 무기한 선물에 ${q}가 없어요.`;return}
   SYM=sym;BASE=q;bids.clear();asks.clear();walls.clear();exec.clear();iceSeen.clear();cvdP.clear();cvdS.clear();LOG.length=0;start=Date.now();vp=null;ms=null;
   $('#log').innerHTML='<div class="sub">감시 시작. 이상 징후가 생기면 여기에 기록돼요.</div>';
-  $('#sym').textContent=q;OD.coinLinks($('#clinks'),q,'watch');document.title=q+' 호가 감시 · 온체인 데스크';store.set('w-sym',q);try{history.replaceState(null,'','#'+q)}catch(e){}
+  $('#sym').innerHTML=OD.coinIcon(q,30)+' '+q.replace(/[<>&"']/g,'');OD.coinLinks($('#clinks'),q,'watch');document.title=q+' 호가 감시 · 온체인 데스크';store.set('w-sym',q);try{history.replaceState(null,'','#'+q)}catch(e){}
   $('#stat').textContent=`Bybit ${sym} 호가 200단계·현물/선물 체결 실시간 감시 · ${hm(start)}부터`;
   if(CH)CH.destroy();CH=null;$('#f-chart').innerHTML='';OD.mountChart($('#f-chart'),q,{links:false}).then(c=>CH=c).catch(()=>{});
   connect();loadStructure().catch(e=>{$('#ms').innerHTML=`<li class="sub">구조 데이터를 불러오지 못했어요: ${esc(e.message)}</li>`});

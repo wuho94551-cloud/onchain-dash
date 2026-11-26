@@ -39,10 +39,10 @@ input,select{min-height:44px;padding:0 12px;border:1px solid var(--line);color:v
 .kpi .l{font-size:13px;color:var(--mute)}
 .kpi .v{white-space:nowrap;line-height:1.2}
 .kpi .r{font-size:13px;color:var(--mute);white-space:nowrap}
-.pos{color:var(--long)}.neg{color:var(--blue)}
+.pos{color:var(--up)}.neg{color:var(--dn)}
 .panel{padding-top:12px}
 .phead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:10px}
-.fig{position:relative;min-height:220px}.fig>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.fig{position:relative;min-height:150px}.fig>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;padding:6px 9px;white-space:nowrap;transform:translate(-50%,-115%);display:none;z-index:2}
 .legend{display:flex;gap:14px;font-size:13px;color:var(--mute);flex-wrap:wrap}
 .legend i{display:inline-block;width:14px;height:2px;margin-right:6px;vertical-align:4px}
@@ -73,7 +73,7 @@ tr.lock td:first-child{box-shadow:inset 3px 0 0 #d23b3b}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;font-weight:600;display:none;z-index:9;max-width:92vw}
 @media(max-width:600px){table{font-size:13px}th,td{padding:6px}.arow label{width:100%}.hide-sm{display:none}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=12">
+<link rel="stylesheet" href="./theme.css?v=13">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -99,13 +99,6 @@ tr.lock td:first-child{box-shadow:inset 3px 0 0 #d23b3b}
   <div class="kpis" id="kp"></div>
 </header>
 
-<section class="band" style="padding-top:0">
-  <div class="panel">
-    <div class="phead"><h2>김프 추이 <span class="sub" style="font-size:14px">페이지를 연 뒤부터</span></h2>
-      <div class="legend"><span><i style="background:var(--ink)"></i>BTC 김프</span><span><i style="background:var(--long)"></i>테더 김프</span></div></div>
-    <div class="fig" id="f-k"></div>
-  </div>
-</section>
 
 <section class="band">
   <div class="panel">
@@ -119,6 +112,14 @@ tr.lock td:first-child{box-shadow:inset 3px 0 0 #d23b3b}
     <div class="tbl"><table><thead><tr id="hd"></tr></thead><tbody id="rows"><tr><td colspan="8" class="l nm">불러오는 중…</td></tr></tbody></table></div>
     <div class="wleg"><span>입출금:</span><span class="wx">업<i class="ok">입</i><i class="no">출</i></span> 순서로 업비트·빗썸·게이트(해외) <span class="wx"><i class="ok">입</i></span>가능 <span class="wx"><i class="no">입</i></span>막힘 <span class="wx"><i class="na">?</i></span>정보 없음 · 5분마다 갱신 · 칸에 마우스를 올리거나 누르면 체인(네트워크)별 상태가 보여요 <span id="wst"></span></div>
     <p class="sub">김프 = 국내 원화 가격 ÷ (해외 USDT 가격 × 환율) − 1. 환율 기준이 기본이고, 체크하면 업비트 테더(USDT) 가격으로 환산해요. 같은 심볼이 다른 코인인 경우가 있어 ±40%가 넘는 값은 숨겨요.</p>
+  </div>
+</section>
+
+<section class="band" style="padding-top:0">
+  <div class="panel">
+    <div class="phead"><h2>김프 추이 <span class="sub" style="font-size:14px">페이지를 연 뒤부터</span></h2>
+      <div class="legend"><span><i style="background:var(--ink)"></i>BTC 김프</span><span><i style="background:var(--blue)"></i>테더 김프</span></div></div>
+    <div class="fig" id="f-k"></div>
   </div>
 </section>
 
@@ -145,7 +146,7 @@ tr.lock td:first-child{box-shadow:inset 3px 0 0 #d23b3b}
 </section>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="./common.js?v=11"></script>
+<script src="./common.js?v=12"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -162,7 +163,9 @@ let sortK='kimp',sortD=-1,q='';const hist=[];
 const REFS=[['bybit','Bybit'],['okx','OKX'],['gate','Gate']];
 
 async function loadFX(){try{const d=await j('https://open.er-api.com/v6/latest/USD');FX=d.rates.KRW;FXT=d.time_last_update_unix*1000}catch(e){}}
-async function loadNames(){try{const d=await j('https://api.upbit.com/v1/market/all');for(const m of d)if(m.market.startsWith('KRW-'))names[m.market.slice(4)]=m.korean_name}catch(e){}}
+/* 한글 이름은 하루 동안 저장해 두고 재사용 (업비트 초당 요청 제한을 덜 쓰려고) */
+async function loadNames(){try{const c=JSON.parse(localStorage.getItem('kimp-names')||'null');if(c&&Date.now()-c.t<864e5){Object.assign(names,c.n);return}
+  const d=await j('https://api.upbit.com/v1/market/all');for(const m of d)if(m.market.startsWith('KRW-'))names[m.market.slice(4)]=m.korean_name;localStorage.setItem('kimp-names',JSON.stringify({t:Date.now(),n:names}));await new Promise(r=>setTimeout(r,400))}catch(e){}}
 async function loadUpbit(){const d=await j('https://api.upbit.com/v1/ticker/all?quote_currencies=KRW');up={};for(const t of d)up[t.market.slice(4)]={p:t.trade_price,c:t.signed_change_rate*100,v:t.acc_trade_price_24h}}
 async function loadBithumb(){try{const d=await j('https://api.bithumb.com/public/ticker/ALL_KRW');bt={};for(const [k,v] of Object.entries(d.data||{}))if(v&&v.closing_price)bt[k]={p:Number(v.closing_price),v:Number(v.acc_trade_value_24H)}}catch(e){}}
 async function loadRef(){
@@ -189,7 +192,7 @@ function render(){
   const f=rs.filter(r=>(!q||r.s.includes(q)||r.n.includes(q))&&Math.abs(r.kimp)>=KMIN);
   f.sort((a,b)=>{const x=a[sortK],y=b[sortK];if(sortK==='s')return sortD*String(x).localeCompare(String(y));return sortD*((x??-1e18)-(y??-1e18))});
   const mx=Math.max(1,...f.map(r=>Math.abs(r.kimp)));
-  $('#rows').innerHTML=f.length?f.map(r=>`<tr class="${Math.abs(r.kimp)>=5?'hot':''} ${locked(r.s)?'lock':''}"><td class="l nm"><b>${esc(r.s)}</b><small>${esc(r.n)}</small></td><td>${krw(r.up)}</td><td class="hide-sm">${krw(r.g)}</td><td>${kp(r.kimp)}<span class="kbar" style="width:${(Math.abs(r.kimp)/mx*40).toFixed(0)}px;background:${r.kimp>=0?'var(--long)':'var(--blue)'}"></span></td><td>${kp(r.bk)}</td><td class="ws">${wcell(r.s)}</td><td class="hide-sm">${kp(r.c)}</td><td>${won(r.v)}</td></tr>`).join(''):'<tr><td colspan="8" class="l nm">조건에 맞는 코인이 없어요.</td></tr>';
+  $('#rows').innerHTML=f.length?f.map(r=>`<tr class="${Math.abs(r.kimp)>=5?'hot':''} ${locked(r.s)?'lock':''}"><td class="l nm">${OD.coinIcon(r.s,20)} <b>${esc(r.s)}</b><small>${esc(r.n)}</small></td><td>${krw(r.up)}</td><td class="hide-sm">${krw(r.g)}</td><td>${kp(r.kimp)}<span class="kbar" style="width:${(Math.abs(r.kimp)/mx*40).toFixed(0)}px;background:${r.kimp>=0?'var(--long)':'var(--blue)'}"></span></td><td>${kp(r.bk)}</td><td class="ws">${wcell(r.s)}</td><td class="hide-sm">${kp(r.c)}</td><td>${won(r.v)}</td></tr>`).join(''):'<tr><td colspan="8" class="l nm">조건에 맞는 코인이 없어요.</td></tr>';
   // summary
   const btc=rs.find(r=>r.s==='BTC'),eth=rs.find(r=>r.s==='ETH');
   const tk=up.USDT&&FX?(up.USDT.p/FX-1)*100:null;
@@ -219,7 +222,7 @@ function draw(){
   g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--mute)"/>`;
   if(!narrow){g+=`<text x="${pl}" y="${H-5}" font-size="12" fill="var(--mute)">${hm(x0)}</text><text x="${W-pr}" y="${H-5}" text-anchor="end" font-size="12" fill="var(--mute)">${hm(x1)}</text>`}
   const path=i=>hist.filter(h=>h[i]!=null).map((h,k)=>(k?'L':'M')+X(h[0]).toFixed(1)+','+Y(h[i]).toFixed(1)).join('');
-  g+=`<path d="${path(2)}" fill="none" stroke="var(--long)" stroke-width="2"/><path d="${path(1)}" fill="none" stroke="var(--ink)" stroke-width="2"/><line class="cx" y1="${pt}" y2="${H-pb}" stroke="var(--ink)" opacity="0"/>`;
+  g+=`<path d="${path(2)}" fill="none" stroke="var(--blue)" stroke-width="2"/><path d="${path(1)}" fill="none" stroke="var(--ink)" stroke-width="2"/><line class="cx" y1="${pt}" y2="${H-pb}" stroke="var(--ink)" opacity="0"/>`;
   svg.innerHTML=g;
   svg.onpointermove=e=>{const r=svg.getBoundingClientRect(),mx=e.clientX-r.left;let b=hist[0],bd=1e18;for(const h of hist){const d=Math.abs(X(h[0])-mx);if(d<bd){bd=d;b=h}}
     const cx=svg.querySelector('.cx');cx.setAttribute('x1',X(b[0]));cx.setAttribute('x2',X(b[0]));cx.setAttribute('opacity',.3);
@@ -281,7 +284,7 @@ let wait=5000,lastOk=0;
 function stat(){$('#stat').textContent=`업비트·빗썸 vs ${REFS.find(r=>r[0]===REF)[1]} 현물 · ${lastOk?hm(lastOk)+' 갱신':'불러오는 중'} · 5초마다 자동 갱신`}
 async function tick(){
   try{await Promise.all([loadUpbit(),loadBithumb(),loadRef()]);lastOk=Date.now();wait=5000;render();stat()}
-  catch(e){wait=e.message==='429'?Math.min(60000,wait*2):10000;$('#stat').textContent=(e.message==='429'?'업비트 요청 제한, 잠시 후 다시 시도':'불러오기 실패: '+e.message)+` (${Math.round(wait/1000)}초 뒤)`}
+  catch(e){wait=e.message==='429'?(!lastOk&&wait===5000?1500:Math.min(60000,wait*2)):10000;$('#stat').textContent=(e.message==='429'?(lastOk?'업비트 요청 제한, 잠시 후 다시 시도':'업비트 시세 받는 중'):'불러오기 실패: '+e.message)+` (${Math.round(wait/1000)}초 뒤)`}
   setTimeout(tick,wait);
 }
 Promise.all([loadFX(),loadNames()]).then(tick);
