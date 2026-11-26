@@ -121,6 +121,7 @@ details li{font-size:14px;color:var(--mute);margin:8px 0 0}
   <details>
     <summary>계산 방법</summary>
     <ul>
+      <li>같은 시각에 같은 방향으로 여러 가격에 걸쳐 체결된 건은 한 주문이 호가를 쓸고 간 것으로 보고 합쳐서 크기를 매겨요.</li>
       <li>Binance가 공개하는 일·월 단위 체결 아카이브(data.binance.vision)를 받아서 체결 하나하나를 금액(USD) 기준 5개 구간으로 나눠요. 시장가 매수는 +, 시장가 매도는 −로 쌓은 게 각 선이에요. 아카이브에 아직 없는 오늘 체결은 실시간 API로 채워요.</li>
       <li>기간 안 체결이 500만 건(정밀 켜면 1,500만 건)을 넘으면, 1D·1W는 기간을 고르게 나눈 표본만 받아 환산하고('표본 추정' 표시), 그보다 긴 기간은 캔들의 시장가 매수 거래대금으로 전체 CVD 한 줄만 그려요. BTC·ETH 같은 대형 코인의 긴 기간이 여기에 해당해요. 작은 알트는 1년·3년도 전부 받아져요.</li>
       <li>히트맵: 시간·가격 칸마다 실제로 체결된 금액을 쌓아서, 고른 백분위 범위(기본 상위 4%)에 드는 칸만 검정→빨강→노랑→흰색으로 칠해요. 과거 호가창 기록은 공개 API로 받을 수 없어서, 대기 주문이 아니라 실제로 거래가 몰린 자리예요. 1주 이하는 체결 단위로, 그보다 길면 캔들 거래대금을 고가~저가에 고르게 나눠서 계산해요.</li>
@@ -209,7 +210,7 @@ async function load(){
     let covered=D.t0;D.arcTrades=nTr;
     if(plan.length&&nTr<=cap){
       D.size=true;D.tot.fill(0);D.mode='archive';let done=0,ix=0;const ends=[];const tot=plan.reduce((a,f)=>a+(f.days?f.days.length:1),0);
-      const one=async f=>{if(await eachArchive(f.url,x=>{if(x.T>=D.t0)add(x,1)})){ends.push(f.end);return true}return false};
+      const one=async f=>{const M=merger(1);const ok=await eachArchive(f.url,x=>{if(x.T>=D.t0)M.push(x)});M.flush();if(ok){ends.push(f.end);return true}return false};
       const worker=async()=>{while(ix<plan.length&&my===run){const f=plan[ix++];
           if(!(await one(f))&&f.days)for(const d of f.days){if(my!==run)return;await one(d);done++}else done+=f.days?f.days.length:1;
           if(my!==run)return;$('#pg').style.width=(3+done/tot*80)+'%';$('#stat').textContent=`${base} 체결 아카이브 받는 중… ${Math.min(done,tot)}/${tot}일`;draw()}};
@@ -229,7 +230,7 @@ async function load(){
       if(D.mode!=='archive')D.mode=w>1?'sample':'full';else if(w>1)D.restSample=true;D.restFrom=covered;
       const conc=MK==='spot'?8:3;let done=0,jx=0;const base0=parseFloat($('#pg').style.width)||3;
       const worker=async()=>{while(jx<ids.length&&my===run){const id=ids[jx++];const r=await j(`${A}/aggTrades?symbol=${sym}&fromId=${id}&limit=1000`);
-          if(my!==run)return;for(const x of r){if(x.T<covered)continue;add(x,w)}done++;if(done%5===0||done===ids.length){$('#pg').style.width=(base0+done/ids.length*(100-base0))+'%';$('#stat').textContent=`${base} 최근 체결 받는 중… ${done}/${ids.length}`;draw()}
+          if(my!==run)return;const M=merger(w);for(const x of r){if(x.T<covered)continue;M.push(x)}M.flush();done++;if(done%5===0||done===ids.length){$('#pg').style.width=(base0+done/ids.length*(100-base0))+'%';$('#stat').textContent=`${base} 최근 체결 받는 중… ${done}/${ids.length}`;draw()}
           if(MK==='fut')await sleep(350)}};
       await Promise.all(Array.from({length:conc},worker));
       if(my!==run)return;
@@ -241,8 +242,10 @@ async function load(){
   finally{if(my===run)$('#go').disabled=false}
 }
 const rowOf=p=>Math.max(0,Math.min(PR-1,Math.floor((p-D.lo)/(D.hi-D.lo)*PR)));
-function add(x,w){const i=Math.floor((x.T-D.t0)/D.bk);if(i<0)return;grow(i);const p=+x.p,v=p*+x.q,c=clsOf(v),s=x.m?-1:1;
-  D.del[c][i]+=s*v*w;D.tot[i]+=s*v*w;D.cnt[c]+=w;D.vol[c]+=v*w;D.heat[i*PR+rowOf(p)]+=v*w}
+/* 같은 시각(ms)·같은 방향으로 이어진 체결은 한 주문이 여러 호가를 쓸고 간 것으로 보고 합쳐서 크기를 매겨요 */
+function merger(w){let o=null;const flush=()=>{if(!o)return;const c=clsOf(o.v);D.del[c][o.i]+=o.s*o.v*w;D.cnt[c]+=w;D.vol[c]+=o.v*w;o=null};
+  return{push(x){const i=Math.floor((x.T-D.t0)/D.bk);if(i<0)return;grow(i);const p=+x.p,v=p*+x.q,s=x.m?-1:1;D.tot[i]+=s*v*w;D.heat[i*PR+rowOf(p)]+=v*w;
+    if(o&&o.T===x.T&&o.s===s)o.v+=v;else{flush();o={T:x.T,s,v,i}}},flush}}
 function grow(i){if(i<D.nb)return;const n=i+1;D.price.length=n;for(let k=D.nb;k<n;k++)D.price[k]=null;
   D.del=D.del.map(a=>{const b=new Float64Array(n);b.set(a);return b});let t=new Float64Array(n);t.set(D.tot);D.tot=t;t=new Float64Array(n*PR);t.set(D.heat);D.heat=t;D.nb=n}
 function status(){const lab={archive:' · Binance 체결 아카이브 전체 집계'+(D.restSample?' (오늘 체결만 표본 추정)':''),full:' · 전체 체결 집계',sample:` · 표본 추정 (실제 체결의 약 ${(100/D.w).toFixed(D.w>20?1:0)}%를 받아 환산)`,kline:` · 캔들 기반 전체 CVD (이 기간 체결이 약 ${(D.arcTrades/1e6).toFixed(0)}백만 건이라 너무 많아서 크기별 구분은 꺼요. '정밀'을 켜면 1,500만 건까지 받아요)`};
@@ -272,12 +275,13 @@ async function eachArchive(url,fn){
   if(rest)line(rest);return true;
 }
 
-let dq=0;
+let dq=0,LM=null;
 function closeLive(){if(ws){ws.onclose=null;ws.close();ws=null}}
 function openLive(){
+  LM=D.size?merger(1):null;
   try{ws=new WebSocket(WS[MK](D.sym.toLowerCase()));ws.onmessage=e=>{const x=JSON.parse(e.data);const i=Math.floor((x.T-D.t0)/D.bk);if(i<0)return;grow(i);D.price[i]=+x.p;
-      if(D.size)add({p:x.p,q:x.q,T:x.T,m:x.m},1);else{const v=+x.p*+x.q;D.tot[i]+=x.m?-v:v;D.heat[i*PR+rowOf(+x.p)]+=v}
-      if(!dq)dq=setTimeout(()=>{dq=0;draw();table()},1000)};ws.onopen=status;ws.onclose=()=>{ws=null;status()}}catch(e){}
+      if(D.size)LM.push({p:x.p,q:x.q,T:x.T,m:x.m});else{const v=+x.p*+x.q;D.tot[i]+=x.m?-v:v;D.heat[i*PR+rowOf(+x.p)]+=v}
+      if(!dq)dq=setTimeout(()=>{dq=0;LM&&LM.flush();draw();table()},1000)};ws.onopen=status;ws.onclose=()=>{ws=null;status()}}catch(e){}
 }
 
 /* ---- 차트 ---- */
