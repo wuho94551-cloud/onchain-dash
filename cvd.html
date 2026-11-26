@@ -132,12 +132,13 @@ details li{font-size:14px;color:var(--mute);margin:8px 0 0}
       <li>Binance가 공개하는 일·월 단위 체결 아카이브(data.binance.vision)를 받아서 체결 하나하나를 금액(USD) 기준 5개 구간으로 나눠요. 시장가 매수는 +, 시장가 매도는 −로 쌓은 게 각 선이에요. 아카이브에 아직 없는 오늘 체결은 실시간 API로 채워요.</li>
       <li>기간 안 체결이 500만 건(정밀 켜면 1,500만 건)을 넘으면, 1D·1W는 기간을 고르게 나눈 표본만 받아 환산하고('표본 추정' 표시), 그보다 긴 기간은 캔들의 시장가 매수 거래대금으로 전체 CVD 한 줄만 그려요. BTC·ETH 같은 대형 코인의 긴 기간이 여기에 해당해요. 작은 알트는 1년·3년도 전부 받아져요.</li>
       <li>히트맵: 시간·가격 칸마다 실제로 체결된 금액을 쌓아서, 고른 백분위 범위(기본 상위 4%)에 드는 칸만 검정→빨강→노랑→흰색으로 칠해요. 과거 호가창 기록은 공개 API로 받을 수 없어서, 대기 주문이 아니라 실제로 거래가 몰린 자리예요. 1주 이하는 체결 단위로, 그보다 길면 캔들 거래대금을 고가~저가에 고르게 나눠서 계산해요.</li>
+      <li>한 번 받은 아카이브 파일은 이 브라우저에 저장해 두고(최대 약 1.5GB), 같은 코인·기간을 다시 열 때 다시 받지 않아요. 지난 날짜 파일은 바뀌지 않아서 저장본도 정확해요. <button type="button" id="clrc" style="min-height:30px;padding:0 10px;font-size:13px">저장한 파일 비우기</button> <span id="clrm"></span></li>
       <li>열어 두는 동안은 실시간 체결이 계속 더해져요.</li>
     </ul>
   </details>
 </section>
 <div id="bub" role="tooltip"></div>
-<script src="./common.js?v=9"></script>
+<script src="./common.js?v=10"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -216,12 +217,12 @@ async function load(){
     const nTr=kl.reduce((a,k)=>a+(k.n||0),0),cap=($('#prec').checked?15e6:5e6),plan=archivePlan(sym,D.t0);
     let covered=D.t0;D.arcTrades=nTr;
     if(plan.length&&nTr<=cap){
-      D.size=true;D.tot.fill(0);D.mode='archive';let done=0,ix=0;const ends=[];const tot=plan.reduce((a,f)=>a+(f.days?f.days.length:1),0);
+      D.size=true;D.tot.fill(0);D.mode='archive';CACHED=0;let done=0,ix=0;const ends=[];const tot=plan.reduce((a,f)=>a+(f.days?f.days.length:1),0);
       const one=async f=>{const M=merger(1);const ok=await eachArchive(f.url,x=>{if(x.T>=D.t0)M.push(x)});M.flush();if(ok){ends.push(f.end);return true}return false};
       const worker=async()=>{while(ix<plan.length&&my===run){const f=plan[ix++];
           if(!(await one(f))&&f.days)for(const d of f.days){if(my!==run)return;await one(d);done++}else done+=f.days?f.days.length:1;
           if(my!==run)return;$('#pg').style.width=(3+done/tot*80)+'%';$('#stat').textContent=`${base} 체결 아카이브 받는 중… ${Math.min(done,tot)}/${tot}일`;draw()}};
-      await Promise.all(Array.from({length:3},worker));if(my!==run)return;covered=ends.length?Math.max(...ends):D.t0;
+      await Promise.all(Array.from({length:3},worker));if(my!==run)return;D.cached=CACHED;covered=ends.length?Math.max(...ends):D.t0;
     }else if(span>6048e5){D.size=false;D.mode='kline'}
     else{D.size=true;D.tot.fill(0)}
     // 2) 아카이브 이후(보통 오늘)는 REST aggTrades로: 적으면 전부, 많으면 표본
@@ -255,7 +256,7 @@ function merger(w){let o=null;const flush=()=>{if(!o)return;const c=clsOf(o.v);D
     if(o&&o.T===x.T&&o.s===s)o.v+=v;else{flush();o={T:x.T,s,v,i}}},flush}}
 function grow(i){if(i<D.nb)return;const n=i+1;D.price.length=n;for(let k=D.nb;k<n;k++)D.price[k]=null;
   D.del=D.del.map(a=>{const b=new Float64Array(n);b.set(a);return b});let t=new Float64Array(n);t.set(D.tot);D.tot=t;t=new Float64Array(n*PR);t.set(D.heat);D.heat=t;D.nb=n}
-function status(){const lab={archive:' · Binance 체결 아카이브 전체 집계'+(D.restSample?' (오늘 체결만 표본 추정)':''),full:' · 전체 체결 집계',sample:` · 표본 추정 (실제 체결의 약 ${(100/D.w).toFixed(D.w>20?1:0)}%를 받아 환산)`,kline:` · 캔들 기반 전체 CVD (이 기간 체결이 약 ${(D.arcTrades/1e6).toFixed(0)}백만 건이라 너무 많아서 크기별 구분은 꺼요. '정밀'을 켜면 1,500만 건까지 받아요)`};
+function status(){const lab={archive:' · Binance 체결 아카이브 전체 집계'+(D.restSample?' (오늘 체결만 표본 추정)':'')+(D.cached?` · 저장된 파일 ${D.cached}개 재사용`:''),full:' · 전체 체결 집계',sample:` · 표본 추정 (실제 체결의 약 ${(100/D.w).toFixed(D.w>20?1:0)}%를 받아 환산)`,kline:` · 캔들 기반 전체 CVD (이 기간 체결이 약 ${(D.arcTrades/1e6).toFixed(0)}백만 건이라 너무 많아서 크기별 구분은 꺼요. '정밀'을 켜면 1,500만 건까지 받아요)`};
   $('#stat').textContent=`${D.base}_USDT · Binance ${MK==='spot'?'현물':'선물'} · ${WIN} · ${WINS.find(x=>x[0]===WIN)[3]} 간격`+(lab[D.mode]||'')+(ws?' · 실시간':'')}
 /* ---- Binance 공개 아카이브 (data.binance.vision) ---- */
 const ARC={spot:'https://data.binance.vision/data/spot',fut:'https://data.binance.vision/data/futures/um'};
@@ -270,8 +271,13 @@ function archivePlan(sym,t0){
   for(let d=Math.max(curM,day0);d<today;d+=864e5)out.push(daily(d));
   return out;
 }
+let CACHED=0;
+async function arcFetch(url){let c=null;try{c=await caches.open('od-binance-arc-v1');const hit=await c.match(url);if(hit){CACHED++;return hit}}catch(e){c=null}
+  const r=await fetch(url);
+  if(r.ok&&c){try{const est=navigator.storage&&navigator.storage.estimate?await navigator.storage.estimate():null;if(!est||est.usage<1.5e9)await c.put(url,r.clone())}catch(e){}}
+  return r}
 async function eachArchive(url,fn){
-  let r;try{r=await fetch(url)}catch(e){return false}if(!r.ok)return false;const buf=await r.arrayBuffer(),dv=new DataView(buf);
+  let r;try{r=await arcFetch(url)}catch(e){return false}if(!r.ok)return false;const buf=await r.arrayBuffer(),dv=new DataView(buf);
   let e=buf.byteLength-22;while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;if(e<0)return;
   const cd=dv.getUint32(e+16,true),method=dv.getUint16(cd+10,true),cs=dv.getUint32(cd+20,true),lho=dv.getUint32(cd+42,true);
   const st=lho+30+dv.getUint16(lho+26,true)+dv.getUint16(lho+28,true);
@@ -378,6 +384,7 @@ $('#mk').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
 $('#mode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;MODE=b.dataset.v;store.set('scvd-mode',MODE);segs();draw()});
 $('#prec').addEventListener('change',load);
 window.addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1));if(h&&symOf(h)!==SYM){$('#q').value=h;load()}});
+$('#clrc').addEventListener('click',async()=>{try{await caches.delete('od-binance-arc-v1');$('#clrm').textContent='비웠어요'}catch(e){$('#clrm').textContent='못 비웠어요'}});
 load();
 }
 </script>

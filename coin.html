@@ -176,7 +176,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   </details>
 </section>
 
-<script src="./common.js?v=9"></script>
+<script src="./common.js?v=10"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -402,7 +402,7 @@ async function showFlowCache(){
   if(!t){empty('#flow',`${esc(C.name)}은(는) Dune에서 추적할 수 있는 EVM 토큰 주소가 없어요. (BTC·솔라나 계열은 추후 추가)`);$('#flowbtn').hidden=true;return}
   $('#flowbtn').hidden=false;
   try{const c=JSON.parse(store.get(flowKey(t))||'null');if(c){renderFlow(c.rows,c.ts);return}}catch(e){}
-  empty('#flow',store.get('k-dune')?`<b>Dune으로 계산</b>을 누르면 최근 30일 ${esc(t.chain)} 체인의 거래소 유입·유출을 계산해요. 30초~2분 걸리고 무료 크레딧을 조금 씁니다.`:'아래 <b>API 키 설정</b>에서 Dune 키를 넣으면 볼 수 있어요.');
+  empty('#flow',store.get('k-dune')?`<b>Dune으로 계산</b>을 누르면 최근 30일 ${esc(t.chain)} 체인의 거래소 유입·유출을 계산해요. 30초~2분 걸리고 무료 크레딧을 조금 씁니다.`:`<div style="text-align:left;max-width:520px;margin:0 auto;line-height:1.6"><b>Dune 키가 있어야 거래소 유입·유출을 계산할 수 있어요.</b> 무료예요.<ol style="margin:6px 0;padding-left:20px"><li><a href="https://dune.com/auth/register" target="_blank" rel="noopener">dune.com</a>에 가입</li><li>오른쪽 위 프로필 → Settings → API → Create new API key</li><li>복사한 키를 아래에 붙여넣고 저장</li></ol><div style="display:flex;gap:6px;flex-wrap:wrap"><input id="k-dune-in" placeholder="Dune API 키" autocomplete="off" spellcheck="false" style="flex:1 1 220px;min-height:40px"><button type="button" id="k-dune-save" style="min-height:40px">저장</button></div><p class="sub" style="margin-top:6px">키는 이 기기 브라우저에만 저장돼요. 그동안은 <a href="./cvd.html#${encodeURIComponent(C.sym)}">CVD</a>에서 현물 매수·매도 흐름을 대신 볼 수 있어요.</p></div>`);
 }
 $('#flowbtn').addEventListener('click',async e=>{
   const b=e.currentTarget;if(!C)return;const t=flowTarget();if(!t)return;
@@ -424,6 +424,7 @@ $('#flowbtn').addEventListener('click',async e=>{
 });
 
 /* keys */
+document.addEventListener('click',e=>{if(e.target.id!=='k-dune-save')return;const v=$('#k-dune-in').value.trim();if(!v)return;store.set('k-dune',v);$('#k-dune').value=v;showFlowCache()});
 $('#k-dune').value=store.get('k-dune')||'';$('#k-ethp').value=store.get('k-ethp')||'';
 $('#keyform').addEventListener('submit',e=>{e.preventDefault();store.set('k-dune',$('#k-dune').value.trim());store.set('k-ethp',$('#k-ethp').value.trim());$('#keymsg').textContent='저장했어요';if(C){showFlowCache();loadHolders()}});
 $('#gokeys').addEventListener('click',()=>{$('#keys').open=true;$('#keys').scrollIntoView({behavior:'smooth'})});

@@ -113,7 +113,7 @@ tr.lock td:first-child{box-shadow:inset 3px 0 0 #d23b3b}
       <label class="sub" style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="usdt" style="min-height:auto;width:18px;height:18px"> 테더 가격 기준으로 계산</label>
     </div>
     <div class="tbl"><table><thead><tr id="hd"></tr></thead><tbody id="rows"><tr><td colspan="8" class="l nm">불러오는 중…</td></tr></tbody></table></div>
-    <div class="wleg"><span>입출금:</span><span class="wx">업<i class="ok">입</i><i class="no">출</i></span> 순서로 업비트·빗썸·게이트(해외) <span class="wx"><i class="ok">입</i></span>가능 <span class="wx"><i class="no">입</i></span>막힘 <span class="wx"><i class="na">?</i></span>정보 없음 · 5분마다 갱신 <span id="wst"></span></div>
+    <div class="wleg"><span>입출금:</span><span class="wx">업<i class="ok">입</i><i class="no">출</i></span> 순서로 업비트·빗썸·게이트(해외) <span class="wx"><i class="ok">입</i></span>가능 <span class="wx"><i class="no">입</i></span>막힘 <span class="wx"><i class="na">?</i></span>정보 없음 · 5분마다 갱신 · 칸에 마우스를 올리거나 누르면 체인(네트워크)별 상태가 보여요 <span id="wst"></span></div>
     <p class="sub">김프 = 국내 원화 가격 ÷ (해외 USDT 가격 × 환율) − 1. 환율 기준이 기본이고, 체크하면 업비트 테더(USDT) 가격으로 환산해요. 같은 심볼이 다른 코인인 경우가 있어 ±40%가 넘는 값은 숨겨요.</p>
   </div>
 </section>
@@ -123,7 +123,7 @@ tr.lock td:first-child{box-shadow:inset 3px 0 0 #d23b3b}
     <summary>김프 알림</summary>
     <form id="aform">
       <div class="arow"><label for="a-th">김프 절댓값이 이 % 이상</label><select id="a-th"><option value="0">끄기</option><option>3</option><option>5</option><option>7</option><option>10</option></select></div>
-      <div class="arow"><label for="a-coins">관심 코인만 (비우면 전체)</label><input id="a-coins" placeholder="예: BTC, XRP" autocomplete="off"></div>
+      <div class="arow"><label for="a-coins">관심 코인만 (비우면 전체)</label><input id="a-coins" placeholder="예: BTC, XRP" autocomplete="off"><button type="button" id="a-fav" class="ghost" style="min-height:40px;padding:0 12px;font-size:14px;flex:none" title="★ 표시한 관심 코인으로 채우기">★ 관심 코인</button></div>
       <div class="arow"><label for="a-vol">업비트 거래대금 최소</label><select id="a-vol"><option value="0">제한 없음</option><option value="1e9">10억원</option><option value="1e10">100억원</option><option value="1e11">1000억원</option></select></div>
       <div class="arow"><span style="width:11em"></span><button type="submit">저장하고 켜기</button><span class="sub" id="amsg"></span></div>
     </form>
@@ -141,7 +141,7 @@ tr.lock td:first-child{box-shadow:inset 3px 0 0 #d23b3b}
 </section>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="./common.js?v=9"></script>
+<script src="./common.js?v=10"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -239,10 +239,12 @@ $('#a-th').value=String(A.th);$('#a-coins').value=A.coins;$('#a-vol').value=Stri
 function beep(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=660;g.gain.setValueAtTime(.08,actx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+.4);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.4)}catch(e){}}
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',6000)}
 /* ---- 입출금 상태 ---- */
-const W={up:null,bt:null,gt:null};let wAt=0,wErr='';
+const W={up:null,bt:null,gt:null},WC={up:{},bt:{},gt:{}};let wAt=0,wErr='';
+function chainTxt(sym){const o=[];for(const [l,k] of [['업비트','up'],['빗썸','bt'],['게이트','gt']]){const c=WC[k][sym];if(!c||!c.length)continue;
+    o.push(l+': '+c.map(x=>`${x.n} 입${x.d?'○':'✕'} 출${x.w?'○':'✕'}`).join(', '))}return o.join('\n')}
 function wcell(sym){const one=(lab,m)=>{const x=m&&m[sym];const c=v=>v==null?'na':v?'ok':'no';
-    return`<span class="wx" title="${lab} 입금 ${x?x.d?'가능':'막힘':'정보 없음'} · 출금 ${x?x.w?'가능':'막힘':'정보 없음'}">${lab[0]}<i class="${c(x?.d)}">입</i><i class="${c(x?.w)}">출</i></span>`};
-  return one('업비트',W.up)+one('빗썸',W.bt)+one('게이트',W.gt)}
+    return`<span class="wx">${lab[0]}<i class="${c(x?.d)}">입</i><i class="${c(x?.w)}">출</i></span>`};
+  const t=chainTxt(sym);return`<span data-wsym="${esc(sym)}" title="${esc(t||'체인 정보 없음')}">`+one('업비트',W.up)+one('빗썸',W.bt)+one('게이트',W.gt)+'</span>'}
 function locked(sym){for(const m of [W.up,W.bt,W.gt]){const x=m&&m[sym];if(x&&(!x.d||!x.w))return true}return false}
 function lockText(sym){const o=[];for(const [l,m] of [['업비트',W.up],['빗썸',W.bt],['게이트',W.gt]]){const x=m&&m[sym];if(!x)continue;const b=[!x.d&&'입금',!x.w&&'출금'].filter(Boolean);if(b.length)o.push(`${l} ${b.join('·')} 막힘`)}return o.join(', ')}
 const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');
@@ -252,14 +254,16 @@ async function upbitJWT(a,sec){const h=b64s(JSON.stringify({alg:'HS256',typ:'JWT
 async function loadWallets(){const errs=[];
   await Promise.all([
     (async()=>{try{const d=await j('https://api.bithumb.com/public/assetsstatus/ALL');const m={};for(const [k,v] of Object.entries(d.data||{}))m[k]={d:v.deposit_status==1,w:v.withdrawal_status==1};W.bt=m}catch(e){errs.push('빗썸')}})(),
-    (async()=>{try{const d=await j('https://api.gateio.ws/api/v4/spot/currencies');const m={};for(const c of d){if(c.delisted)continue;const k=c.currency.toUpperCase();if(k.includes('_'))continue;m[k]={d:!c.deposit_disabled,w:!c.withdraw_disabled}}W.gt=m}catch(e){errs.push('게이트')}})(),
+    (async()=>{try{const d=await j('https://api.bithumb.com/public/assetsstatus/multichain/ALL');const m={};for(const x of d.data||[])(m[x.currency]=m[x.currency]||[]).push({n:x.net_type,d:x.deposit_status==1,w:x.withdrawal_status==1});WC.bt=m}catch(e){}})(),
+    (async()=>{try{const d=await j('https://api.gateio.ws/api/v4/spot/currencies');const m={},mc={};for(const c of d){if(c.delisted)continue;const k=c.currency.toUpperCase();if(k.includes('_'))continue;m[k]={d:!c.deposit_disabled,w:!c.withdraw_disabled};if(c.chains)mc[k]=c.chains.map(x=>({n:x.name,d:!x.deposit_disabled,w:!x.withdraw_disabled}))}W.gt=m;WC.gt=mc}catch(e){errs.push('게이트')}})(),
     (async()=>{const a=store.get('uk-a'),sec=store.get('uk-s');if(!a||!sec){W.up=null;return}
       try{const t=await upbitJWT(a,sec);const r=await fetch('https://api.upbit.com/v1/status/wallet',{headers:{Authorization:'Bearer '+t}});const d=await r.json();if(!r.ok)throw new Error(d.error?.message||('HTTP '+r.status));
-        const m={};for(const x of d){const s=x.wallet_state;m[x.currency]={d:s==='working'||s==='deposit_only',w:s==='working'||s==='withdraw_only'}}W.up=m}catch(e){errs.push('업비트('+e.message+')')}})()]);
+        const m={},mc={};for(const x of d){const s=x.wallet_state,ok={d:s==='working'||s==='deposit_only',w:s==='working'||s==='withdraw_only'};const p=m[x.currency];m[x.currency]=p?{d:p.d||ok.d,w:p.w||ok.w}:ok;(mc[x.currency]=mc[x.currency]||[]).push({n:x.net_type||x.currency,...ok})}W.up=m;WC.up=mc}catch(e){errs.push('업비트('+e.message+')')}})()]);
   wAt=Date.now();wErr=errs.join(', ');$('#wst').textContent=`· ${hm(wAt)} 확인`+(wErr?` · 못 받은 곳: ${wErr}`:'')+(W.up?'':' · 업비트는 키를 넣으면 보여요');render()}
 $('#uk-a').value=store.get('uk-a')||'';$('#uk-s').value=store.get('uk-s')||'';
 $('#ukf').addEventListener('submit',async e=>{e.preventDefault();store.set('uk-a',$('#uk-a').value.trim());store.set('uk-s',$('#uk-s').value.trim());$('#ukmsg').textContent='확인 중…';await loadWallets();$('#ukmsg').textContent=W.up?'업비트 입출금 상태를 받았어요':'업비트에서 거절했어요. 키 권한과 등록한 IP를 확인하세요'});
-setTimeout(loadWallets,1500);setInterval(()=>{if(!document.hidden)loadWallets()},300e3);
+setTimeout(loadWallets,1500);
+$('#rows').addEventListener('click',e=>{const w=e.target.closest('[data-wsym]');if(!w)return;const t=chainTxt(w.dataset.wsym);OD.toast(w.dataset.wsym+' 체인별 입출금',t||'체인 정보 없음',{ms:7000})});setInterval(()=>{if(!document.hidden)loadWallets()},300e3);
 function checkAlerts(rs){if(!A.th)return;const w=A.coins?A.coins.toUpperCase().split(/[\s,]+/).filter(Boolean):null;
   for(const r of rs){if(w&&!w.includes(r.s))continue;if(r.v<A.vol)continue;if(Math.abs(r.kimp)<A.th)continue;if(Date.now()-(fired[r.s]||0)<600e3)continue;
     fired[r.s]=Date.now();const m=`${r.s} 김프 ${r.kimp>=0?'+':''}${r.kimp.toFixed(2)}%`;beep();OD.notify(m,`업비트 ${krw(r.up)}원 · 해외 ${krw(r.g)}원`+(lockText(r.s)?` · ⚠ ${lockText(r.s)}`:''),{side:r.kimp>=0?'B':'S',href:'./kimp.html'});
@@ -279,6 +283,7 @@ async function tick(){
 Promise.all([loadFX(),loadNames()]).then(tick);
 setInterval(loadFX,3600e3);
 }
+document.getElementById('a-fav')?.addEventListener('click',()=>{const f=OD.favs();const i=document.getElementById('a-coins');i.value=f.length?f.join(', '):i.value;if(!f.length)OD.toast('관심 코인이 없어요','코인 선택 창이나 코인 분석·호가 감시·CVD에서 ☆를 눌러 추가하세요.',{ms:5000})});
 </script>
 </body>
 </html>

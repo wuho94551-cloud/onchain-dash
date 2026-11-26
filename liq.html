@@ -140,7 +140,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
     <form id="aform">
       <div class="arow"><label for="a-one">단일 청산이 이 금액 이상</label><select id="a-one"><option value="0">끄기</option><option>100000</option><option>250000</option><option>500000</option><option>1000000</option><option>5000000</option></select></div>
       <div class="arow"><label for="a-sum">1분 합계가 이 금액 이상</label><select id="a-sum"><option value="0">끄기</option><option>1000000</option><option>5000000</option><option>10000000</option><option>50000000</option></select></div>
-      <div class="arow"><label for="a-coins">관심 코인만 (비우면 전체)</label><input id="a-coins" placeholder="예: BTC, ETH, SOL" autocomplete="off"></div>
+      <div class="arow"><label for="a-coins">관심 코인만 (비우면 전체)</label><input id="a-coins" placeholder="예: BTC, ETH, SOL" autocomplete="off"><button type="button" id="a-fav" class="ghost" style="min-height:40px;padding:0 12px;font-size:14px;flex:none" title="★ 표시한 관심 코인으로 채우기">★ 관심 코인</button></div>
       <div class="arow"><label>알림 방식</label>
         <span class="chk"><input type="checkbox" id="a-sound" checked><label for="a-sound" style="width:auto">소리</label></span>
         <span class="chk"><input type="checkbox" id="a-notif"><label for="a-notif" style="width:auto">브라우저 알림</label></span>
@@ -151,7 +151,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 </section>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="./common.js?v=9"></script>
+<script src="./common.js?v=10"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -323,6 +323,7 @@ $('#a-test').addEventListener('click',async()=>{try{actx=actx||new (window.Audio
 
 rebuildRows();conn();okx();bybit();gate();
 }
+document.getElementById('a-fav')?.addEventListener('click',()=>{const f=OD.favs();const i=document.getElementById('a-coins');i.value=f.length?f.join(', '):i.value;if(!f.length)OD.toast('관심 코인이 없어요','코인 선택 창이나 코인 분석·호가 감시·CVD에서 ☆를 눌러 추가하세요.',{ms:5000})});
 </script>
 </body>
 </html>

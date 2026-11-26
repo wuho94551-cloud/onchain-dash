@@ -91,6 +91,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
     <span><span class="lab">종류</span><span class="seg" id="kind"></span></span>
     <span><span class="lab">최소 충족</span><span class="seg" id="minh"></span></span>
     <button id="go">다시 점검</button>
+    <label class="sub" style="margin:0;display:inline-flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="newal" style="width:18px;height:18px;accent-color:var(--ink)"> 새로 3개 이상 충족되면 알림</label>
     <span class="sub" style="margin:0" id="stat">준비 중…</span>
   </div>
   <div class="prog"><i id="bar"></i></div>
@@ -109,7 +110,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   </details>
 </section>
 
-<script src="./common.js?v=9"></script>
+<script src="./common.js?v=10"></script>
 <script>if(location.hash.length>1)location.replace("./coin.html"+location.hash);</script>
 <script>
 {
@@ -172,15 +173,22 @@ async function run(){
       C[4]=d.pos!=null?d.pos<=.4:null;
       d.C=C;d.hits=C.filter(x=>x===true).length;
     },(n,m)=>{$('#bar').style.width=(n/m*100)+'%'});
-    render();
-    const p2=n=>String(n).padStart(2,'0'),now=new Date();$('#stat').textContent=`${p2(now.getHours())}:${p2(now.getMinutes())} 점검 · ${DATA.length}개 종목`;
+    // 직전 점검 대비 새로 3개 이상 충족한 종목
+    const nowHits=new Map(DATA.filter(d=>d.C).map(d=>[d.base,d.hits]));
+    if(PREV){for(const d of DATA){if(d.hits>=3&&PREV.has(d.base)&&PREV.get(d.base)<3){d.fresh=true;
+        if($('#newal').checked)OD.notify(`${d.base} 급등 준비 ${d.hits}/5`,`새로 3개 이상 충족 · 24시간 ${d.c24>=0?'+':''}${d.c24.toFixed(1)}% · OI ${d.doi!=null?(d.doi>=0?'+':'')+d.doi.toFixed(1)+'%':'–'}`,{side:'B',href:'./'})}}}
+    PREV=nowHits;LASTRUN=Date.now();
+    render();tickStat();
   }catch(e){$('#stat').textContent='점검 실패: '+e.message}
-  finally{busy=false;$('#go').disabled=false}
+  finally{busy=false;$('#go').disabled=false;tickStat()}
 }
+let PREV=null,LASTRUN=0;const p2=n=>String(n).padStart(2,'0');
+function tickStat(){if(!LASTRUN||busy)return;const d=new Date(LASTRUN),left=Math.max(0,Math.ceil((LASTRUN+300e3-Date.now())/60e3));$('#stat').textContent=`${p2(d.getHours())}:${p2(d.getMinutes())} 점검 · ${DATA.length}개 종목 · ${left}분 뒤 자동 점검`+(DATA.some(x=>x.fresh)?' · NEW = 직전 점검 뒤 새로 3개 이상':'')}
+setInterval(tickStat,30e3);
 function cell(v){return v===true?'<span class="on">충족</span>':v===false?'<span class="off">–</span>':'<span class="na">데이터 없음</span>'}
 function render(){
   kindSeg();
-  const row=d=>`<tr data-s="${esc(d.base)}" data-k="${esc(d.kind)}"><td class="l"><b>${esc(d.base)}</b>${KF==='전체'?'':`<span class="kb">${esc(d.kind)}</span>`}</td><td class="hide-sm">${px(d.p)}</td><td>${pc(d.c24)}</td><td>${pc(d.doi,1)}</td><td>${pc(d.fr,4)}</td><td class="hide-sm">${d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–'}</td><td class="hide-sm">${d.up!=null&&(d.up+d.dn)?(d.dn?(d.up/d.dn).toFixed(2)+'x':'위쪽만'):'–'}</td>${d.C.map(c=>`<td class="c">${cell(c)}</td>`).join('')}<td><span class="hit">${d.hits}</span>/5</td></tr>`;
+  const row=d=>`<tr data-s="${esc(d.base)}" data-k="${esc(d.kind)}"><td class="l"><b>${esc(d.base)}</b>${d.fresh?'<span class="kb" style="color:var(--up);border-color:var(--up)">NEW</span>':''}${KF==='전체'?'':`<span class="kb">${esc(d.kind)}</span>`}</td><td class="hide-sm">${px(d.p)}</td><td>${pc(d.c24)}</td><td>${pc(d.doi,1)}</td><td>${pc(d.fr,4)}</td><td class="hide-sm">${d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–'}</td><td class="hide-sm">${d.up!=null&&(d.up+d.dn)?(d.dn?(d.up/d.dn).toFixed(2)+'x':'위쪽만'):'–'}</td>${d.C.map(c=>`<td class="c">${cell(c)}</td>`).join('')}<td><span class="hit">${d.hits}</span>/5</td></tr>`;
   const f=DATA.filter(d=>d.C&&d.hits>=MINH&&(KF==='전체'||d.kind===KF)).sort((a,b)=>b.hits-a.hits||(b.doi||0)-(a.doi||0));
   let html='';
   if(KF==='전체'){for(const k of OD.KINDS){const g=f.filter(d=>d.kind===k);if(!g.length)continue;const top3=g.filter(d=>d.hits>=3).length;
@@ -189,7 +197,8 @@ function render(){
   $('#rows').innerHTML=html||'<tr><td colspan="13" class="l">조건에 맞는 종목이 없어요.</td></tr>';
 }
 $('#go').addEventListener('click',run);
-setInterval(()=>{if(!document.hidden)run()},600e3);
+setInterval(()=>{if(!document.hidden)run()},300e3);
+$('#newal').checked=store.get('su-newal')!=='0';$('#newal').addEventListener('change',()=>store.set('su-newal',$('#newal').checked?'1':'0'));
 run();
 }
 </script>

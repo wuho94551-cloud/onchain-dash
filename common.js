@@ -22,7 +22,7 @@ const kindOf=sym=>(typeMap&&typeMap.get(sym))||'코인';
 
 /* ---- 우측 상단 알림 팝업 (3초 뒤 사라짐, 열린 다른 탭에도 표시) ---- */
 const tcss=`.od-toasts{position:fixed;top:64px;right:14px;z-index:60;display:flex;flex-direction:column;gap:8px;width:min(320px,calc(100vw - 28px));pointer-events:none}
-.od-toast{pointer-events:auto;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-left:3px solid var(--ink);box-shadow:0 6px 20px rgba(0,0,0,.18);padding:10px 12px;font-family:var(--sans);font-size:13px;line-height:1.4;cursor:pointer;opacity:0;transform:translateX(16px);transition:opacity .25s,transform .25s}
+.od-toast{white-space:pre-line;pointer-events:auto;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-left:3px solid var(--ink);box-shadow:0 6px 20px rgba(0,0,0,.18);padding:10px 12px;font-family:var(--sans);font-size:13px;line-height:1.4;cursor:pointer;opacity:0;transform:translateX(16px);transition:opacity .25s,transform .25s}
 .od-toast.in{opacity:1;transform:none}
 .od-toast b{display:block;font-size:14px;font-weight:600;margin-bottom:2px}
 .od-toast.B{border-left-color:var(--up)}.od-toast.S{border-left-color:var(--dn)}
