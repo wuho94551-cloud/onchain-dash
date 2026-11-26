@@ -119,7 +119,7 @@ const wallets=()=>JSON.parse(localStorage.getItem('od-wallets')||'[]');
 function cfg(){
   const n=id=>Math.max(0,+$(id).value||0);
   const c={chat:$('chat').value.trim(),coins:[...new Set($('coins').value.toUpperCase().split(/[\s,]+/).filter(Boolean))],move:n('move'),fund:n('fund'),kimp:n('kimp'),cool:Math.max(5,n('cool')||60)};
-  if($('wal').checked)c.wallets=wallets().map(w=>({chain:w.chain,addr:w.addr,label:w.label||''}));
+  if($('wal').checked)c.wallets=wallets().flatMap(w=>(w.chains?.length?w.chains:w.chain?[w.chain]:['eth','base','arbitrum','polygon']).map(ch=>({chain:ch,addr:w.addr,label:w.label||''})));
   if($('win').checked)c.walletIn=true;
   return c}
 function upd(){
