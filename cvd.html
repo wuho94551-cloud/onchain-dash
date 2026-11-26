@@ -264,7 +264,8 @@ async function load(){
     }
     if(D.arcSample)D.mode='sample';
     if(D.size){const from=D.mode==='sample'?0:D.restSample?Math.max(0,Math.floor((D.restFrom-D.t0)/bk)):Infinity;if(from<Infinity)calibrate(from);verify()}
-    if(D.mode==='kline')for(const k of kl){const i=Math.floor((k.t-D.t0)/bk);if(i<0||i>=D.nb)continue;const a=rowOf(k.l),b=rowOf(k.h),per=k.qv/(b-a+1);for(let r=a;r<=b;r++)D.heat[i*PR+r]+=per}
+    if(D.arcSample)D.heat.fill(0); // 표본 날짜만 있으면 히트맵이 듬성듬성해서, 선물 긴 기간은 캔들 거래대금으로 채움
+    if(D.mode==='kline'||D.arcSample)for(const k of kl){const i=Math.floor((k.t-D.t0)/bk);if(i<0||i>=D.nb)continue;const a=rowOf(k.l),b=rowOf(k.h),per=k.qv/(b-a+1);for(let r=a;r<=b;r++)D.heat[i*PR+r]+=per}
     $('#pg').style.width='100%';
     status();draw();table();openLive();
   }catch(e){if(my===run){$('#stat').textContent=`불러오지 못했어요: ${e.message}. ${MK==='fut'?'선물에 없는 코인일 수 있어요.':'Binance 현물에 없는 코인이면 선물로 바꿔 보세요.'}`;$('#pg').style.width='0'}}
