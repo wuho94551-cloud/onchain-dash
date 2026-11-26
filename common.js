@@ -43,6 +43,55 @@ function toast(title,body='',o={}){
 function notify(title,body='',o={}){toast(title,body,o);try{localStorage.setItem('od-alert',JSON.stringify({title,body,o:{...o,from:o.from||document.title.split(' · ')[0]},t:Date.now()}))}catch(e){}}
 window.addEventListener('storage',e=>{if(e.key!=='od-alert'||!e.newValue)return;try{const a=JSON.parse(e.newValue);if(Date.now()-a.t<10e3)toast(a.title,a.body,{...a.o,t:a.t})}catch(x){}});
 
+
+/* ---- 코인 선택 창: 버튼을 누르면 변동성 순 목록 + 검색 ---- */
+const pcss=`.odp-wrap{position:relative;display:inline-block}
+.odp-btn{background:transparent!important;border:0!important;padding:0!important;min-height:0!important;color:inherit!important;font:inherit!important;display:inline-flex;align-items:baseline;gap:10px;cursor:pointer;text-align:left}
+.odp-btn:hover em{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:6px}
+.odp-btn .car{font-size:.45em;color:var(--mute)}
+.odp{position:absolute;z-index:20;top:calc(100% + 8px);left:0;width:min(420px,calc(100vw - 28px));background:var(--bg);border:1px solid var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.2);padding:10px;font-family:var(--sans);font-size:14px;line-height:1.4;letter-spacing:0}
+.odp input{width:100%;min-height:44px;font:inherit;font-size:16px;padding:0 12px;border:1px solid var(--line);color:var(--ink);background:transparent}
+.odp .hd{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin:8px 2px 4px}
+.odp ul{list-style:none;margin:0;padding:0;max-height:min(420px,55vh);overflow:auto}
+.odp li{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:8px 6px;border-top:1px solid var(--line);cursor:pointer;font-size:14px;font-style:normal}
+.odp li b{font-weight:600}.odp li span{font-family:var(--mono);font-size:13px;white-space:nowrap;text-align:right}
+.odp li .vb{color:var(--mute)}.odp li .u{color:var(--up)}.odp li .d{color:var(--dn)}
+.odp li[aria-selected=true],.odp li:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.odp li.srch{grid-template-columns:1fr;color:var(--mute)}`;
+let PKD=null,PKT=0;
+async function pickData(){if(PKD&&Date.now()-PKT<60e3)return PKD;try{await loadTypes()}catch(e){}
+  const r=await j('https://api.bybit.com/v5/market/tickers?category=linear');
+  PKD=r.result.list.filter(x=>x.symbol.endsWith('USDT')&&kindOf(x.symbol)==='코인'&&+x.turnover24h>3e6).map(x=>{const b=x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,'');const hi=+x.highPrice24h,lo=+x.lowPrice24h;
+    return{b,p:+x.lastPrice,c:+x.price24hPcnt*100,rg:lo?(hi-lo)/lo*100:0}}).sort((a,b)=>b.rg-a.rg);PKT=Date.now();return PKD}
+const pfx=n=>'$'+(n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:0}):n>=1?n.toFixed(2):n.toPrecision(4));
+function picker(btn,onPick,opt={}){
+  if(!document.getElementById('odp-css')){const st=document.createElement('style');st.id='odp-css';st.textContent=pcss;document.head.appendChild(st)}
+  const wrap=btn.parentElement;wrap.classList.add('odp-wrap');
+  const pop=document.createElement('div');pop.className='odp';pop.hidden=true;
+  pop.innerHTML=`<input placeholder="${esc(opt.placeholder||'코인 검색 (예: SOL, PEPE)')}" autocomplete="off" spellcheck="false" aria-label="코인 검색"><div class="hd"><span>변동성 순 · 24시간 고저폭</span><span data-r="st"></span></div><ul role="listbox"></ul>`;
+  wrap.appendChild(pop);btn.setAttribute('aria-haspopup','listbox');btn.setAttribute('aria-expanded','false');
+  const inp=pop.querySelector('input'),ul=pop.querySelector('ul'),st=pop.querySelector('[data-r=st]');let sel=0;
+  const render=()=>{const q=inp.value.trim().toUpperCase(),all=PKD||[];
+    const L=(q?all.filter(x=>x.b.includes(q)).sort((a,b)=>(b.b===q)-(a.b===q)||(b.b.startsWith(q))-(a.b.startsWith(q))||b.rg-a.rg):all).slice(0,40);
+    sel=Math.min(sel,L.length);
+    ul.innerHTML=L.map((x,i)=>`<li role="option" data-s="${esc(x.b)}" aria-selected="${i===sel}"><b>${esc(x.b)}</b><span>${pfx(x.p)}</span><span class="${x.c>=0?'u':'d'}">${x.c>=0?'+':''}${x.c.toFixed(1)}%</span><span class="vb">폭 ${x.rg.toFixed(1)}%</span></li>`).join('')+
+      (q?`<li class="srch" role="option" data-q="${esc(inp.value.trim())}" aria-selected="${sel===L.length}">"${esc(inp.value.trim())}" ${esc(opt.searchLabel||'그대로 열기')} ↵</li>`:'');
+    st.textContent=all.length?`선물 ${all.length}개 중`:'불러오는 중…'};
+  const open=()=>{pop.hidden=false;btn.setAttribute('aria-expanded','true');inp.value='';sel=0;render();inp.focus();pickData().then(render).catch(()=>{st.textContent='목록을 못 불러왔어요. 검색은 돼요.'})};
+  const close=()=>{pop.hidden=true;btn.setAttribute('aria-expanded','false')};
+  const go=li=>{if(!li)return;close();const s=li.dataset.s||li.dataset.q;if(s)onPick(s)};
+  btn.addEventListener('click',()=>pop.hidden?open():close());
+  inp.addEventListener('input',()=>{sel=0;render()});
+  inp.addEventListener('keydown',e=>{const n=ul.children.length;
+    if(e.key==='ArrowDown'){e.preventDefault();sel=Math.min(n-1,sel+1);render();ul.children[sel]?.scrollIntoView({block:'nearest'})}
+    else if(e.key==='ArrowUp'){e.preventDefault();sel=Math.max(0,sel-1);render();ul.children[sel]?.scrollIntoView({block:'nearest'})}
+    else if(e.key==='Enter'){e.preventDefault();if(ul.children[sel])go(ul.children[sel]);else if(inp.value.trim()){close();onPick(inp.value.trim())}}
+    else if(e.key==='Escape'){close();btn.focus()}});
+  ul.addEventListener('click',e=>go(e.target.closest('li')));
+  document.addEventListener('pointerdown',e=>{if(!pop.hidden&&!wrap.contains(e.target))close()});
+  return{open,close};
+}
+
 /* ---- 차트 창 ---- */
 let lwcP=null;const loadLWC=()=>lwcP||(lwcP=new Promise((res,rej)=>{if(window.LightweightCharts)return res();const s=document.createElement('script');s.src=LWC;s.onload=res;s.onerror=()=>rej(new Error('차트 라이브러리를 불러오지 못했어요'));document.head.appendChild(s)}));
 const css=`
@@ -235,5 +284,5 @@ async function openChart(base,meta={}){
   try{inst=await mountChart(back.querySelector('[data-r="body"]'),base)}catch(e){back.querySelector('[data-r="body"]').innerHTML=`<p class="odc-note">${esc(e.message)}</p>`}
 }
 
-window.OD={toast,notify,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
+window.OD={picker,toast,notify,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
 })();

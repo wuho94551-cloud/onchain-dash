@@ -75,9 +75,8 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
 </div></nav>
 
 <header class="band">
-  <h1><em id="sym">Order</em> Watch</h1>
-  <p class="sub" id="stat">코인을 입력하세요</p>
-  <form class="q" id="qf"><input id="q" placeholder="심볼 (예: SOL)" autocomplete="off" aria-label="심볼"><button type="submit">감시</button></form>
+  <div><h1><button type="button" class="odp-btn" id="pick" title="눌러서 코인 바꾸기"><span><em id="sym">Order</em> Watch</span><span class="car" aria-hidden="true">▾</span></button></h1></div>
+  <p class="sub" id="stat">코인 이름을 눌러 고르세요</p>
   <div class="verdict" id="vd"></div>
 </header>
 
@@ -116,7 +115,7 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
   </div>
 </section>
 
-<script src="./common.js?v=7"></script>
+<script src="./common.js?v=8"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -263,10 +262,10 @@ async function startWatch(q){
   if(CH)CH.destroy();CH=null;$('#f-chart').innerHTML='';OD.mountChart($('#f-chart'),q,{links:false}).then(c=>CH=c).catch(()=>{});
   connect();loadStructure().catch(e=>{$('#ms').innerHTML=`<li class="sub">구조 데이터를 불러오지 못했어요: ${esc(e.message)}</li>`});
 }
-$('#qf').addEventListener('submit',e=>{e.preventDefault();startWatch($('#q').value)});
+OD.picker($('#pick'),s=>startWatch(s),{searchLabel:'감시하기'});
 setInterval(scanWalls,1000);setInterval(()=>{drawCVD();verdict()},5000);setInterval(()=>{if(SYM&&!document.hidden)loadStructure().catch(()=>{})},300e3);
 setInterval(()=>{const cut=Date.now()-1800e3;if(exec.size>5000)exec.clear();for(const [k,t] of iceSeen)if(t<cut)iceSeen.delete(k)},60e3);
-const s0=decodeURIComponent(location.hash.slice(1))||store.get('w-sym')||'BTC';$('#q').value=s0;startWatch(s0);
+const s0=decodeURIComponent(location.hash.slice(1))||store.get('w-sym')||'BTC';startWatch(s0);
 }
 </script>
 </body>
