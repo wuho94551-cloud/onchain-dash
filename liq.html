@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<script>try{const t=localStorage.getItem("od-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>실시간 청산 · 온체인 데스크</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -87,14 +89,14 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 <body>
 <nav class="top"><div class="band">
   <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
-  <a href="./">급등 준비</a>
+  <a href="./">급등·스캐너</a>
   <a href="./coin.html">코인 분석</a>
   <a href="./watch.html">호가 감시</a>
-  <a href="./scan.html">스캐너</a>
   <a href="./liq.html" aria-current="page">실시간 청산</a>
   <a href="./liqmap.html">청산 압력</a>
   <a href="./cvd.html">CVD</a>
   <a href="./kimp.html">김프</a>
+  <span class="od-tools" id="od-tools"></span>
 </div></nav>
 <div class="tape" aria-label="최근 큰 청산"><div class="run" id="tape"><span>$50K 이상 청산을 기다리는 중…</span></div></div>
 
@@ -149,7 +151,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 </section>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="./common.js?v=8"></script>
+<script src="./common.js?v=9"></script>
 <script>
 {
 const $=s=>document.querySelector(s);

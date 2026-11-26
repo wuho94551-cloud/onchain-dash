@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<script>try{const t=localStorage.getItem("od-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>코인 스캐너 · 온체인 데스크</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -70,17 +72,18 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 <body>
 <nav class="top"><div class="band">
   <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
-  <a href="./">급등 준비</a>
+  <a href="./" aria-current="page">급등·스캐너</a>
   <a href="./coin.html">코인 분석</a>
   <a href="./watch.html">호가 감시</a>
-  <a href="./scan.html" aria-current="page">스캐너</a>
   <a href="./liq.html">실시간 청산</a>
   <a href="./liqmap.html">청산 압력</a>
   <a href="./cvd.html">CVD</a>
   <a href="./kimp.html">김프</a>
+  <span class="od-tools" id="od-tools"></span>
 </div></nav>
 
 <header class="band">
+  <div class="odtabs" role="tablist"><a href="./" role="tab">급등 준비</a><a href="./scan.html" role="tab" aria-selected="true">스캐너</a></div>
   <h1><em>Coin</em> Scanner</h1>
   <p style="margin:8px 0 0;font-size:15px">USDT 무기한 선물 상위 종목을 훑어 수급 신호로 점수를 매겨요</p>
   <p class="sub" id="stat">준비 중…</p>
@@ -110,7 +113,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   </details>
 </section>
 
-<script src="./common.js?v=8"></script>
+<script src="./common.js?v=9"></script>
 <script>
 {
 const $=s=>document.querySelector(s);

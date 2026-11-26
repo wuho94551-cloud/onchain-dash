@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<script>try{const t=localStorage.getItem("od-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>호가 감시 · 온체인 데스크</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -64,18 +66,19 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
 <body>
 <nav class="top"><div class="band">
   <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
-  <a href="./">급등 준비</a>
+  <a href="./">급등·스캐너</a>
   <a href="./coin.html">코인 분석</a>
   <a href="./watch.html" aria-current="page">호가 감시</a>
-  <a href="./scan.html">스캐너</a>
   <a href="./liq.html">실시간 청산</a>
   <a href="./liqmap.html">청산 압력</a>
   <a href="./cvd.html">CVD</a>
   <a href="./kimp.html">김프</a>
+  <span class="od-tools" id="od-tools"></span>
 </div></nav>
 
 <header class="band">
   <div><h1><button type="button" class="odp-btn" id="pick" title="눌러서 코인 바꾸기"><span><em id="sym">Order</em> Watch</span><span class="car" aria-hidden="true">▾</span></button></h1></div>
+  <div id="clinks"></div>
   <p class="sub" id="stat">코인 이름을 눌러 고르세요</p>
   <div class="verdict" id="vd"></div>
 </header>
@@ -115,7 +118,7 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
   </div>
 </section>
 
-<script src="./common.js?v=8"></script>
+<script src="./common.js?v=9"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -257,7 +260,7 @@ async function startWatch(q){
   if(!sym){$('#stat').textContent=`Bybit 무기한 선물에 ${q}가 없어요.`;return}
   SYM=sym;BASE=q;bids.clear();asks.clear();walls.clear();exec.clear();iceSeen.clear();cvdP.clear();cvdS.clear();LOG.length=0;start=Date.now();vp=null;ms=null;
   $('#log').innerHTML='<div class="sub">감시 시작. 이상 징후가 생기면 여기에 기록돼요.</div>';
-  $('#sym').textContent=q;document.title=q+' 호가 감시 · 온체인 데스크';store.set('w-sym',q);try{history.replaceState(null,'','#'+q)}catch(e){}
+  $('#sym').textContent=q;OD.coinLinks($('#clinks'),q,'watch');document.title=q+' 호가 감시 · 온체인 데스크';store.set('w-sym',q);try{history.replaceState(null,'','#'+q)}catch(e){}
   $('#stat').textContent=`Bybit ${sym} 호가 200단계·현물/선물 체결 실시간 감시 · ${hm(start)}부터`;
   if(CH)CH.destroy();CH=null;$('#f-chart').innerHTML='';OD.mountChart($('#f-chart'),q,{links:false}).then(c=>CH=c).catch(()=>{});
   connect();loadStructure().catch(e=>{$('#ms').innerHTML=`<li class="sub">구조 데이터를 불러오지 못했어요: ${esc(e.message)}</li>`});

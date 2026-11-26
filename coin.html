@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<script>try{const t=localStorage.getItem("od-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>내 온체인 데스크</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -93,18 +95,17 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 <link rel="stylesheet" href="./theme.css">
 </head>
 <body>
-<div class="bar-top"><div class="band">
+<nav class="top"><div class="band">
   <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
-  <a class="nav" href="./">급등 준비</a>
-  <a class="nav" href="./coin.html" aria-current="page">코인 분석</a>
-  <a class="nav" href="./watch.html">호가 감시</a>
-  <a class="nav" href="./scan.html">스캐너</a>
-  <a class="nav" href="./liq.html">실시간 청산</a>
-  <a class="nav" href="./liqmap.html">청산 압력</a>
-  <a class="nav" href="./cvd.html">CVD</a>
-  <a class="nav" href="./kimp.html">김프</a>
-  <button class="ghost" id="gokeys" style="margin-left:auto">API 키</button>
-</div></div>
+  <a href="./">급등·스캐너</a>
+  <a href="./coin.html" aria-current="page">코인 분석</a>
+  <a href="./watch.html">호가 감시</a>
+  <a href="./liq.html">실시간 청산</a>
+  <a href="./liqmap.html">청산 압력</a>
+  <a href="./cvd.html">CVD</a>
+  <a href="./kimp.html">김프</a>
+  <span class="od-tools" id="od-tools"></span>
+</div></nav>
 
 <header class="band">
   <div class="coin">
@@ -118,7 +119,9 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
     <span id="cch"></span>
   </div>
   <div class="chips" id="cinfo"></div>
+  <div id="clinks"></div>
   <p class="sub" id="stamp"></p>
+  <button class="ghost" id="gokeys" style="min-height:36px;padding:0 12px;font-size:14px;margin-top:6px">API 키 설정</button>
 </header>
 
 <section class="band">
@@ -173,7 +176,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   </details>
 </section>
 
-<script src="./common.js?v=8"></script>
+<script src="./common.js?v=9"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -250,6 +253,7 @@ async function findCoin(q){
 async function loadCoin(q){
   $('#stamp').textContent='불러오는 중…';
   try{C=await findCoin(q)}catch(e){$('#stamp').textContent='조회 실패: '+e.message;return}
+  OD.coinLinks($('#clinks'),C.sym,'coin');
   store.set('coin',C.sym);try{history.replaceState(null,'','#'+C.sym.replace(/[^A-Za-z0-9-]/g,''))}catch(e){}
   document.title=C.sym+' · 온체인 데스크';
   $('#cname').innerHTML=`<em>${esc(C.name)}</em> <span style="font-size:.45em;color:var(--mute)">${esc(C.sym)}</span>`;

@@ -40,9 +40,60 @@ function toast(title,body='',o={}){
   setTimeout(()=>{t.classList.remove('in');setTimeout(()=>t.remove(),300)},o.ms||3000);
 }
 /* 알림 발생: 이 탭에 띄우고, 같은 사이트의 다른 열린 탭에도 전달 */
-function notify(title,body='',o={}){toast(title,body,o);try{localStorage.setItem('od-alert',JSON.stringify({title,body,o:{...o,from:o.from||document.title.split(' · ')[0]},t:Date.now()}))}catch(e){}}
-window.addEventListener('storage',e=>{if(e.key!=='od-alert'||!e.newValue)return;try{const a=JSON.parse(e.newValue);if(Date.now()-a.t<10e3)toast(a.title,a.body,{...a.o,t:a.t})}catch(x){}});
+function notify(title,body='',o={}){toast(title,body,o);pushHist({title,body,side:o.side||'',href:o.href||'',from:o.from||document.title.split(' · ')[0],t:Date.now()});try{localStorage.setItem('od-alert',JSON.stringify({title,body,o:{...o,from:o.from||document.title.split(' · ')[0]},t:Date.now()}))}catch(e){}}
+window.addEventListener('storage',e=>{if(e.key==='od-alerts')bellBadge();if(e.key==='od-fav')window.dispatchEvent(new Event('od-fav'));if(e.key!=='od-alert'||!e.newValue)return;try{const a=JSON.parse(e.newValue);if(Date.now()-a.t<10e3)toast(a.title,a.body,{...a.o,t:a.t})}catch(x){}});
 
+
+
+/* ---- 알림 기록함 ---- */
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+function pushHist(a){const h=LS.get('od-alerts',[]);h.unshift(a);LS.set('od-alerts',h.slice(0,50));bellBadge()}
+function bellBadge(){const b=document.getElementById('od-bell');if(!b)return;const seen=LS.get('od-alerts-seen',0),n=LS.get('od-alerts',[]).filter(a=>a.t>seen).length;
+  let g=b.querySelector('.badge');if(n){if(!g){g=document.createElement('span');g.className='badge';b.appendChild(g)}g.textContent=n>9?'9+':n}else if(g)g.remove()}
+const shcss=`.od-hist{position:fixed;z-index:65;top:56px;right:12px;width:min(360px,calc(100vw - 24px));max-height:min(520px,75vh);overflow:auto;background:var(--bg);border:1px solid var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.25);font-family:var(--sans);font-size:13px}
+.od-hist header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg)}
+.od-hist header b{font-size:15px}.od-hist header button{background:transparent;color:var(--mute);border:0;font:inherit;font-size:12px;cursor:pointer;min-height:32px}
+.od-hist a{display:block;padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;border-left:3px solid var(--line)}
+.od-hist a.B{border-left-color:var(--up)}.od-hist a.S{border-left-color:var(--dn)}.od-hist a.new{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.od-hist a:hover{background:color-mix(in srgb,var(--ink) 9%,transparent)}
+.od-hist small{float:right;color:var(--mute);font-family:var(--mono);font-size:11px}.od-hist p{margin:2px 0 0;color:var(--mute)}
+.od-hist .empty{padding:18px 12px;color:var(--mute)}
+.odl{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;margin:6px 0 0;font-family:var(--sans);align-items:center}
+.odl span{color:var(--mute)}.odl a{color:var(--ink);text-underline-offset:3px}
+.odl button{background:transparent;border:1px solid var(--line);color:var(--ink);min-height:32px;padding:0 10px;font:inherit;font-size:13px;cursor:pointer}
+.odl button[aria-pressed=true]{color:#c99400;border-color:#c99400}`;
+function shellStyle(){if(document.getElementById('od-shcss'))return;const st=document.createElement('style');st.id='od-shcss';st.textContent=shcss;document.head.appendChild(st)}
+function openHist(){shellStyle();let p=document.querySelector('.od-hist');if(p){p.remove();return}
+  const seen=LS.get('od-alerts-seen',0),h=LS.get('od-alerts',[]);p=document.createElement('div');p.className='od-hist';p.setAttribute('role','dialog');p.setAttribute('aria-label','알림 기록');
+  const tm=t=>{const d=new Date(t);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
+  p.innerHTML=`<header><b>알림 기록</b><button type="button" data-clear>모두 지우기</button></header>`+(h.length?h.map(a=>`<a href="${esc(a.href||'#')}" class="${esc(a.side)} ${a.t>seen?'new':''}"><small>${tm(a.t)}${a.from?' · '+esc(a.from):''}</small><b>${esc(a.title)}</b>${a.body?`<p>${esc(a.body)}</p>`:''}</a>`).join(''):'<div class="empty">아직 알림이 없어요. 실시간 청산·김프·호가 감시·급등 준비 페이지가 열려 있을 때 생겨요.</div>');
+  document.body.appendChild(p);LS.set('od-alerts-seen',Date.now());bellBadge();
+  p.querySelector('[data-clear]').onclick=()=>{LS.set('od-alerts',[]);p.remove();bellBadge()};
+  setTimeout(()=>document.addEventListener('pointerdown',function off(e){if(!p.contains(e.target)&&!e.target.closest('#od-bell')){p.remove();document.removeEventListener('pointerdown',off)}}));
+}
+/* ---- 테마 ---- */
+const THEMES=[['','◐','기기 설정 따르기'],['dark','☾','다크'],['light','☀','라이트']];
+function setTheme(t){if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme;try{t?localStorage.setItem('od-theme',t):localStorage.removeItem('od-theme')}catch(e){}window.dispatchEvent(new Event('od-theme'))}
+/* ---- 관심 코인 ---- */
+const favs=()=>LS.get('od-fav',[]);
+const isFav=b=>favs().includes(b);
+function toggleFav(b){let f=favs();f=f.includes(b)?f.filter(x=>x!==b):[b,...f];LS.set('od-fav',f.slice(0,40));window.dispatchEvent(new Event('od-fav'));return f.includes(b)}
+/* ---- 같은 코인 바로가기 ---- */
+function coinLinks(host,base,here){shellStyle();const b=encodeURIComponent(base);
+  const L=[['coin','코인 분석',`./coin.html#${b}`],['watch','호가 감시',`./watch.html#${b}`],['cvd','CVD',`./cvd.html#${b}`]].filter(x=>x[0]!==here);
+  host.innerHTML=`<button type="button" data-fav aria-pressed="${isFav(base)}" title="관심 코인">${isFav(base)?'★':'☆'} 관심</button><span>이 코인으로</span>`+L.map(x=>`<a href="${x[2]}">${x[1]} →</a>`).join('')+(here!=='chart'?`<a href="#" data-chart>차트 창 →</a>`:'');
+  host.querySelector('[data-fav]').onclick=e=>{const on=toggleFav(base);e.currentTarget.setAttribute('aria-pressed',on);e.currentTarget.textContent=(on?'★':'☆')+' 관심'};
+  const ch=host.querySelector('[data-chart]');if(ch)ch.onclick=e=>{e.preventDefault();openChart(base)};
+  host.classList.add('odl')}
+/* ---- 메뉴 도구 (🔔, 테마) ---- */
+function shell(){const t=document.getElementById('od-tools');if(!t||t.dataset.ok)return;t.dataset.ok=1;shellStyle();
+  const cur=()=>document.documentElement.dataset.theme||'';
+  t.innerHTML=`<button type="button" id="od-theme" title="화면 테마"></button><button type="button" id="od-bell" title="알림 기록" aria-label="알림 기록">🔔</button>`;
+  const tb=t.querySelector('#od-theme'),paint=()=>{const th=THEMES.find(x=>x[0]===cur())||THEMES[0];tb.textContent=th[1];tb.title='화면 테마: '+th[2]+' (누르면 바뀜)';tb.setAttribute('aria-label',tb.title)};paint();
+  tb.onclick=()=>{const i=THEMES.findIndex(x=>x[0]===cur());setTheme(THEMES[(i+1)%THEMES.length][0]);paint()};
+  t.querySelector('#od-bell').onclick=openHist;bellBadge();
+  const a=document.querySelector('nav.top a[aria-current]');if(a&&a.scrollIntoView)a.scrollIntoView({block:'nearest',inline:'center'});window.scrollTo(0,0)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',shell);else setTimeout(shell);
 
 /* ---- 코인 선택 창: 버튼을 누르면 변동성 순 목록 + 검색 ---- */
 const pcss=`.odp-wrap{position:relative;display:inline-block}
@@ -57,7 +108,10 @@ const pcss=`.odp-wrap{position:relative;display:inline-block}
 .odp li b{font-weight:600}.odp li span{font-family:var(--mono);font-size:13px;white-space:nowrap;text-align:right}
 .odp li .vb{color:var(--mute)}.odp li .u{color:var(--up)}.odp li .d{color:var(--dn)}
 .odp li[aria-selected=true],.odp li:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
-.odp li.srch{grid-template-columns:1fr;color:var(--mute)}`;
+.odp li.srch{grid-template-columns:1fr;color:var(--mute)}
+.odp li{grid-template-columns:22px 1fr auto auto auto}.odp li.srch{grid-template-columns:1fr}
+.odp li .st{background:transparent;border:0;color:var(--mute);font-size:16px;cursor:pointer;padding:0;min-height:0;line-height:1}.odp li .st.on{color:#c99400}
+.odp li.sep{display:block;cursor:default;font-size:11px;color:var(--mute);padding:6px 6px 2px;border-top:0}.odp li.sep:hover{background:none}`;
 let PKD=null,PKT=0;
 async function pickData(){if(PKD&&Date.now()-PKT<60e3)return PKD;try{await loadTypes()}catch(e){}
   const r=await j('https://api.bybit.com/v5/market/tickers?category=linear');
@@ -66,28 +120,32 @@ async function pickData(){if(PKD&&Date.now()-PKT<60e3)return PKD;try{await loadT
 const pfx=n=>'$'+(n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:0}):n>=1?n.toFixed(2):n.toPrecision(4));
 function picker(btn,onPick,opt={}){
   if(!document.getElementById('odp-css')){const st=document.createElement('style');st.id='odp-css';st.textContent=pcss;document.head.appendChild(st)}
-  const wrap=btn.parentElement;wrap.classList.add('odp-wrap');
+  const wrap=btn.parentElement;if(getComputedStyle(wrap).position==='static')wrap.style.position='relative';
   const pop=document.createElement('div');pop.className='odp';pop.hidden=true;
   pop.innerHTML=`<input placeholder="${esc(opt.placeholder||'코인 검색 (예: SOL, PEPE)')}" autocomplete="off" spellcheck="false" aria-label="코인 검색"><div class="hd"><span>변동성 순 · 24시간 고저폭</span><span data-r="st"></span></div><ul role="listbox"></ul>`;
   wrap.appendChild(pop);btn.setAttribute('aria-haspopup','listbox');btn.setAttribute('aria-expanded','false');
   const inp=pop.querySelector('input'),ul=pop.querySelector('ul'),st=pop.querySelector('[data-r=st]');let sel=0;
-  const render=()=>{const q=inp.value.trim().toUpperCase(),all=PKD||[];
-    const L=(q?all.filter(x=>x.b.includes(q)).sort((a,b)=>(b.b===q)-(a.b===q)||(b.b.startsWith(q))-(a.b.startsWith(q))||b.rg-a.rg):all).slice(0,40);
-    sel=Math.min(sel,L.length);
-    ul.innerHTML=L.map((x,i)=>`<li role="option" data-s="${esc(x.b)}" aria-selected="${i===sel}"><b>${esc(x.b)}</b><span>${pfx(x.p)}</span><span class="${x.c>=0?'u':'d'}">${x.c>=0?'+':''}${x.c.toFixed(1)}%</span><span class="vb">폭 ${x.rg.toFixed(1)}%</span></li>`).join('')+
-      (q?`<li class="srch" role="option" data-q="${esc(inp.value.trim())}" aria-selected="${sel===L.length}">"${esc(inp.value.trim())}" ${esc(opt.searchLabel||'그대로 열기')} ↵</li>`:'');
+  let items=[];
+  const render=()=>{const q=inp.value.trim().toUpperCase(),all=PKD||[],F=favs(),by=new Map(all.map(x=>[x.b,x]));
+    let L=(q?all.filter(x=>x.b.includes(q)).sort((a,b)=>(b.b===q)-(a.b===q)||(b.b.startsWith(q))-(a.b.startsWith(q))||b.rg-a.rg):all).slice(0,40);
+    let fv=[];if(!q&&F.length){fv=F.map(b=>by.get(b)||{b,p:null,c:null,rg:null});L=L.filter(x=>!F.includes(x.b))}
+    items=[...fv,...L];sel=Math.min(sel,items.length);
+    const row=(x,i)=>`<li role="option" data-s="${esc(x.b)}" aria-selected="${i===sel}"><button type="button" class="st ${F.includes(x.b)?'on':''}" data-star="${esc(x.b)}" aria-label="관심 코인">${F.includes(x.b)?'★':'☆'}</button><b>${esc(x.b)}</b><span>${x.p!=null?pfx(x.p):''}</span><span class="${x.c>=0?'u':'d'}">${x.c!=null?(x.c>=0?'+':'')+x.c.toFixed(1)+'%':''}</span><span class="vb">${x.rg!=null?'폭 '+x.rg.toFixed(1)+'%':''}</span></li>`;
+    ul.innerHTML=(fv.length?'<li class="sep">★ 관심 코인</li>':'')+fv.map((x,i)=>row(x,i)).join('')+(fv.length?'<li class="sep">변동성 순</li>':'')+L.map((x,i)=>row(x,i+fv.length)).join('')+
+      (q?`<li class="srch" role="option" data-q="${esc(inp.value.trim())}" aria-selected="${sel===items.length}">"${esc(inp.value.trim())}" ${esc(opt.searchLabel||'그대로 열기')} ↵</li>`:'');
     st.textContent=all.length?`선물 ${all.length}개 중`:'불러오는 중…'};
+  const opts=()=>[...ul.querySelectorAll('li[role=option]')];
   const open=()=>{pop.hidden=false;btn.setAttribute('aria-expanded','true');inp.value='';sel=0;render();inp.focus();pickData().then(render).catch(()=>{st.textContent='목록을 못 불러왔어요. 검색은 돼요.'})};
   const close=()=>{pop.hidden=true;btn.setAttribute('aria-expanded','false')};
   const go=li=>{if(!li)return;close();const s=li.dataset.s||li.dataset.q;if(s)onPick(s)};
   btn.addEventListener('click',()=>pop.hidden?open():close());
   inp.addEventListener('input',()=>{sel=0;render()});
-  inp.addEventListener('keydown',e=>{const n=ul.children.length;
-    if(e.key==='ArrowDown'){e.preventDefault();sel=Math.min(n-1,sel+1);render();ul.children[sel]?.scrollIntoView({block:'nearest'})}
-    else if(e.key==='ArrowUp'){e.preventDefault();sel=Math.max(0,sel-1);render();ul.children[sel]?.scrollIntoView({block:'nearest'})}
-    else if(e.key==='Enter'){e.preventDefault();if(ul.children[sel])go(ul.children[sel]);else if(inp.value.trim()){close();onPick(inp.value.trim())}}
+  inp.addEventListener('keydown',e=>{const n=opts().length;
+    if(e.key==='ArrowDown'){e.preventDefault();sel=Math.min(n-1,sel+1);render();opts()[sel]?.scrollIntoView({block:'nearest'})}
+    else if(e.key==='ArrowUp'){e.preventDefault();sel=Math.max(0,sel-1);render();opts()[sel]?.scrollIntoView({block:'nearest'})}
+    else if(e.key==='Enter'){e.preventDefault();if(opts()[sel])go(opts()[sel]);else if(inp.value.trim()){close();onPick(inp.value.trim())}}
     else if(e.key==='Escape'){close();btn.focus()}});
-  ul.addEventListener('click',e=>go(e.target.closest('li')));
+  ul.addEventListener('click',e=>{const s=e.target.closest('[data-star]');if(s){e.stopPropagation();toggleFav(s.dataset.star);render();return}const li=e.target.closest('li[role=option]');if(li)go(li)});
   document.addEventListener('pointerdown',e=>{if(!pop.hidden&&!wrap.contains(e.target))close()});
   return{open,close};
 }
@@ -211,7 +269,7 @@ async function mountChart(host,base,opt={}){
   host.innerHTML=`<div class="odc-tools" data-r="tools"></div><div class="odc-set" data-r="set" hidden></div><div class="odc-wrap" data-r="wrap"><canvas class="vp" data-r="vp"></canvas></div><div class="odc-info" data-r="info"></div><p class="odc-note">Bybit 무기한 선물 캔들 · 오른쪽 막대는 화면에 보이는 구간의 볼륨 프로파일 (진한 선 POC, 점선 VAH·VAL, 옅은 칸은 매물 공백 LVN). 차트를 움직이면 다시 계산돼요.</p>`;
   const $=r=>host.querySelector(`[data-r="${r}"]`);const wrap=$('wrap'),cv=$('vp');
   let tf=opt.tf||localStorage.getItem('odc-tf')||'60',sym=null,K=[],vp=null,lines=[];
-  const ink=cvar('--ink'),mute=cvar('--mute'),line=cvar('--line'),up=cvar('--up'),dn=cvar('--dn');
+  let ink=cvar('--ink'),mute=cvar('--mute'),line=cvar('--line');
   const chart=LightweightCharts.createChart(wrap,{autoSize:true,layout:{background:{type:'solid',color:'transparent'},textColor:mute,fontFamily:'JetBrains Mono, monospace',fontSize:11},
     grid:{vertLines:{color:alpha(line,.05)},horzLines:{color:alpha(line,.07)}},rightPriceScale:{borderColor:line,scaleMargins:{top:.08,bottom:.22}},timeScale:{borderColor:line,timeVisible:true,secondsVisible:false},crosshair:{mode:0},
     localization:{locale:'ko-KR'}});
@@ -257,6 +315,7 @@ async function mountChart(host,base,opt={}){
     vs.setData(K.map((k,i)=>{const u=isUp(k,i)?'up':'dn';return{time:k.time,value:k.q,color:rgba([c.border[u][0],.4])}}));
   }
   const onCol=()=>{applyCol();paint()};window.addEventListener('odc-col',onCol);
+  const onTheme=()=>{ink=cvar('--ink');mute=cvar('--mute');line=cvar('--line');const m=mute,l=line;chart.applyOptions({layout:{textColor:m},grid:{vertLines:{color:alpha(l,.05)},horzLines:{color:alpha(l,.07)}},rightPriceScale:{borderColor:l},timeScale:{borderColor:l}});onCol();sched()};window.addEventListener('od-theme',onTheme);
   async function resolve(){for(const s of [base+'USDT','1000'+base+'USDT','10000'+base+'USDT','1000000'+base+'USDT']){try{const r=await j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${s}&interval=60&limit=1`);if(r.result?.list?.length)return s}catch(e){}}return null}
   async function load(){
     $('info').textContent='불러오는 중…';
@@ -268,7 +327,7 @@ async function mountChart(host,base,opt={}){
   }
   await load().catch(e=>{$('info').textContent='차트를 불러오지 못했어요: '+e.message});
   const timer=setInterval(()=>{if(!document.hidden)load().catch(()=>{})},60e3);
-  return{destroy(){window.removeEventListener('odc-col',onCol);clearInterval(timer);ro.disconnect();chart.remove()},reload:load};
+  return{destroy(){window.removeEventListener('odc-col',onCol);window.removeEventListener('od-theme',onTheme);clearInterval(timer);ro.disconnect();chart.remove()},reload:load};
 }
 
 async function openChart(base,meta={}){
@@ -284,5 +343,5 @@ async function openChart(base,meta={}){
   try{inst=await mountChart(back.querySelector('[data-r="body"]'),base)}catch(e){back.querySelector('[data-r="body"]').innerHTML=`<p class="odc-note">${esc(e.message)}</p>`}
 }
 
-window.OD={picker,toast,notify,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
+window.OD={picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
 })();

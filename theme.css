@@ -53,3 +53,18 @@ td.side,td[colspan],td.ex,.tape .L,.tape .S,.empty{font-family:var(--sans)}
 tr.grp td{background:var(--card)!important;font-family:var(--serif);font-size:19px;text-align:left;cursor:default}
 tr.grp td small{font-family:var(--sans);font-size:12px;color:var(--mute);margin-left:8px}
 a.brand{color:var(--ink);text-decoration:none}
+/* 공통 메뉴: 한 줄, 넘치면 가로로 밀기 */
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+nav.top{position:sticky;top:0;z-index:30}
+nav.top .band{padding-block:4px!important;display:flex!important;flex-wrap:nowrap!important;gap:0 18px!important;align-items:center;overflow-x:auto;scrollbar-width:none;max-width:1320px;margin:0 auto}
+nav.top .band::-webkit-scrollbar{display:none}
+nav.top a{color:var(--mute);text-decoration:none;font-weight:600;min-height:44px;display:flex;align-items:center;white-space:nowrap;flex:none;font-size:15px}
+nav.top a[aria-current]{color:var(--ink);border-bottom:2px solid var(--ink)}
+nav.top a.brand{color:var(--ink);margin-right:auto;padding-right:8px}
+.od-tools{display:flex;gap:4px;flex:none;align-items:center;margin-left:6px}
+.od-tools button{min-height:36px;min-width:36px;padding:0 8px;background:transparent;color:var(--ink);border:1px solid var(--line);font-size:16px;line-height:1;cursor:pointer;position:relative}
+.od-tools .badge{position:absolute;top:-5px;right:-6px;background:#d23b3b;color:#fff;font-size:10px;font-family:var(--mono);min-width:16px;height:16px;border-radius:8px;display:grid;place-items:center;padding:0 3px}
+@media(max-width:700px){nav.top a{font-size:14px}nav.top .band{gap:0 14px!important}nav.top a.brand{font-size:22px!important}}
+.odtabs{display:inline-flex;border:1px solid var(--line);margin-bottom:14px}
+.odtabs a{padding:8px 16px;min-height:40px;display:flex;align-items:center;color:var(--mute);text-decoration:none;font-weight:600;font-size:15px}
+.odtabs a[aria-selected=true]{background:var(--ink);color:var(--bg)}

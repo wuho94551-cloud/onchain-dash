@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<script>try{const t=localStorage.getItem("od-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>급등 준비 스크리너 · 온체인 데스크</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -59,17 +61,18 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 <body>
 <nav class="top"><div class="band">
   <a class="brand" href="./" aria-label="홈으로"><em>Onchain</em> Desk</a>
-  <a href="./" aria-current="page">급등 준비</a>
+  <a href="./" aria-current="page">급등·스캐너</a>
   <a href="./coin.html">코인 분석</a>
   <a href="./watch.html">호가 감시</a>
-  <a href="./scan.html">스캐너</a>
   <a href="./liq.html">실시간 청산</a>
   <a href="./liqmap.html">청산 압력</a>
   <a href="./cvd.html">CVD</a>
   <a href="./kimp.html">김프</a>
+  <span class="od-tools" id="od-tools"></span>
 </div></nav>
 
 <header class="band">
+  <div class="odtabs" role="tablist"><a href="./" role="tab" aria-selected="true">급등 준비</a><a href="./scan.html" role="tab">스캐너</a></div>
   <h1><em>Pre-pump</em> Checklist</h1>
   <p style="margin:8px 0 0;font-size:15px">세력이 급등을 준비할 때 남기는 흔적이 몇 개나 겹쳤는지 종목별로 점검해요</p>
   <div class="conds">
@@ -106,7 +109,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   </details>
 </section>
 
-<script src="./common.js?v=8"></script>
+<script src="./common.js?v=9"></script>
 <script>if(location.hash.length>1)location.replace("./coin.html"+location.hash);</script>
 <script>
 {
