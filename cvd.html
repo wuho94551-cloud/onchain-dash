@@ -121,9 +121,8 @@ details li{font-size:14px;color:var(--mute);margin:8px 0 0}
   <details>
     <summary>계산 방법</summary>
     <ul>
-      <li>1일·1주: Binance aggTrades(같은 주문이 같은 가격에 체결된 묶음)를 받아 체결 금액(USD) 기준 5개 구간으로 나눠요. 시장가 매수는 +, 시장가 매도는 −로 쌓은 게 각 선이에요.</li>
-      <li>거래가 많은 코인은 기간 전체를 받으려면 요청이 수천 번 필요해서, 기간을 고르게 나눈 표본만 받아 전체 규모로 환산해요. 이때는 '표본 추정'이라고 표시돼요. '정밀'을 켜면 표본이 3배로 늘어요.</li>
-      <li>1개월·6개월·1년·3년: 체결 하나하나를 받기엔 너무 많아서, 캔들의 시장가 매수 거래대금으로 전체 CVD 한 줄만 그려요. 크기별 구분은 1주 이하에서만 돼요.</li>
+      <li>Binance가 공개하는 일·월 단위 체결 아카이브(data.binance.vision)를 받아서 체결 하나하나를 금액(USD) 기준 5개 구간으로 나눠요. 시장가 매수는 +, 시장가 매도는 −로 쌓은 게 각 선이에요. 아카이브에 아직 없는 오늘 체결은 실시간 API로 채워요.</li>
+      <li>받을 아카이브가 120MB(정밀 켜면 400MB)를 넘으면, 1D·1W는 기간을 고르게 나눈 표본만 받아 환산하고('표본 추정' 표시), 그보다 긴 기간은 캔들의 시장가 매수 거래대금으로 전체 CVD 한 줄만 그려요. BTC·ETH 같은 대형 코인의 긴 기간이 여기에 해당해요. 작은 알트는 1년·3년도 전부 받아져요.</li>
       <li>히트맵: 시간·가격 칸마다 실제로 체결된 금액을 쌓아서, 고른 백분위 범위(기본 상위 4%)에 드는 칸만 검정→빨강→노랑→흰색으로 칠해요. 과거 호가창 기록은 공개 API로 받을 수 없어서, 대기 주문이 아니라 실제로 거래가 몰린 자리예요. 1주 이하는 체결 단위로, 그보다 길면 캔들 거래대금을 고가~저가에 고르게 나눠서 계산해요.</li>
       <li>열어 두는 동안은 실시간 체결이 계속 더해져요.</li>
     </ul>
@@ -153,7 +152,7 @@ $('#q').value=(decodeURIComponent(location.hash.slice(1))||store.get('scvd-q')||
 const TIPS={
   ticker:['Ticker','Binance에 상장된 코인 심볼을 넣어요. BTC, SOL, PEPE처럼 USDT는 빼고 넣어도 돼요.'],
   pct:['Volume Percentiles','히트맵에 칠할 칸의 범위예요. 96..99면 체결 금액이 상위 4% 안에 드는 칸만 보여주고, 99% 이상은 흰색이에요. 왼쪽 손잡이를 내리면 더 많은 자리가 보여요.'],
-  win:['기간','1D·1W는 체결을 주문 크기별로 나눠요. 1M 이상은 데이터가 너무 많아서 전체 CVD 한 줄만 그려요.'],
+  win:['기간','Binance 체결 아카이브를 받아 크기별로 나눠요. 거래가 아주 많은 코인의 긴 기간은 파일이 너무 커서 전체 CVD 한 줄만 그려요.'],
   mode:['Normalized / Absolute','Normalized는 선마다 기간 안의 최저를 0, 최고를 1로 맞춰서 규모가 다른 구간끼리 방향만 비교해요. Absolute는 실제 달러 금액이에요.'],
   mk:['시장','현물은 실제 코인 매매, 선물은 무기한 선물 매매예요. 현물 CVD가 오르면 실수요 매수, 선물만 오르면 레버리지 매수일 가능성이 커요.'],
   prec:['정밀','거래가 많은 코인은 표본만 받아서 추정해요. 켜면 표본을 3배로 늘려 오차가 줄지만 더 오래 걸려요.'],
@@ -202,26 +201,38 @@ async function load(){
     const kl=K.map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],qv:+k[7],tb:+k[10]}));
     let lo=Infinity,hi=-Infinity;for(const k of kl){if(k.l<lo)lo=k.l;if(k.h>hi)hi=k.h}const pad=(hi-lo)*.08||hi*.01;lo-=pad;hi+=pad;
     const realT0=Math.max(t0,kl[0].t),nb2=Math.ceil((now-realT0)/bk)||1;
-    D={base,sym,t0:realT0,bk,nb:nb2,kl,lo,hi,price:new Array(nb2).fill(null),del:CLS.map(()=>new Float64Array(nb2)),cnt:new Float64Array(CLS.length),vol:new Float64Array(CLS.length),tot:new Float64Array(nb2),heat:new Float64Array(nb2*PR),mode:'',w:1,size:span<=6048e5};
-    for(const k of kl){const i=Math.floor((k.t-D.t0)/bk);if(i>=0&&i<D.nb){D.price[i]=k.c;D.tot[i]=2*k.tb-k.qv;
-      if(!D.size){const a=rowOf(k.l),b=rowOf(k.h),per=k.qv/(b-a+1);for(let r=a;r<=b;r++)D.heat[i*PR+r]+=per}}}
+    D={base,sym,t0:realT0,bk,nb:nb2,kl,lo,hi,price:new Array(nb2).fill(null),del:CLS.map(()=>new Float64Array(nb2)),cnt:new Float64Array(CLS.length),vol:new Float64Array(CLS.length),tot:new Float64Array(nb2),heat:new Float64Array(nb2*PR),mode:'',w:1,size:false,restSample:false,arcBytes:0};
+    for(const k of kl){const i=Math.floor((k.t-D.t0)/bk);if(i>=0&&i<D.nb){D.price[i]=k.c;D.tot[i]=2*k.tb-k.qv}}
+    // 1) Binance 공개 아카이브(일·월 단위 체결 파일)로 지난 기간 전체 체결을 받는다
+    $('#stat').textContent=`${base} 체결 아카이브 크기 확인 중…`;draw();
+    const cap=($('#prec').checked?400:120)*1e6,plan=await archivePlan(sym,D.t0,my);if(my!==run)return;
+    let covered=D.t0;D.arcBytes=plan.bytes;
+    if(plan.files.length&&plan.bytes<=cap){
+      D.size=true;D.tot.fill(0);D.mode='archive';let got=0,ix=0;
+      const worker=async()=>{while(ix<plan.files.length&&my===run){const f=plan.files[ix++];await eachArchive(f.url,x=>{if(x.T>=D.t0)add(x,1)});if(my!==run)return;got+=f.bytes;
+          $('#pg').style.width=(3+got/plan.bytes*80)+'%';$('#stat').textContent=`${base} 체결 아카이브 받는 중… ${(got/1e6).toFixed(1)} / ${(plan.bytes/1e6).toFixed(1)}MB`;draw()}};
+      await Promise.all(Array.from({length:3},worker));if(my!==run)return;covered=plan.end;
+    }else if(span>6048e5){D.size=false;D.mode='kline'}
+    else{D.size=true;D.tot.fill(0)}
+    // 2) 아카이브 이후(보통 오늘)는 REST aggTrades로: 적으면 전부, 많으면 표본
     if(D.size){
-      $('#stat').textContent=`${base} 체결 범위 확인 중…`;draw();
+      $('#stat').textContent=`${base} 최근 체결 받는 중…`;
       const last=(await j(`${A}/aggTrades?symbol=${sym}&limit=1`))[0].a;
-      let first=null;for(const h of [1,6,24]){const r=await j(`${A}/aggTrades?symbol=${sym}&startTime=${D.t0}&endTime=${D.t0+h*36e5}&limit=1`);if(r.length){first=r[0].a;break}}
+      let first=null;for(const h of [1,6,24,72]){const r=await j(`${A}/aggTrades?symbol=${sym}&startTime=${covered}&endTime=${covered+h*36e5}&limit=1`);if(r.length){first=r[0].a;break}}
       const budget=(MK==='spot'?400:90)*($('#prec').checked?3:1);
-      if(first==null)first=Math.max(0,last-budget*1000);
-      const N=last-first+1,pages=Math.ceil(N/1000);let ids;
-      if(pages<=budget){ids=Array.from({length:pages},(_,k)=>first+k*1000);D.w=1;D.mode='full'}
-      else{const s=N/budget;ids=Array.from({length:budget},(_,k)=>Math.round(first+k*s));D.w=N/(budget*1000);D.mode='sample'}
-      D.tot.fill(0);
-      const conc=MK==='spot'?8:3;let done=0,ix=0;
-      const worker=async()=>{while(ix<ids.length&&my===run){const id=ids[ix++];const r=await j(`${A}/aggTrades?symbol=${sym}&fromId=${id}&limit=1000`);
-          if(my!==run)return;for(const x of r){if(x.T<D.t0)continue;add(x,D.w)}done++;if(done%5===0||done===ids.length){$('#pg').style.width=(5+done/ids.length*95)+'%';$('#stat').textContent=`${base} 체결 받는 중… ${done}/${ids.length}`;draw()}
+      if(first==null)first=last;
+      const N=last-first+1,pages=Math.ceil(N/1000);let ids,w=1;
+      if(pages<=budget)ids=Array.from({length:pages},(_,k)=>first+k*1000);
+      else{const st=N/budget;ids=Array.from({length:budget},(_,k)=>Math.round(first+k*st));w=N/(budget*1000);D.w=w}
+      if(D.mode!=='archive')D.mode=w>1?'sample':'full';else if(w>1)D.restSample=true;D.restFrom=covered;
+      const conc=MK==='spot'?8:3;let done=0,jx=0;const base0=parseFloat($('#pg').style.width)||3;
+      const worker=async()=>{while(jx<ids.length&&my===run){const id=ids[jx++];const r=await j(`${A}/aggTrades?symbol=${sym}&fromId=${id}&limit=1000`);
+          if(my!==run)return;for(const x of r){if(x.T<covered)continue;add(x,w)}done++;if(done%5===0||done===ids.length){$('#pg').style.width=(base0+done/ids.length*(100-base0))+'%';$('#stat').textContent=`${base} 최근 체결 받는 중… ${done}/${ids.length}`;draw()}
           if(MK==='fut')await sleep(350)}};
       await Promise.all(Array.from({length:conc},worker));
       if(my!==run)return;
-    }else D.mode='kline';
+    }
+    if(D.mode==='kline')for(const k of kl){const i=Math.floor((k.t-D.t0)/bk);if(i<0||i>=D.nb)continue;const a=rowOf(k.l),b=rowOf(k.h),per=k.qv/(b-a+1);for(let r=a;r<=b;r++)D.heat[i*PR+r]+=per}
     $('#pg').style.width='100%';
     status();draw();table();openLive();
   }catch(e){if(my===run){$('#stat').textContent=`불러오지 못했어요: ${e.message}. ${MK==='fut'?'선물에 없는 코인일 수 있어요.':'Binance 현물에 없는 코인이면 선물로 바꿔 보세요.'}`;$('#pg').style.width='0'}}
@@ -232,8 +243,41 @@ function add(x,w){const i=Math.floor((x.T-D.t0)/D.bk);if(i<0)return;grow(i);cons
   D.del[c][i]+=s*v*w;D.tot[i]+=s*v*w;D.cnt[c]+=w;D.vol[c]+=v*w;D.heat[i*PR+rowOf(p)]+=v*w}
 function grow(i){if(i<D.nb)return;const n=i+1;D.price.length=n;for(let k=D.nb;k<n;k++)D.price[k]=null;
   D.del=D.del.map(a=>{const b=new Float64Array(n);b.set(a);return b});let t=new Float64Array(n);t.set(D.tot);D.tot=t;t=new Float64Array(n*PR);t.set(D.heat);D.heat=t;D.nb=n}
-function status(){
-  $('#stat').textContent=`${D.base}_USDT · Binance ${MK==='spot'?'현물':'선물'} · ${WIN} · ${WINS.find(x=>x[0]===WIN)[3]} 간격`+(D.mode==='full'?' · 전체 체결 집계':D.mode==='sample'?` · 표본 추정 (실제 체결의 약 ${(100/D.w).toFixed(D.w>20?1:0)}%를 받아 환산)`:' · 캔들 기반 전체 CVD (크기별 구분은 1W 이하에서만 돼요)')+(ws?' · 실시간':'')}
+function status(){const lab={archive:' · Binance 체결 아카이브 전체 집계'+(D.restSample?' (오늘 체결만 표본 추정)':''),full:' · 전체 체결 집계',sample:` · 표본 추정 (실제 체결의 약 ${(100/D.w).toFixed(D.w>20?1:0)}%를 받아 환산)`,kline:` · 캔들 기반 전체 CVD (체결 아카이브가 ${(D.arcBytes/1e6).toFixed(0)}MB로 너무 커서 크기별 구분은 꺼요. '정밀'을 켜면 400MB까지 받아요)`};
+  $('#stat').textContent=`${D.base}_USDT · Binance ${MK==='spot'?'현물':'선물'} · ${WIN} · ${WINS.find(x=>x[0]===WIN)[3]} 간격`+(lab[D.mode]||'')+(ws?' · 실시간':'')}
+/* ---- Binance 공개 아카이브 (data.binance.vision) ---- */
+const ARC={spot:'https://data.binance.vision/data/spot',fut:'https://data.binance.vision/data/futures/um'};
+const ymd=t=>new Date(t).toISOString().slice(0,10),ym=t=>new Date(t).toISOString().slice(0,7);
+async function headSize(u){try{const r=await fetch(u,{method:'HEAD'});if(!r.ok)return-1;return+(r.headers.get('content-length')||0)}catch(e){return-1}}
+async function archivePlan(sym,t0,my){
+  const root=`${ARC[MK]}`,now=Date.now(),d0=new Date(),today=Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate()),curM=Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),1);
+  const daily=t=>({url:`${root}/daily/aggTrades/${sym}/${sym}-aggTrades-${ymd(t)}.zip`,start:t,end:t+864e5});
+  const cand=[];const s0=new Date(t0);let m=Date.UTC(s0.getUTCFullYear(),s0.getUTCMonth(),1);
+  while(m<curM){const nd=new Date(m);const nx=Date.UTC(nd.getUTCFullYear(),nd.getUTCMonth()+1,1);
+    if(nx-t0>3*864e5&&(t0<=m||nx-t0>20*864e5))cand.push({url:`${root}/monthly/aggTrades/${sym}/${sym}-aggTrades-${ym(m)}.zip`,start:m,end:nx,month:true});
+    else for(let d=Math.max(m,Math.floor(t0/864e5)*864e5);d<nx;d+=864e5)cand.push(daily(d));m=nx}
+  for(let d=Math.max(curM,Math.floor(t0/864e5)*864e5);d<today;d+=864e5)cand.push(daily(d));
+  // sizes (missing month → its days)
+  const out=[];let ix=0;
+  const sizes=await Promise.all(cand.map(async c=>({c,b:await headSize(c.url)})));
+  for(const {c,b} of sizes){if(b>=0){out.push({...c,bytes:b});continue}
+    if(c.month)for(let d=Math.max(c.start,Math.floor(t0/864e5)*864e5);d<c.end;d+=864e5){const dc=daily(d),db=await headSize(dc.url);if(db<0)break;out.push({...dc,bytes:db})}}
+  out.sort((a,b)=>a.start-b.start);
+  // only a contiguous run from the start counts as covered
+  const files=[];let end=t0;for(const f of out){if(f.start>Math.max(end,Math.floor(t0/864e5)*864e5)+1&&files.length)break;files.push(f);end=f.end}
+  return{files,bytes:files.reduce((a,f)=>a+f.bytes,0),end:files.length?end:t0};
+}
+async function eachArchive(url,fn){
+  const r=await fetch(url);if(!r.ok)return;const buf=await r.arrayBuffer(),dv=new DataView(buf);
+  let e=buf.byteLength-22;while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;if(e<0)return;
+  const cd=dv.getUint32(e+16,true),method=dv.getUint16(cd+10,true),cs=dv.getUint32(cd+20,true),lho=dv.getUint32(cd+42,true);
+  const st=lho+30+dv.getUint16(lho+26,true)+dv.getUint16(lho+28,true);
+  let stream=new Blob([new Uint8Array(buf,st,cs)]).stream();if(method===8)stream=stream.pipeThrough(new DecompressionStream('deflate-raw'));
+  const rd=stream.pipeThrough(new TextDecoderStream()).getReader();let rest='';
+  const line=l=>{const c=l.split(',');if(c.length<7)return;let T=+c[5];if(!(T>0))return;if(T>1e14)T=Math.floor(T/1000);const m=c[6].charCodeAt(0)===84||c[6].charCodeAt(0)===116;fn({p:c[1],q:c[2],T,m})};
+  for(;;){const {value,done}=await rd.read();if(done)break;const s=rest+value;let i=0,nl;while((nl=s.indexOf('\n',i))>=0){line(s.slice(i,nl));i=nl+1}rest=s.slice(i)}
+  if(rest)line(rest);
+}
 
 let dq=0;
 function closeLive(){if(ws){ws.onclose=null;ws.close();ws=null}}
@@ -316,7 +360,7 @@ function table(){
   const tv=rows.reduce((x,r)=>x+r.share,0)||1;let ts=0,ts4=0;for(let k=0;k<D.tot.length;k++){ts+=D.tot[k];if(k>=q)ts4+=D.tot[k]}
   $('#tb').innerHTML=rows.map(r=>`<tr><td class="l"><span class="hint" data-tip="${r.k}"><i style="display:inline-block;width:12px;height:3px;background:${r.c};vertical-align:middle;margin-right:8px"></i>${r.n}</span></td><td class="${r.s>=0?'up':'dn'}">${usd(r.s)}</td><td class="${r.s4>=0?'up':'dn'}">${usd(r.s4)}</td><td>${(r.share/tv*100).toFixed(1)}%</td><td>${Math.round(r.cnt).toLocaleString()}</td></tr>`).join('')+
     `<tr><td class="l"><b>전체</b></td><td class="${ts>=0?'up':'dn'}">${usd(ts)}</td><td class="${ts4>=0?'up':'dn'}">${usd(ts4)}</td><td>–</td><td>–</td></tr>`;
-  if(!D.size){$('#vd').innerHTML=`기간 전체 시장가 순매수 <b class="${ts>=0?'up':'dn'}">${usd(ts)}</b>, 최근 1/4 구간 <b class="${ts4>=0?'up':'dn'}">${usd(ts4)}</b>. <span class="sub">${WIN}는 크기별 구분 없이 전체 CVD만 보여줘요. 크기별은 1D·1W에서 볼 수 있어요.</span>`;return}
+  if(!D.size){$('#vd').innerHTML=`기간 전체 시장가 순매수 <b class="${ts>=0?'up':'dn'}">${usd(ts)}</b>, 최근 1/4 구간 <b class="${ts4>=0?'up':'dn'}">${usd(ts4)}</b>. <span class="sub">이 코인은 이 기간 체결 파일이 너무 커서 전체 CVD만 보여줘요. 기간을 줄이거나 '정밀'을 켜 보세요.</span>`;return}
   const big=rows[3].s+rows[4].s,big4=rows[3].s4+rows[4].s4,sm=rows[0].s+rows[1].s,sm4=rows[0].s4+rows[1].s4;
   let v;if(big4>0&&sm4<0)v='<b class="up">큰손 매집 신호</b>: 최근 구간에 $100K 이상 주문은 순매수, 소액은 순매도예요.';
   else if(big4<0&&sm4>0)v='<b class="dn">큰손 분산 신호</b>: 최근 구간에 $100K 이상 주문은 순매도, 소액이 받아 주고 있어요.';
