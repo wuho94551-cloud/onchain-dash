@@ -140,7 +140,7 @@ const usd=n=>{const a=Math.abs(n),s=n<0?'−':'';return a>=1e9?s+'$'+(a/1e9).toF
 const pxf=n=>n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:1}):n>=1?(+n.toFixed(4)).toString():(+n.toPrecision(4)).toString();
 const API={spot:'https://data-api.binance.vision/api/v3',fut:'https://fapi.binance.com/fapi/v1'};
 const WS={spot:s=>`wss://stream.binance.com:9443/ws/${s}@aggTrade`,fut:s=>`wss://fstream.binance.com/ws/${s}@aggTrade`};
-const WINS=[['1D','1D',864e5,'5m',3e5],['1W','1W',6048e5,'30m',18e5],['1M','1M',2592e6,'2h',72e5],['6M','6M',15552e6,'12h',432e5],['1Y','1Y',31536e6,'1d',864e5],['3Y','3Y',94608e6,'3d',2592e5]];
+const WINS=[['1D','1D',864e5,'5m',3e5],['1W','1W',6048e5,'30m',18e5],['1M','1M',2592e6,'2h',72e5],['6M','6M',15552e6,'4h',144e5],['1Y','1Y',31536e6,'12h',432e5],['3Y','3Y',94608e6,'1d',864e5]];
 const CLS=[['$1K 미만',1e3,'#B08CF0','개미 주문. 개인 투자자의 작은 시장가 체결이에요.'],['$1K–10K',1e4,'#4AA3FF','중간 크기 개인 주문이에요.'],['$10K–100K',1e5,'#3FBF6E','큰 개인이나 작은 기관 주문이에요.'],['$100K–1M',1e6,'#F39A2B','큰손 주문. 기관·고래가 시장가로 밀어붙인 체결이에요.'],['$1M 이상',Infinity,'#F0453A','초대형 고래 주문. 드물지만 나오면 방향성이 강해요.']];
 const clsOf=v=>{for(let i=0;i<CLS.length;i++)if(v<CLS[i][1])return i;return CLS.length-1};
 const PR=56; // price rows in heatmap
