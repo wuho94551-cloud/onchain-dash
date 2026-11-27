@@ -62,7 +62,7 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 .lq span:last-child{text-align:right;color:var(--mute)}
 .up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
 </style>
-<link rel="stylesheet" href="./theme.css?v=19">
+<link rel="stylesheet" href="./theme.css?v=20">
 </head>
 <body>
 <nav class="top"><div class="band"></div></nav>
@@ -94,7 +94,7 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   </details>
   <div class="grid2">
     <div class="pn"><h2>미결제약정 (7일)</h2><p>Bybit · 1시간 단위 · 계약 수량 기준</p><div class="mini" id="c-oi"></div></div>
-    <div class="pn"><h2>누적 CVD (7일)</h2><p>Gate 체결 기준 · 시장가 매수 − 매도 (달러)</p><div class="mini" id="c-cvd"></div></div>
+    <div class="pn"><h2>누적 CVD (7일)</h2><p id="cvd-src">바이낸스 선물 체결 기준 · 시장가 매수 − 매도 (달러)</p><div class="mini" id="c-cvd"></div></div>
     <div class="pn"><h2>펀딩비 (최근 정산 60회)</h2><p>Bybit · 양수면 롱이 숏에게 지불</p><div class="mini" id="c-fr"></div></div>
     <div class="pn"><h2>청산 추정 구간 (현재가 ±8%)</h2><p>최근 48시간 새로 열린 포지션 기준 추정 · 초록 = 숏 청산(위), 빨강 = 롱 청산(아래)</p><div class="lq" id="lq"></div></div>
   </div>
@@ -108,9 +108,9 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
       <li><b>큰 체결 / 작은 체결</b>: 현물은 7일, 선물은 최근 2일(바이낸스가 선물 체결은 2일까지만 조회돼요)을 28구간으로 나눠 구간마다 체결 1000건을 받아서, 한 건이 5만 달러 이상인 시장가 매수·매도와 1000달러 미만인 것의 평균가를 따로 내요. 큰 주문이 여러 체결로 쪼개지면 작게 잡힐 수 있어요. 순매수는 샘플 안의 매수 금액에서 매도 금액을 뺀 값이에요.</li>
       <li>현재가가 평단보다 위면 그쪽은 수익 중이에요. 큰손 롱이 수익 중이면 익절 물량, 손실 중이면 버티거나 손절 물량이 나올 자리로 볼 수 있어요.</li></ul></details>
   </div>
-  <p class="sub" style="margin-top:14px">데이터: Bybit 선물(가격·미결제약정·펀딩비), Gate.io 선물(체결 CVD·롱숏 비율·청산 추정). 1분마다 새로 받아요. <a href="./watch.html" id="lw">호가 감시 →</a> <a href="./coin.html" id="lc">코인 분석 →</a></p>
+  <p class="sub" style="margin-top:14px"><b>출처</b>: 가격·차트·미결제약정·펀딩비·롱숏 계정 비율은 Bybit 무기한 선물(api.bybit.com). CVD는 바이낸스 USDⓈ-M 선물 1시간 봉의 시장가 매수량(fapi.binance.com). 청산 추정은 바이낸스 1시간 봉 + Bybit 미결제약정·계정 비율로 계산해요. 바이낸스 선물에 없는 코인만 Gate.io 선물로 대신해요. 평단 나눠 보기는 바이낸스 선물 공개 통계(futures/data: 상위 트레이더 포지션 비율, 전체 계정 비율, 미결제약정 기록, 시장가 매수/매도 비율)와 체결 내역(fapi·api.binance.com aggTrades). 1분마다 새로 받아요. <span id="src-now"></span> <a href="./watch.html" id="lw">호가 감시 →</a> <a href="./coin.html" id="lc">코인 분석 →</a></p>
 </section>
-<script src="./common.js?v=21"></script>
+<script src="./common.js?v=22"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -136,23 +136,24 @@ function clusterBins(st,cs,price){const n=cs.length,smn=new Float64Array(n+1).fi
   return{up,dn,bins,lo,st8,NB}}
 async function load(){const b=BASE;$('#stat').textContent='불러오는 중…';
   const R=await resolve(b);if(!R){$('#stat').textContent=`Bybit 무기한 선물에 ${b}가 없어요.`;return}
-  if(!GM){GM={};try{for(const x of await j('https://api.gateio.ws/api/v4/futures/usdt/contracts'))GM[x.name]=+x.quanto_multiplier||1}catch(e){}}
-  const g=b+'_USDT',hasG=GM[g]!=null,t=R.t,p=+t.lastPrice,pg=p/R.sc;
-  const [oi,fr,st,cs]=await Promise.allSettled([j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${R.s}&intervalTime=1h&limit=169`),j(`https://api.bybit.com/v5/market/funding/history?category=linear&symbol=${R.s}&limit=60`),
-    hasG?j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=168`):Promise.reject(new Error('Gate 없음')),hasG?j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`):Promise.reject()]);
+  const t=R.t,p=+t.lastPrice,pg=p/R.sc;
+  const [oi,fr,fs]=await Promise.allSettled([j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${R.s}&intervalTime=1h&limit=169`),j(`https://api.bybit.com/v5/market/funding/history?category=linear&symbol=${R.s}&limit=60`),
+    OD.flowStats({sym:R.s,base:b,scale:R.sc,hours:167})]);
+  const st=fs.status==='fulfilled'?{status:'fulfilled',value:fs.value.st}:fs,cs=fs.status==='fulfilled'?{status:'fulfilled',value:fs.value.cs.slice(-48)}:fs,SRC=fs.status==='fulfilled'?fs.value.src:null;
   if(b!==BASE)return;
   const d={c24:+t.price24hPcnt*100,fr:+t.fundingRate*100};
+  $('#src-now').textContent=SRC==='gate'?'이 코인은 바이낸스 선물에 없어서 CVD·청산 추정을 Gate.io로 계산했어요.':'';$('#cvd-src').textContent=(SRC==='gate'?'Gate.io 선물':'바이낸스 선물')+' 체결 기준 · 시장가 매수 − 매도 (달러)';
   const O=oi.status==='fulfilled'?oi.value.result.list.map(a=>[+a.timestamp,+a.openInterest]).sort((x,y)=>x[0]-y[0]):[];
   if(O.length>24){d.doi=(O.at(-1)[1]/O.at(-25)[1]-1)*100}
-  let S=[],lsr=null;if(st.status==='fulfilled'&&st.value.length>4){const m=GM[g];S=st.value.map(a=>({time:a.time,v:((a.long_taker_size||0)-(a.short_taker_size||0))*m*(+a.mark_price||0),oiu:+a.open_interest_usd||0,lsr:+a.lsr_account||1,mp:+a.mark_price||0}));
+  let S=[],lsr=null;if(st.status==='fulfilled'&&st.value.length>4){const m=fs.value.mult;S=st.value.map(a=>({time:a.time,v:((a.long_taker_size||0)-(a.short_taker_size||0))*m*(+a.mark_price||0),oiu:+a.open_interest_usd||0,lsr:+a.lsr_account||1,mp:+a.mark_price||0}));
     let c=0,c4=0;S.slice(-24).forEach((a,i,arr)=>{c+=a.v;if(i>=arr.length-4)c4+=a.v});d.cvd=c;d.cvd4=c4;lsr=S.at(-1).lsr}
   let K=null;if(S.length&&cs.status==='fulfilled'&&cs.value.length){const C=cs.value.map(x=>({t:+x.t,h:+x.h,l:+x.l}));K=clusterBins(S.slice(-48),C,pg);d.up=K.up;d.dn=K.dn;
     const Hh=Math.max(...C.map(x=>x.h)),Ll=Math.min(...C.map(x=>x.l));d.pos=Hh>Ll?(pg-Ll)/(Hh-Ll):null}
   const P=OD.sigP(),sg=OD.sigCond(d,P);LASTH=sg.hits;LASTP=p;if(!$('#k-en').value){$('#k-en').value=p}calc();
   const nf=+t.nextFundingTime,left=nf?Math.max(0,Math.round((nf-Date.now())/60e3)):null;
   $('#kp').innerHTML=[['가격',fp(p),pc(d.c24)+' · 24시간'],['미결제약정',usd(+t.openInterestValue),'24시간 '+pc(d.doi,1)],['펀딩비',pc(d.fr,4),left!=null?`다음 정산 ${Math.floor(left/60)}시간 ${left%60}분 뒤`:''],
-    ['CVD 24시간',d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–',d.cvd4!=null?`4시간 <span class="${d.cvd4>=0?'up':'dn'}">${usd(d.cvd4)}</span>`:'Gate 데이터 없음'],
-    ['롱숏 계정 비율',lsr!=null?lsr.toFixed(2):'–','Gate · 1보다 크면 롱 계정이 많음'],['위·아래 청산 비',d.up!=null&&d.dn?(d.up/d.dn).toFixed(2)+'x':d.up?'위쪽만':'–','숏 청산(위) ÷ 롱 청산(아래)'],
+    ['CVD 24시간',d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–',d.cvd4!=null?`4시간 <span class="${d.cvd4>=0?'up':'dn'}">${usd(d.cvd4)}</span>`:'데이터 없음'],
+    ['롱숏 계정 비율',lsr!=null?lsr.toFixed(2):'–',(SRC==='gate'?'Gate.io':'Bybit')+' · 1보다 크면 롱 계정이 많음'],['위·아래 청산 비',d.up!=null&&d.dn?(d.up/d.dn).toFixed(2)+'x':d.up?'위쪽만':'–','숏 청산(위) ÷ 롱 청산(아래)'],
     ['48시간 위치',d.pos!=null?(d.pos*100).toFixed(0)+'%':'–','0% = 48시간 최저'],['급등 준비',`${sg.hits}/${sg.max}`,`<a href="#calc" onclick="document.getElementById('calc').open=true">계산기로 크기 정하기 ↓</a>`]].map(([a,b,c])=>`<div><small>${a}</small><b>${b}</b><i>${c}</i></div>`).join('');
   const NM=['① 포지션 누적','② 펀딩 음수','③ 체결 매수 우위','④ 상단 숏 클러스터','⑤ 바닥권'];
   $('#sig').innerHTML=NM.map((n,i)=>P.on[i]?`<span class="${sg.C[i]?'on':''}" title="${esc(OD.sigText(P)[i])}">${n}${sg.C[i]==null?' (데이터 없음)':''}</span>`:'').join('');
@@ -165,7 +166,7 @@ async function load(){const b=BASE;$('#stat').textContent='불러오는 중…';
   // liquidation ladder (top = higher price)
   if(K){const mx=Math.max(...K.bins)||1,ci=Math.floor((pg-K.lo)/K.st8);let h='';for(let i=K.NB-1;i>=0;i--){const pr=(K.lo+(i+.5)*K.st8)*R.sc,above=i>ci;
       if(i===ci)h+=`<div class="cur"><span>${fp(p)}</span><span>현재가</span><span></span></div>`;else h+=`<div class="${above?'u':'d'}"><span>${fp(+pr.toPrecision(5))}</span><span><i style="width:${(K.bins[i]/mx*100).toFixed(1)}%"></i></span><span>${K.bins[i]?usd(K.bins[i]):''}</span></div>`}
-    $('#lq').innerHTML=h}else $('#lq').innerHTML='<div><span></span><span class="mu">Gate에 이 코인 선물이 없어서 추정할 수 없어요</span><span></span></div>';
+    $('#lq').innerHTML=h}else $('#lq').innerHTML='<div><span></span><span class="mu">바이낸스·Gate 모두 이 코인 선물이 없어서 추정할 수 없어요</span><span></span></div>';
   const tm=new Date();$('#stat').textContent=`${String(tm.getHours()).padStart(2,'0')}:${String(tm.getMinutes()).padStart(2,'0')} 기준 · ${R.s} 무기한 선물`;
 }
 /* ---- 포지션 계산기 ---- */

@@ -85,7 +85,7 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
 .warn{border:1px solid var(--line);padding:10px 14px;font-size:14px;margin:10px 0}
 .ev td{font-size:13px}
 </style>
-<link rel="stylesheet" href="./theme.css?v=19">
+<link rel="stylesheet" href="./theme.css?v=20">
 </head>
 <body>
 <nav class="top"><div class="band"></div></nav>
@@ -165,7 +165,7 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
     <li>데이터: Bybit(가격·미결제약정·펀딩비), Gate.io(체결 CVD·롱숏 비율·미결제약정 달러값·캔들).</li>
   </ul></details>
 </section>
-<script src="./common.js?v=21"></script>
+<script src="./common.js?v=22"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -173,7 +173,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),H=3600e3;
 /* Bybit에 한꺼번에 몰리지 않게 요청 간격을 둠 (초당 약 6번) */
-let BYQ=0;const pace=async u=>{if(!u.includes('api.bybit.com'))return;const t=Math.max(Date.now(),BYQ);BYQ=t+170;const w=t-Date.now();if(w>0)await sleep(w)};
+const pace=async u=>{if(u.includes('api.bybit.com'))await OD.byPace()};
 async function j(u){for(let n=0;;n++){let r;try{await pace(u);r=await fetch(u)}catch(e){/* Bybit는 요청이 몰리면 CORS 헤더 없이 막음: 쉬었다가 다시 */if(n<5){await sleep(2000*2**n);continue}throw new Error('요청 제한에 걸렸어요. 잠시 뒤 다시 해 주세요')}if((r.status===429||r.status>=500)&&n<4){await sleep(1500*(n+1));continue}if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}}
 async function pool(items,n,fn,prog){let i=0,d=0;await Promise.all(Array.from({length:n},async()=>{while(i<items.length){const x=items[i++];try{await fn(x)}catch(e){x.err=e.message}d++;prog&&prog(d,items.length)}}))}
 let P=OD.sigP(),FEE=store.get('bt-fee',0.055),FUND=store.get('bt-fund',1),DLY=store.get('bt-dly',0);const MAXH=()=>P.on.filter(Boolean).length;
@@ -201,7 +201,7 @@ $('#fund').onchange=()=>{FUND=$('#fund').checked?1:0;store.set('bt-fund',FUND);i
 pform();if(matchMedia('(max-width:700px)').matches)$('.pbox').open=false;
 
 /* ---- 과거 데이터 받기 (코인마다 6시간 저장) ---- */
-async function cached(key,fn){try{const c=await caches.open('od-bt-v2');const h=await c.match(key);if(h){const o=await h.json();if(Date.now()-o.t<6*H)return o.d}
+async function cached(key,fn){try{const c=await caches.open('od-bt-v3');const h=await c.match(key);if(h){const o=await h.json();if(Date.now()-o.t<6*H)return o.d}
   const d=await fn();try{await c.put(key,new Response(JSON.stringify({t:Date.now(),d}),{headers:{'content-type':'application/json'}}))}catch(e){}return d}catch(e){return fn()}}
 async function bybitKlines(sym,from,to){const out=new Map();for(let s=from;s<to;s+=1000*H){const r=await j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${sym}&interval=60&start=${s}&end=${Math.min(to,s+1000*H-1)}&limit=1000`);for(const a of r.result.list)out.set(+a[0],[+a[0],+a[1],+a[2],+a[3],+a[4],+a[6]])}return [...out.values()].sort((a,b)=>a[0]-b[0])}
 async function bybitOI(sym,from,to){const out=new Map();for(let s=from;s<to;s+=200*H){const r=await j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${sym}&intervalTime=1h&startTime=${s}&endTime=${Math.min(to,s+200*H-1)}&limit=200`);for(const a of r.result.list)out.set(+a.timestamp,+a.openInterest)}return [...out.entries()].sort((a,b)=>a[0]-b[0])}
@@ -288,8 +288,12 @@ async function run(){const b=$('#go');b.disabled=true;$('#pg').style.width='2%';
     const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')).sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,TOPN).map(x=>{const m=x.symbol.match(/^(1000000|10000|1000)/);return{sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),scale:m?+m[1]:1}});
     const to=Math.floor(Date.now()/H)*H,from=to-(DAYS+2)*24*H,tag=`${DAYS}d-${Math.floor(to/(6*H))}`;
     await pool(top,3,async c=>{const g=c.base+'_USDT',has=!!gm[g];
-      const d=await cached(`https://bt.local/${c.sym}/${tag}`,async()=>{const [k,oi,fr,st,cs]=await Promise.all([bybitKlines(c.sym,from,to),bybitOI(c.sym,from,to),bybitFunding(c.sym,from-3*24*H,to),has?gateStats(g,from,to):[],has?gateCandles(g,from,to):[]]);return{k,oi,fr,st,cs}});
-      Object.assign(c,d);c.S=series(c,gm[g]||1)},(n,m)=>{$('#pg').style.width=(2+n/m*90)+'%';$('#stat').textContent=`과거 데이터 받는 중… ${n}/${m}개 코인`});
+      const d=await cached(`https://bt.local/${c.sym}/${tag}`,async()=>{const [k,oi,fr]=await Promise.all([bybitKlines(c.sym,from,to),bybitOI(c.sym,from,to),bybitFunding(c.sym,from-3*24*H,to)]);
+        /* CVD·청산 추정: 바이낸스 선물 체결 + Bybit 미결제약정·계정 비율. 바이낸스에 없으면 Gate.io */
+        let st=[],cs=[],mult=1,src='';try{const f=await OD.flowStats({sym:c.sym,base:c.base,scale:c.scale,from,to,oi,noGate:true});st=f.st.map(a=>({time:a.time,oiu:a.open_interest_usd,lsr:a.lsr_account,mp:a.mark_price,lt:a.long_taker_size,stk:a.short_taker_size}));cs=f.cs.map(x=>({t:x.t,h:x.h,l:x.l}));src='binance'}
+        catch(e){if(has){[st,cs]=await Promise.all([gateStats(g,from,to),gateCandles(g,from,to)]);mult=gm[g];src='gate'}}
+        return{k,oi,fr,st,cs,mult,src}});
+      Object.assign(c,d);c.S=series(c,d.mult||1)},(n,m)=>{$('#pg').style.width=(2+n/m*90)+'%';$('#stat').textContent=`과거 데이터 받는 중… ${n}/${m}개 코인`});
     RES={top:top.filter(c=>c.S),fail:top.filter(c=>!c.S).map(c=>c.base),from,to};$('#pg').style.width='100%';regime();applyP();render();$('#out').hidden=false;
     $('#stat').textContent=`${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} 계산 · ${RES.top.length}개 코인 · 최근 ${DAYS}일`+(RES.fail.length?` · 데이터 부족으로 뺀 코인: ${RES.fail.join(', ')}`:'');
   }catch(e){$('#stat').textContent='검증 실패: '+e.message}finally{b.disabled=false}}

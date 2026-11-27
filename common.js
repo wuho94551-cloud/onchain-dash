@@ -134,6 +134,51 @@ const NAV=[['시장',[['./','급등 준비'],['./scan.html','스캐너'],['./pum
   ['청산',[['./liq.html','실시간 청산'],['./liqmap.html','청산 압력']]],
   ['온체인',[['./unlock.html','언락'],['./wallet.html','지갑']]],
   ['기록',[['./journal.html','매매 일지']]]];
+/* ---- 페이지마다 데이터 출처: 맨 아래 접이식 상자 ---- */
+const SRC_L={
+  bybit:['Bybit 공개 시장 API','https://bybit-exchange.github.io/docs/v5/intro'],
+  binF:['바이낸스 USDⓈ-M 선물 공개 API','https://developers.binance.com/docs/derivatives/usds-margined-futures/general-info'],
+  binS:['바이낸스 현물 공개 API','https://developers.binance.com/docs/binance-spot-api-docs'],
+  binV:['바이낸스 공개 데이터 저장소','https://data.binance.vision'],
+  gate:['Gate.io 공개 API','https://www.gate.io/docs/developers/apiv4/'],
+  okx:['OKX 공개 API','https://www.okx.com/docs-v5/en/'],
+  upbit:['업비트 공개 API','https://docs.upbit.com'],
+  bithumb:['빗썸 공개 API','https://apidocs.bithumb.com'],
+  fx:['ExchangeRate-API (open.er-api.com)','https://www.exchangerate-api.com/docs/free'],
+  cg:['CoinGecko API','https://docs.coingecko.com'],
+  llama:['DefiLlama 언락 데이터','https://defillama.com/unlocks'],
+  ethp:['Ethplorer API','https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API'],
+  dune:['Dune API (내 키)','https://docs.dune.com/api-reference'],
+  bs:['Blockscout API','https://docs.blockscout.com'],
+  gh:['GitHub Gist API (내 토큰)','https://docs.github.com/rest/gists'],
+  tg:['Telegram Bot API','https://core.telegram.org/bots/api'],
+  cf:['Cloudflare Workers (내 워커)','https://developers.cloudflare.com/workers/'],
+  coincap:['CoinCap 아이콘','https://coincap.io'],
+  lwc:['TradingView Lightweight Charts','https://github.com/tradingview/lightweight-charts']};
+const GATE_FB='바이낸스 선물에 없는 코인만 Gate.io 선물 contract_stats·candlesticks로 대신';
+const SRC_P={
+  './':[['bybit','종목·가격·24시간 변동·펀딩비(tickers), 미결제약정 변화(open-interest), 롱숏 계정 비율(account-ratio)'],['binF','CVD와 청산 추정용 1시간 봉·시장가 매수량(fapi/v1/klines)'],['gate',GATE_FB]],
+  './scan.html':[['bybit','종목·가격·거래량·펀딩비(tickers, kline), 미결제약정(open-interest)'],['binF','CVD용 1시간 봉 시장가 매수량(klines)'],['gate',GATE_FB]],
+  './pump.html':[['bybit','종목·가격(tickers), 1시간 봉 240개(kline), 미결제약정(open-interest), 롱숏 계정 비율(account-ratio)'],['binF','CVD·청산 추정용 1시간 봉(klines), 큰손 평단용 상위 트레이더 포지션 비율·전체 계정 비율·미결제약정 기록·시장가 매수/매도 비율(futures/data)'],['gate',GATE_FB],['','확률·검증 통과 조합: 이 사이트 신호 검증 결과(기본값은 pump-default.json)']],
+  './kimp.html':[['upbit','원화 시세·마켓 목록·입출금 상태'],['bithumb','원화 시세·입출금 상태'],['bybit','해외 기준가(현물 tickers, 기본)'],['okx','해외 기준가(선택 시)'],['gate','해외 기준가(선택 시)·입출금 상태(spot/currencies)'],['fx','달러/원 환율']],
+  './bt.html':[['bybit','180일 1시간 봉(kline), 미결제약정(open-interest), 펀딩비 기록(funding/history), 롱숏 계정 비율(account-ratio)'],['binF','180일 CVD·청산 추정용 1시간 봉 시장가 매수량(klines)'],['gate','바이낸스 선물에 없는 코인만 contract_stats·candlesticks (최근 180일까지만 제공)']],
+  './fav.html':[['bybit','가격·펀딩비(tickers), 미결제약정(open-interest)'],['binS','현물 1시간 봉 시장가 매수량으로 CVD(data-api.binance.vision klines)'],['binF','현물이 없으면 선물 1시간 봉으로 CVD'],['upbit','원화 시세(김프)'],['bithumb','입출금 상태'],['gate','입출금 상태(spot/currencies)'],['fx','달러/원 환율']],
+  './view.html':[['bybit','가격·차트(tickers, kline), 미결제약정(open-interest), 펀딩비 기록(funding/history), 롱숏 계정 비율(account-ratio)'],['binF','CVD·청산 추정용 1시간 봉(klines), 평단 나눠 보기(futures/data 상위 트레이더·전체 계정 비율·미결제약정 기록·시장가 매수/매도 비율, aggTrades 최근 2일 체결)'],['binS','현물 체결 크기별 평단(api/v3/aggTrades 최근 7일 체결)'],['gate',GATE_FB]],
+  './coin.html':[['cg','코인 검색·정보·컨트랙트 주소'],['binF','CVD(klines의 시장가 매수량), 상위 트레이더 롱/숏(futures/data)'],['bybit','미결제약정·펀딩비'],['gate','청산 합계(시간별 청산 기록을 무료로 주는 곳이 Gate.io뿐), 바이낸스에 없는 코인의 CVD'],['llama','언락 일정·물량'],['ethp','보유자 상위 20, 상위 지갑 토큰 이동(분산 흔적)'],['dune','거래소 유입·유출(내 Dune 키를 넣었을 때)'],['','주소 정보 링크: Arkham, Etherscan']],
+  './watch.html':[['bybit','실시간 호가·체결(웹소켓 stream.bybit.com 선물·현물), 캔들·가격(kline, tickers)']],
+  './cvd.html':[['binF','선물 실시간 체결(웹소켓 fstream.binance.com), 최근 체결(fapi/v1)'],['binS','현물 실시간 체결(웹소켓 stream.binance.com), 최근 체결(data-api.binance.vision)'],['binV','지난 체결 기록 파일(data.binance.vision)']],
+  './liq.html':[['bybit','실시간 청산(웹소켓 stream.bybit.com), 종목 목록(tickers)'],['okx','실시간 청산(웹소켓 ws.okx.com), 계약 정보(instruments)'],['gate','실시간 청산(웹소켓 fx-ws.gateio.ws), 계약 배수(contracts)']],
+  './liqmap.html':[['bybit','종목·가격·펀딩비(tickers), 미결제약정(open-interest), 롱숏 계정 비율(account-ratio)'],['binF','청산 구간 추정용 1시간 봉(klines)'],['gate','실제 청산 금액(점화 경보), '+GATE_FB]],
+  './unlock.html':[['llama','언락 일정·물량(emissionsIndex)'],['bybit','가격(tickers)']],
+  './wallet.html':[['bs','체인별 지갑 잔고·거래 내역(각 체인 blockscout.com)']],
+  './journal.html':[['gh','일지 동기화(내 GitHub 토큰, 암호화한 뒤 저장)'],['','매매 기록은 내가 입력한 값']],
+  './alert.html':[['tg','텔레그램 알림 보내기'],['cf','사이트를 꺼도 도는 알림 워커(내 Cloudflare 계정)'],['bybit','워커가 보는 가격·지표'],['gate','워커의 CVD·청산 추정(워커는 아직 Gate.io 기준)']]};
+const SRC_ALL=[['bybit','상단 분위기 줄의 BTC 가격·4시간 봉·미결제약정, 종목 분류(instruments-info)'],['upbit','상단 분위기 줄의 BTC 원화 가격(김프)'],['fx','달러/원 환율'],['cg','코인 아이콘(코인 분석에서 본 코인)'],['coincap','그 밖의 코인 아이콘'],['lwc','차트 그리기']];
+function buildSrc(here){if(document.getElementById('od-src'))return;const P=SRC_P[here];if(!P)return;
+  const li=([k,t])=>{const s=SRC_L[k];return`<li>${s?`<a href="${s[1]}" target="_blank" rel="noopener">${s[0]}</a>: `:''}${esc(t)}</li>`};
+  const f=document.createElement('footer');f.id='od-src';f.className='od-src';
+  f.innerHTML=`<details><summary>데이터 출처</summary><ul>${P.map(li).join('')}</ul><p>모든 페이지 공통</p><ul>${SRC_ALL.map(li).join('')}</ul><p>모두 무료 공개 데이터예요. 거래소마다 집계 방식이 달라 값이 조금씩 다를 수 있고, 추정이라고 적힌 값은 이 사이트가 계산한 값이에요.</p></details>`;
+  const bb=document.querySelector('.od-bb');if(bb)document.body.insertBefore(f,bb);else document.body.appendChild(f)}
 function buildNav(){const nav=document.querySelector('nav.top');if(!nav||nav.dataset.built)return;nav.dataset.built=1;
   const f=(location.pathname.split('/').pop()||'index.html').toLowerCase(),here=f==='index.html'?'./':'./'+f;
   const gi=NAV.findIndex(g=>g[1].some(p=>p[0]===here));
@@ -145,6 +190,7 @@ function buildNav(){const nav=document.querySelector('nav.top');if(!nav||nav.dat
   const bb=document.createElement('div');bb.className='od-bb';
   bb.innerHTML=NAV.map((g,i)=>`<a href="${g[1][0][0]}"${i===gi?' aria-current="true"':''}>${g[0]}</a>`).join('')+'<a href="#" data-srch>검색</a>';
   document.body.appendChild(bb);bb.querySelector('[data-srch]').onclick=e=>{e.preventDefault();openSearch()};
+  buildSrc(here);
   mood()}
 /* ---- 어디서나 코인 찾기: / 키 또는 폰 하단 '검색' → 한눈에 페이지 ---- */
 let SRB=null;
@@ -503,6 +549,28 @@ const ALLN=['① 포지션 누적','② 펀딩 음수','③ 체결 매수 우위
 /* 10개 조건을 비트로: 참이면 1. 데이터 없으면 0 */
 function allMask(r,P){if(r.c24==null)return 0;const g=sigCond(r,{...P,on:[1,1,1,1,1]});let m=0;g.C.forEach((v,i)=>{if(v===true)m|=1<<i});PUMP.forEach((x,i)=>{if(x[2](r)===true)m|=1<<(5+i)});return m}
 
+/* 시간별 체결·미결제약정 묶음: 바이낸스 선물 1시간 봉(시장가 매수·매도) + 바이비트 미결제약정·롱숏 계정 비율.
+   바이낸스 선물에 없는 코인만 Gate.io로 대체. 행 모양은 Gate contract_stats와 같게 맞춤(time=구간 시작 초, 크기는 코인 개수, 가격은 코인 1개 기준) */
+let BYQ2=0;const byPace=async()=>{const t=Math.max(Date.now(),BYQ2);BYQ2=t+160;const w=t-Date.now();if(w>0)await new Promise(r=>setTimeout(r,w))};
+async function fjson(u){for(let n=0;;n++){let r;try{if(u.includes('api.bybit.com'))await byPace();r=await fetch(u)}catch(e){if(n<3){await new Promise(x=>setTimeout(x,1500*2**n));continue}throw new Error('요청 제한')}
+  if((r.status===429||r.status>=500)&&n<3){await new Promise(x=>setTimeout(x,1500*(n+1)));continue}if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e}return r.json()}}
+const GQM={};let GQP=null;const gateMult=async g=>{if(!GQP)GQP=fjson('https://api.gateio.ws/api/v4/futures/usdt/contracts').then(cs=>{for(const c of cs)GQM[c.name]=+c.quanto_multiplier||1}).catch(()=>{GQP=null});await GQP;return GQM[g]};
+async function flowStats(o){const H=3600e3,{sym,scale=1}=o,base=o.base||sym.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,'');const to=o.to||Date.now(),from=o.from||to-(o.hours||48)*H;
+  try{const K=[];for(let s=Math.floor(from/H)*H;s<to;){const r=await fjson(`https://fapi.binance.com/fapi/v1/klines?symbol=${sym}&interval=1h&startTime=${s}&endTime=${to}&limit=1500`);if(!r.length)break;K.push(...r);const nx=r.at(-1)[0]+H;if(r.length<1500||nx<=s)break;s=nx}
+    if(K.length<2)throw new Error('바이낸스 없음');
+    const OI=new Map(),LR=new Map(),lo=K[0][0];
+    const page=async(url,lim,put)=>{for(let e=to;;){const d=await fjson(url+`&startTime=${lo}&endTime=${Math.floor(e)}&limit=${lim}`);const l=d.result?.list||[];if(!l.length)break;let mn=Infinity;for(const x of l){put(x);mn=Math.min(mn,+x.timestamp)}if(l.length<lim||mn<=lo)break;e=mn-1}};
+    if(Array.isArray(o.oi))for(const [t,v] of o.oi)OI.set(+t,+v);
+    await Promise.all([Array.isArray(o.oi)?0:page(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${sym}&intervalTime=1h`,200,x=>OI.set(+x.timestamp,+x.openInterest)).catch(()=>{}),
+      page(`https://api.bybit.com/v5/market/account-ratio?category=linear&symbol=${sym}&period=1h`,500,x=>LR.set(+x.timestamp,+x.sellRatio?+x.buyRatio/+x.sellRatio:1)).catch(()=>{})]);
+    let po=null,pl=1;const st=[],cs=[];
+    for(const k of K){const t=k[0],c=+k[4],v=+k[5],tb=+k[9];const oi=OI.get(t+H)??OI.get(t)??po;if(oi!=null)po=oi;const lr=LR.get(t+H)??LR.get(t)??pl;pl=lr;
+      st.push({time:t/1000,open_interest_usd:po!=null?po*c:0,lsr_account:lr,mark_price:c/scale,long_taker_size:tb*scale,short_taker_size:(v-tb)*scale});cs.push({t:t/1000,o:+k[1]/scale,h:+k[2]/scale,l:+k[3]/scale,c:c/scale})}
+    return{st,cs,mult:1,src:'binance',oiN:OI.size,lrN:LR.size}}
+  catch(e){if(o.noGate)throw e;const g=base+'_USDT',m=await gateMult(g);if(m==null)throw new Error('바이낸스·Gate 모두 없음');const lim=Math.min(1000,Math.ceil((to-from)/H)+1);
+    const [st,cs]=await Promise.all([fjson(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=${lim}`),fjson(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=${lim}`)]);
+    return{st,cs:cs.map(x=>({t:+x.t,o:+x.o,h:+x.h,l:+x.l,c:+x.c})),mult:m,src:'gate'}}}
+const SRCN={binance:'바이낸스 선물 체결 + 바이비트 미결제약정·계정 비율',gate:'Gate.io (바이낸스 선물에 없는 코인)'};
 /* 평단 나눠 보기: 바이낸스 선물 공개 통계 + 체결 샘플. 모두 추정치 */
 async function bget(u){for(let n=0;n<3;n++){try{const r=await fetch(u);if(r.ok)return r.json();if(r.status===400)return null}catch(e){}await new Promise(r=>setTimeout(r,1500*(n+1)))}return null}
 async function costBasis(sym,scale=1){const F='https://fapi.binance.com/futures/data/',q=`?symbol=${sym}&period=1h&limit=168`;
@@ -529,5 +597,5 @@ async function sizeBasis(sym,spot,scale=1,win=28,big=5e4,small=1e3,prog){const H
       for(const x of d){const p=+x.p/sc,v=+x.p*+x.q;if(!p||!v)continue;acc.tot+=v;acc.n++;const buy=!x.m,b=v>=big?(buy?acc.bB:acc.bS):v<small?(buy?acc.sB:acc.sS):null;if(b){b[0]+=v;b[1]+=v/p;b[2]++}}}}));
     const f=a=>a[2]?{p:a[0]/a[1],v:a[0],n:a[2]}:null;out[k]=acc.ok?{bB:f(acc.bB),bS:f(acc.bS),sB:f(acc.sB),sS:f(acc.sS),tot:acc.tot,n:acc.n,ok:acc.ok,win,span}:null}
   return out}
-window.OD={costBasis,sizeBasis,btSeries,allMask,ALLN,PUMP,getLines,setLines,workerCfg,workerPut,sigP,sigSave,sigCond,sigText,SIG_DEF,coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
+window.OD={byPace,flowStats,fjson,SRCN,costBasis,sizeBasis,btSeries,allMask,ALLN,PUMP,getLines,setLines,workerCfg,workerPut,sigP,sigSave,sigCond,sigText,SIG_DEF,coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
 })();

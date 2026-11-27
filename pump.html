@@ -61,7 +61,7 @@ dialog#pv::backdrop{background:rgb(0 0 0/.45)}
 .pvt td,.pvt th{padding:5px 8px}
 @media(max-width:700px){.hide-sm{display:none}.pvc{height:260px}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=19">
+<link rel="stylesheet" href="./theme.css?v=20">
 </head>
 <body>
 <nav class="top"><div class="band"></div></nav>
@@ -82,13 +82,13 @@ dialog#pv::backdrop{background:rgb(0 0 0/.45)}
     <p class="sub">'세력'을 직접 볼 수는 없어요. 여기 나오는 건 작업이 있을 때 자주 같이 보이는 흔적일 뿐이고, 같은 흔적이 급락 전에도 나와요. 승률·기대값은 신호 검증에서 계산한 과거 값이라 앞으로도 같다는 보장이 없어요. 익절·손절은 신호가 뜬 시점 가격 기준이에요. 7일 안에 둘 다 안 닿으면 7일 뒤 종가로 정리한 결과예요. 롱·숏 평단은 Gate 선물에서 최근 7일 미결제약정이 늘어난 시간마다 시장가 매수 비중만큼 롱, 나머지는 숏이 새로 열렸다고 보고 가격을 가중평균한 추정치예요. 실제 세력의 평단을 아는 방법은 없어요. 현재가가 롱 평단보다 아래면 롱이 손실 중(아래로 털릴 연료), 숏 평단보다 위면 숏이 손실 중(위로 털릴 연료)이라는 뜻으로 보세요.</p></details>
   <dialog id="pv" aria-labelledby="pv-t"><div class="pvh"><span id="pv-i"></span><h2 id="pv-t"></h2><span id="pv-p" style="font-family:var(--mono)"></span><button type="button" class="x" id="pv-x">닫기</button></div><div class="pvb" id="pv-b"></div></dialog>
 </section>
-<script src="./common.js?v=21"></script>
+<script src="./common.js?v=22"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),H=3600e3;
-let BYQ=0;const pace=async u=>{if(!u.includes('api.bybit.com'))return;const t=Math.max(Date.now(),BYQ);BYQ=t+150;const w=t-Date.now();if(w>0)await sleep(w)};
+const pace=async u=>{if(u.includes('api.bybit.com'))await OD.byPace()};
 async function j(u){for(let n=0;;n++){let r;try{await pace(u);r=await fetch(u)}catch(e){if(n<4){await sleep(2000*2**n);continue}throw new Error('요청 제한')}if((r.status===429||r.status>=500)&&n<4){await sleep(1500*(n+1));continue}if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}}
 async function pool(items,n,fn,prog){let i=0,d=0;await Promise.all(Array.from({length:n},async()=>{while(i<items.length){const x=items[i++];try{await fn(x)}catch(e){x.err=e.message}d++;prog&&prog(d,items.length)}}))}
 const pc=(v,d=1)=>v==null||!isFinite(v)?'–':`<span class="${v>0?'up':v<0?'dn':''}">${v>0?'+':''}${v.toFixed(d)}%</span>`;
@@ -107,19 +107,19 @@ $('#src').innerHTML=!B?'<b>아직 확률 데이터가 없어요.</b> <a href="./
 }
 let DATA=[],busy=false;
 async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').style.width='2%';$('#stat').textContent='종목 불러오는 중…';
-  try{const [t,gc]=await Promise.all([j('https://api.bybit.com/v5/market/tickers?category=linear'),j('https://api.gateio.ws/api/v4/futures/usdt/contracts')]);const gm={};for(const x of gc)gm[x.name]=+x.quanto_multiplier||1;
+  try{const t=await j('https://api.bybit.com/v5/market/tickers?category=linear');
     await OD.loadTypes();
     const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')&&OD.kindOf(x.symbol)==='코인').sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,TOPN).map(x=>{const m=x.symbol.match(/^(1000000|10000|1000)/);return{sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),scale:m?+m[1]:1,p:+x.lastPrice,c24:+x.price24hPcnt*100,fr:+x.fundingRate*100}});
     const P=B?.P||OD.sigP();
     for(let w=0;w<40&&!window.OD_MOOD?.tr;w++)await sleep(250);const RBb=B?.rb||OD.ALLN.length,RG=window.OD_MOOD?.tr==='up'?1<<RBb:window.OD_MOOD?.tr==='dn'?1<<(RBb+1):0;
-    await pool(top,4,async c=>{const g=c.base+'_USDT',has=gm[g]!=null;
-      const [k,oi,st,cs]=await Promise.allSettled([j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${c.sym}&interval=60&limit=240`),j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${c.sym}&intervalTime=1h&limit=200`),
-        has?j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=170`):Promise.reject(),has?j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`):Promise.reject()]);
+    await pool(top,4,async c=>{
+      const [k,oi,st]=await Promise.allSettled([j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${c.sym}&interval=60&limit=240`),j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${c.sym}&intervalTime=1h&limit=200`),
+        OD.flowStats({sym:c.sym,base:c.base,scale:c.scale,hours:170})]);const fs=st.status==='fulfilled'?st.value:null;if(fs)c.src=fs.src;
       if(k.status!=='fulfilled')throw new Error('캔들 없음');
       const d={k:k.value.result.list.map(a=>[+a[0],+a[1],+a[2],+a[3],+a[4],+a[6]]).sort((a,b)=>a[0]-b[0]),oi:oi.status==='fulfilled'?oi.value.result.list.map(a=>[+a.timestamp,+a.openInterest]).sort((a,b)=>a[0]-b[0]):[],fr:[[0,c.fr]],scale:c.scale,
-        st:st.status==='fulfilled'?st.value.map(a=>({time:a.time,oiu:+a.open_interest_usd||0,lsr:+a.lsr_account||1,mp:+a.mark_price||0,lt:+a.long_taker_size||0,stk:+a.short_taker_size||0})):[],cs:cs.status==='fulfilled'?cs.value.map(x=>({t:+x.t,h:+x.h,l:+x.l})):[]};
-      const S=OD.btSeries(d,gm[g]||1);c.cb=await OD.costBasis(c.sym,c.scale).catch(()=>null);
-      /* 선물 전체 신규 평단(게이트): 최근 7일 미결제약정이 늘어난 시간마다, 시장가 매수 비중만큼 롱·나머지는 숏이 새로 열렸다고 보고 가격을 가중평균 */
+        st:fs?fs.st.map(a=>({time:a.time,oiu:+a.open_interest_usd||0,lsr:+a.lsr_account||1,mp:+a.mark_price||0,lt:+a.long_taker_size||0,stk:+a.short_taker_size||0})):[],cs:fs?fs.cs:[]};
+      const S=OD.btSeries(d,fs?fs.mult:1);c.cb=await OD.costBasis(c.sym,c.scale).catch(()=>null);
+      /* 선물 전체 신규 평단(바이낸스 체결 비율 × Bybit 미결제약정, 없으면 Gate): 최근 7일 미결제약정이 늘어난 시간마다, 시장가 매수 비중만큼 롱·나머지는 숏이 새로 열렸다고 보고 가격을 가중평균 */
       if(d.st.length>24){let L=0,Lw=0,Sx=0,Sw=0;for(let q=1;q<d.st.length;q++){const a=d.st[q],dd=a.oiu-d.st[q-1].oiu;if(dd<=0||!a.mp)continue;const tot=a.lt+a.stk,sh=tot?a.lt/tot:.5;L+=dd*sh*a.mp;Lw+=dd*sh;Sx+=dd*(1-sh)*a.mp;Sw+=dd*(1-sh)}
         c.lavg=Lw?L/Lw*c.scale:null;c.savg=Sw?Sx/Sw*c.scale:null}if(!S)throw new Error('데이터 부족');const r=S.at(-1);r.c24=c.c24;r.fr=c.fr;c.r=r;c.m=OD.allMask(r,P)|RG;
       /* 맞는 조합 중 뒤 기간 확률이 가장 높은 것 (통과 조합 우선) */
@@ -154,7 +154,7 @@ function preview(base){const c=DATA.find(x=>x.base===base);if(!c)return;const r=
     <div class="tbl"><table class="pvt"><thead><tr><th class="l">평단 (최근 7일 추정)</th><th>롱</th><th>숏</th><th class="l">참고</th></tr></thead><tbody>
       <tr><td class="l">큰손 선물 (바이낸스 상위 트레이더)</td><td>${rel(cb?.big?.L*sc)}</td><td>${rel(cb?.big?.S*sc,1)}</td><td class="l"><small class="mu">${cb?.big?`롱 비중 ${(cb.big.lr*100).toFixed(0)}%`:'바이낸스 선물 없음'}</small></td></tr>
       <tr><td class="l">다수 계정 선물 (계정 수 기준)</td><td>${rel(cb?.acct?.L*sc)}</td><td>${rel(cb?.acct?.S*sc,1)}</td><td class="l"><small class="mu">${cb?.acct?`롱 계정 ${(cb.acct.lr*100).toFixed(0)}%`:''}</small></td></tr>
-      <tr><td class="l">선물 전체 신규 (게이트 체결 비율)</td><td>${rel(c.lavg)}</td><td>${rel(c.savg,1)}</td><td class="l"><small class="mu">초록 = 지금 수익, 빨강 = 손실</small></td></tr>
+      <tr><td class="l">선물 전체 신규 (${c.src==='gate'?'Gate.io 체결 비율':'바이낸스 체결 비율 × Bybit 미결제약정'})</td><td>${rel(c.lavg)}</td><td>${rel(c.savg,1)}</td><td class="l"><small class="mu">초록 = 지금 수익, 빨강 = 손실</small></td></tr>
     </tbody></table></div>
     <p class="sub">현물·선물 체결 크기별 평단과 큰 체결 순매수는 <a href="./view.html#${encodeURIComponent(c.base)}">한눈에</a>, 상위 지갑 분산 흔적은 <a href="./coin.html#${encodeURIComponent(c.base)}">코인 분석</a>에서 볼 수 있어요.</p>`;
   if(PVC){PVC.destroy();PVC=null}dlg.showModal();OD.mountChart($('#pv-c'),c.base,{links:false}).then(x=>{if(dlg.open)PVC=x;else x.destroy()}).catch(e=>{$('#pv-c').textContent='차트 실패: '+e.message})}

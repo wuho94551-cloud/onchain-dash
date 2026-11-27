@@ -93,7 +93,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:600px){table{font-size:13px}.fig{min-height:240px}.kpi .v{font-size:22px}.keyrow label{width:100%}}
 @media(prefers-reduced-motion:no-preference){.panel{animation:in .35s ease both}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=19">
+<link rel="stylesheet" href="./theme.css?v=20">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -143,7 +143,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
     </div>
     <div class="fig" id="f-cvd"></div>
     <div class="kpis" id="cvdk"></div>
-    <p class="src">Gate.io USDT 무기한 선물의 시장가 매수 체결량 − 시장가 매도 체결량 누적. 청산 합계와 상위 트레이더 비율도 Gate 기준이에요. 미결제약정·펀딩비는 다른 페이지와 같은 Bybit 기준이에요.</p>
+    <p class="src"><b>출처</b>: CVD는 <span id="cvd-src">바이낸스 선물</span>의 시장가 매수 체결량 − 시장가 매도 체결량 누적(fapi.binance.com klines, 바이낸스에 없는 코인은 Gate.io contract_stats). 미결제약정·펀딩비는 Bybit(api.bybit.com). 청산 합계는 Gate.io(시간별 청산 기록을 무료로 주는 곳이 Gate.io뿐), 상위 트레이더 롱/숏은 바이낸스(futures/data topLongShortPositionRatio).</p>
   </div>
 </section>
 
@@ -183,7 +183,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   </details>
 </section>
 
-<script src="./common.js?v=21"></script>
+<script src="./common.js?v=22"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -278,30 +278,35 @@ async function loadCoin(q){
   $('#stamp').textContent='마지막 갱신 '+new Date().toLocaleString('ko-KR');
 }
 
-/* CVD from Gate futures contract_stats */
+/* CVD: 바이낸스 USDⓈ-M 선물 봉의 시장가 매수량 − 매도량 누적. 바이낸스 선물에 없으면 Gate.io. 청산 합계는 Gate.io(시간별 청산 기록을 무료로 주는 곳) */
 async function loadCVD(){
   const box=$('#f-cvd');box.innerHTML='<div class="empty">불러오는 중…</div>';$('#cvdk').innerHTML='';
   const ct=C.sym+'_USDT';
   try{
-    const [info,st]=await Promise.all([j('https://api.gateio.ws/api/v4/futures/usdt/contracts/'+ct),j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${ct}&interval=${TF}&limit=200`)]);
-    const mult=Number(info.quanto_multiplier)||1;
-    if(!st.length)throw new Error('데이터 없음');
-    let cum=0;const pts=[];let liqL=0,liqS=0;
-    for(const r of st){cum+=((r.long_taker_size||0)-(r.short_taker_size||0))*mult;pts.push([r.time*1000,cum]);liqL+=r.long_liq_usd||0;liqS+=r.short_liq_usd||0}
+    let by=null;for(const s of [C.sym+'USDT','1000'+C.sym+'USDT','10000'+C.sym+'USDT','1000000'+C.sym+'USDT']){try{const r=await j(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${s}`);if(r.result?.list?.length){by={s,t:r.result.list[0]};break}}catch(e){}}
+    const bsyms=by?[by.s]:[C.sym+'USDT','1000'+C.sym+'USDT'];let K=null,bs=null;
+    for(const s of bsyms){try{const r=await j(`https://fapi.binance.com/fapi/v1/klines?symbol=${s}&interval=${TF}&limit=200`);if(Array.isArray(r)&&r.length){K=r;bs=s;break}}catch(e){}}
+    const [gs,gi,tp]=await Promise.allSettled([j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${ct}&interval=${TF}&limit=200`),j('https://api.gateio.ws/api/v4/futures/usdt/contracts/'+ct),
+      bs?j(`https://fapi.binance.com/futures/data/topLongShortPositionRatio?symbol=${bs}&period=${TF}&limit=1`):Promise.reject()]);
+    const sc=bs?+(bs.match(/^(1000000|10000|1000)/)||[0,1])[1]:1;
+    let cum=0,cumU=0;const pts=[];let liqL=0,liqS=0,src,mp;
+    if(K){src='바이낸스 선물';for(const k of K){const d=(2*+k[9]-+k[5])*sc;cum+=d;cumU+=2*+k[10]-+k[7];pts.push([k[0],cum])}mp=+K.at(-1)[4]/sc}
+    else if(gs.status==='fulfilled'&&gs.value.length){src='Gate.io 선물';const mult=gi.status==='fulfilled'?Number(gi.value.quanto_multiplier)||1:1;for(const r of gs.value){const d=((r.long_taker_size||0)-(r.short_taker_size||0))*mult;cum+=d;cumU+=d*(Number(r.mark_price)||0);pts.push([r.time*1000,cum])}mp=Number(gs.value.at(-1).mark_price)||C.price||0}
+    else throw new Error('바이낸스·Gate.io 모두 데이터 없음');
+    const hasLiq=gs.status==='fulfilled'&&gs.value.length;if(hasLiq)for(const r of gs.value){liqL+=r.long_liq_usd||0;liqS+=r.short_liq_usd||0}
     chart(box,[{pts,color:'var(--acc)',name:'CVD',area:true}],(v,f)=>num(v)+(f?' '+C.sym:''),dfmt);
-    const a=st[0],z=st.at(-1),mp=Number(z.mark_price)||C.price||0;
-    /* 미결제약정·펀딩비는 다른 페이지와 같은 Bybit 기준 */
-    let by=null;for(const s of [C.sym+'USDT','1000'+C.sym+'USDT','10000'+C.sym+'USDT']){try{const r=await j(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${s}`);if(r.result?.list?.length){by={s,t:r.result.list[0]};break}}catch(e){}}
+    $('#cvd-src').textContent=src;
     let oiV=null,oiChg=null,fr=null;if(by){oiV=+by.t.openInterestValue;fr=+by.t.fundingRate*100;try{const l=(await j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${by.s}&intervalTime=1h&limit=25`)).result.list;if(l.length>1)oiChg=(+l[0].openInterest/+l.at(-1).openInterest-1)*100}catch(e){}}
+    const top=tp.status==='fulfilled'&&tp.value[0]?+tp.value[0].longShortRatio:null;
     $('#cvdk').innerHTML=[
-      ['구간 순체결',sgn(cum,v=>num(v))+` <span class="sub">${esc(C.sym)}</span>`],
-      ['순체결 (USD 환산)',sgn(cum*mp,usd)],
+      ['구간 순체결 ('+src+')',sgn(cum,v=>num(v))+` <span class="sub">${esc(C.sym)}</span>`],
+      ['순체결 (USD)',sgn(cumU,usd)],
       ['미결제약정 (Bybit)',oiV!=null?usd(oiV)+(oiChg!=null?` <span class="sub">24시간 ${oiChg>=0?'+':''}${oiChg.toFixed(1)}%</span>`:''):'–'],
       ['펀딩비 (Bybit)',fr!=null?sgn(fr,v=>v.toFixed(4)+'%'):'–'],
-      ['롱 청산 합계',usd(liqL)],['숏 청산 합계',usd(liqS)],
-      ['상위 트레이더 롱/숏',Number(z.top_lsr_size||0).toFixed(2)]
+      ['롱 청산 합계 (Gate.io)',hasLiq?usd(liqL):'–'],['숏 청산 합계 (Gate.io)',hasLiq?usd(liqS):'–'],
+      ['상위 트레이더 롱/숏 (바이낸스)',top!=null?top.toFixed(2):'–']
     ].map(([l,v])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
-  }catch(e){empty('#f-cvd',`Gate.io에 ${esc(C.sym)}_USDT 선물이 없거나 불러오지 못했어요 (${esc(e.message)})`)}
+  }catch(e){empty('#f-cvd',`이 코인(${esc(C.sym)})의 선물 체결 데이터를 불러오지 못했어요 (${esc(e.message)})`)}
 }
 
 let CH=null;

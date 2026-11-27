@@ -133,3 +133,8 @@ nav.top .od-mood>span{flex-shrink:0}
   nav.top .od-dm a:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
   nav.top .od-dm a[data-on]{font-weight:700;background:color-mix(in srgb,var(--ink) 10%,transparent)}
 }
+
+/* ---- 데이터 출처 상자 ---- */
+.od-src{max-width:1240px;margin:24px auto 0;padding:0 max(4vw,14px) 90px;font-size:13px;color:var(--mute)}
+.od-src details{border-top:1px solid var(--line);padding-top:10px}.od-src summary{cursor:pointer;font-weight:600;color:var(--ink);font-size:14px}
+.od-src ul{margin:6px 0 10px;padding-left:18px}.od-src li{margin:3px 0}.od-src a{color:var(--ink)}.od-src p{margin:8px 0 4px}

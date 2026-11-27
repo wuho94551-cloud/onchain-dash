@@ -58,7 +58,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 @media(max-width:700px){table{font-size:13px}.hide-sm{display:none}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=19">
+<link rel="stylesheet" href="./theme.css?v=20">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -114,12 +114,12 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 <section class="band">
   <details>
     <summary>데이터와 한계</summary>
-    <p>가격·펀딩·미결제약정: Bybit 무기한 선물. CVD와 청산 추정: Gate.io 선물 1시간 데이터. 현물 CVD는 과거 기록을 무료로 받을 곳이 없어 호가 감시 화면에서 실시간으로만 봐요.</p>
+    <p><b>출처</b>: 종목·가격·24시간 변동·펀딩비·미결제약정 변화는 Bybit 무기한 선물(api.bybit.com, tickers·open-interest). CVD(시장가 매수 − 매도)는 바이낸스 USDⓈ-M 선물 1시간 봉의 시장가 매수량(fapi.binance.com, klines). 청산 추정 구간과 48시간 위치는 바이낸스 선물 1시간 봉 + Bybit 1시간 미결제약정·롱숏 계정 비율(account-ratio)로 계산해요. 바이낸스 선물에 없는 코인만 Gate.io 선물(contract_stats·candlesticks)로 대신해요.</p>
     <p>청산 클러스터는 미결제약정 증가분과 롱/숏 비율, 10~100배 레버리지를 가정한 추정치예요. 조건이 많이 겹친다고 오른다는 보장은 없고, 후보를 추리는 용도로 쓰세요.</p>
   </details>
 </section>
 
-<script src="./common.js?v=21"></script>
+<script src="./common.js?v=22"></script>
 <script>if(location.hash.length>1)location.replace("./coin.html"+location.hash);</script>
 <script>
 {
@@ -158,20 +158,18 @@ const gm={};
 async function run(){
   if(busy)return;busy=true;$('#go').disabled=true;$('#bar').style.width='0';$('#stat').textContent='종목 불러오는 중…';
   try{
-    if(!Object.keys(gm).length){const cs=await j('https://api.gateio.ws/api/v4/futures/usdt/contracts');for(const c of cs)gm[c.name]=Number(c.quanto_multiplier)||1}
     const t=await j('https://api.bybit.com/v5/market/tickers?category=linear');
     const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')).sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,TOPN)
       .map(x=>({sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),p:+x.lastPrice,sc:+(x.symbol.match(/^(1000000|10000|1000)/)||[0,1])[1],c24:+x.price24hPcnt*100,fr:+x.fundingRate*100}));
     await OD.loadTypes();for(const d of top)d.kind=OD.kindOf(d.sym);
     DATA=top;
     await pool(top,6,async d=>{
-      const g=d.base+'_USDT',hasG=!!gm[g];
-      const [oi,st,cs]=await Promise.allSettled([
+      const [oi,fs]=await Promise.allSettled([
         j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${d.sym}&intervalTime=1h&limit=25`),
-        hasG?j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=48`):Promise.reject(),
-        hasG?j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`):Promise.reject()]);
+        OD.flowStats({sym:d.sym,base:d.base,scale:d.sc,hours:48})]);
+      const st=fs.status==='fulfilled'?{status:'fulfilled',value:fs.value.st}:fs,cs=fs.status==='fulfilled'?{status:'fulfilled',value:fs.value.cs}:fs;if(fs.status==='fulfilled')d.src=fs.value.src;
       if(oi.status==='fulfilled'){const l=oi.value.result.list;if(l.length>1){const n=+l[0].openInterest,o=+l.at(-1).openInterest;d.doi=o?(n/o-1)*100:null}}
-      if(st.status==='fulfilled'&&st.value.length>4){const s=st.value,m=gm[g];let c=0,c4=0;s.slice(-24).forEach((a,i,arr)=>{const v=((a.long_taker_size||0)-(a.short_taker_size||0))*m*(+a.mark_price||0);c+=v;if(i>=arr.length-4)c4+=v});d.cvd=c;d.cvd4=c4;
+      if(st.status==='fulfilled'&&st.value.length>4){const s=st.value,m=fs.value.mult;let c=0,c4=0;s.slice(-24).forEach((a,i,arr)=>{const v=((a.long_taker_size||0)-(a.short_taker_size||0))*m*(+a.mark_price||0);c+=v;if(i>=arr.length-4)c4+=v});d.cvd=c;d.cvd4=c4;
         if(cs.status==='fulfilled'&&cs.value.length){const pg=d.p/d.sc,k=clusters(s,cs.value,pg);d.up=k.up;d.dn=k.dn;
           const H=Math.max(...cs.value.map(x=>+x.h)),L=Math.min(...cs.value.map(x=>+x.l));d.pos=H>L?(pg-L)/(H-L):null}}
       const g2=OD.sigCond(d,SP);d.C=g2.C;d.hits=g2.hits;
