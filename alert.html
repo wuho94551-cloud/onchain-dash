@@ -45,7 +45,7 @@ ol.steps code,.note code{font-family:var(--mono);font-size:13px;border:1px solid
 .pv{border:1px solid var(--line);padding:12px 14px;margin-top:12px;font-size:14px;white-space:pre-line;min-height:48px}
 .note{font-size:14px;color:var(--mute)}
 </style>
-<link rel="stylesheet" href="./theme.css?v=20">
+<link rel="stylesheet" href="./theme.css?v=21">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -121,7 +121,7 @@ ol.steps code,.note code{font-family:var(--mono);font-size:13px;border:1px solid
     <li>봇 토큰은 Cloudflare 비밀값에만 있고, 이 사이트나 코드에는 들어가지 않아요.</li>
   </ul></details>
 </section>
-<script src="./common.js?v=22"></script>
+<script src="./common.js?v=23"></script>
 <script>
 {
 
@@ -153,7 +153,7 @@ $('fav').onclick=()=>{$('coins').value=(OD.favs()||[]).join(', ');upd()};
 $('cp').onclick=async()=>{try{await navigator.clipboard.writeText($('cfg').value);OD.toast('설정값을 복사했어요')}catch(e){$('cfg').select();OD.toast('복사가 막혀 있어요. 선택된 글자를 직접 복사해 주세요')}};
 $('pvb').onclick=async()=>{
   const b=$('pvb');b.disabled=true;$('pvs').textContent='확인 중…';
-  try{const m=await import('./worker/odesk-alert.js?v=6');const mem=new Map();
+  try{const m=await import('./worker/odesk-alert.js?v=7');const mem=new Map();
     const r=await m.default.run({DRY:true,SLICE:'all',SINCE:Date.now()-864e5,CONFIG:cfg(),STATE:{get:async k=>mem.get(k),put:async(k,v)=>mem.set(k,v),delete:async k=>mem.delete(k)}});
     $('pv').textContent=r.out.length?r.out.join('\n'):'지금은 조건에 맞는 알림이 없어요.';
     $('pvs').textContent=`${new Date().toLocaleTimeString('ko-KR')} 기준 ${r.count}건`+(r.errs.length?` · 오류: ${r.errs.join(', ')}`:'');

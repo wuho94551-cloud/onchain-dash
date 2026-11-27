@@ -61,7 +61,7 @@ details{border:1px solid var(--line);padding:12px 16px}
 summary{cursor:pointer;font-weight:600;min-height:28px}
 details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 </style>
-<link rel="stylesheet" href="./theme.css?v=20">
+<link rel="stylesheet" href="./theme.css?v=21">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -101,14 +101,14 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 <section class="band">
   <details>
     <summary>어떻게 계산하나요</summary>
-    <p><b>출처</b>: 가격·펀딩비는 Bybit 무기한 선물(api.bybit.com). 1시간 봉은 바이낸스 USDⓈ-M 선물(fapi.binance.com, klines), 미결제약정과 롱/숏 계정 비율은 Bybit(open-interest, account-ratio). 바이낸스 선물에 없는 코인은 Gate.io 선물(contract_stats). 점화 경보의 실제 청산 금액은 시간별 기록을 무료로 주는 곳이 Gate.io뿐이라 Gate.io 값이에요(Gate.io에 없는 코인은 점화 경보 없음).</p>
+    <p><b>출처</b>: 가격·펀딩비는 Bybit 무기한 선물(api.bybit.com). 1시간 봉은 바이낸스 USDⓈ-M 선물(fapi.binance.com, klines), 미결제약정과 롱/숏 계정 비율은 Bybit(open-interest, account-ratio). 바이낸스 선물에 없는 코인은 Gate.io 선물(contract_stats). 점화 경보의 실제 청산 금액은 OKX 공개 API(liquidation-orders, 최근 약 24시간)로, 지금 시간 청산이 지난 24시간 시간당 평균의 3배를 넘으면 떠요. 바이낸스·바이비트는 청산 기록을 실시간으로만 줘서 쓸 수 없어요.</p>
     <p>1시간 단위 미결제약정 증가분을 그 시간 가격에 새로 열린 포지션으로 보고, 롱/숏 계정 비율로 나눈 뒤 10·20·25·50·100배 레버리지를 가정해 청산 가격을 계산해요. 그 뒤로 가격이 이미 그 청산가를 지나갔다면 정리된 것으로 보고 뺍니다.</p>
     <p>왼쪽(빨강)은 현재가 아래의 롱 청산 물량, 오른쪽(초록)은 현재가 위의 숏 청산 물량이에요. 진할수록 많이 몰려 있어요. <b>쏠림</b>이 +이면 위쪽 숏 청산 물량이 더 많아 급등 시 연쇄 숏 청산 위험, −이면 아래 롱 청산 위험이 큰 거예요.</p>
     <p>실제 포지션이 아닌 추정치라 방향 참고용으로만 보세요.</p>
   </details>
 </section>
 
-<script src="./common.js?v=22"></script>
+<script src="./common.js?v=23"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -188,17 +188,17 @@ const gm={};
 async function run(){
   if(busy)return;busy=true;$('#go').disabled=true;$('#bar').style.width='0';$('#stat').textContent='종목 불러오는 중…';
   try{
-    if(!Object.keys(gm).length){try{const cs=await j('https://api.gateio.ws/api/v4/futures/usdt/contracts');for(const c of cs)gm[c.name]=Number(c.quanto_multiplier)||1}catch(e){}}
     const t=await j('https://api.bybit.com/v5/market/tickers?category=linear');
     const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')).sort((a,b)=>b.turnover24h-a.turnover24h)
-      .map(x=>({sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),p:+x.lastPrice,sc:+(x.symbol.match(/^(1000000|10000|1000)/)||[0,1])[1],c24:+x.price24hPcnt*100,vol:+x.turnover24h,fr:+x.fundingRate*100}))
+      .map(x=>({sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)|(1000000|10000|1000)$/g,''),p:+x.lastPrice,sc:OD.symScale(x.symbol),c24:+x.price24hPcnt*100,vol:+x.turnover24h,fr:+x.fundingRate*100}))
       .slice(0,TOPN);
     await OD.loadTypes();for(const d of top)d.kind=OD.kindOf(d.sym);
     DATA=top;
     await pool(top,6,async d=>{const c=d.base+'_USDT';
       /* 청산 구간: 바이낸스 선물 1시간 봉 + Bybit 미결제약정·계정 비율 (바이낸스에 없으면 Gate.io). 실제 청산 금액(점화 경보)은 시간별 기록을 무료로 주는 곳이 Gate.io뿐이라 Gate.io 값 */
-      const [fs,lq]=await Promise.allSettled([OD.flowStats({sym:d.sym,base:d.base,scale:d.sc,hours:47}),gm[c]?j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${c}&interval=1h&limit=48`):Promise.reject()]);
-      if(fs.status==='fulfilled'&&fs.value.st.length>3&&fs.value.cs.length){d.src=fs.value.src;d.a=analyze(fs.value.st,fs.value.cs,fs.value.mult,d.p/d.sc,lq.status==='fulfilled'?lq.value:(fs.value.src==='gate'?fs.value.st:[]),d.fr)}
+      const [fs,lq0]=await Promise.allSettled([OD.flowStats({sym:d.sym,base:d.base,scale:d.sc,hours:47}),OD.okxLiq(d.base,24,6)]);
+      /* OKX 청산을 시간별 줄로 (빈 시간은 0) */const lq=lq0.status==='fulfilled'&&lq0.value?{status:'fulfilled',value:(()=>{const v=lq0.value,H=3600e3,m=new Map(v.rows.map(r=>[r.t,r])),out=[];for(let t=Math.floor(v.from/H)*H;t<=v.to;t+=H){const r=m.get(t);out.push({long_liq_usd:r?r.L:0,short_liq_usd:r?r.S:0})}return out})()}:{status:'rejected'};
+      if(fs.status==='fulfilled'&&fs.value.st.length>3&&fs.value.cs.length){d.src=fs.value.src;d.a=analyze(fs.value.st,fs.value.cs,fs.value.mult,d.p/d.sc,lq.status==='fulfilled'?lq.value:[],d.fr)}
     },(n,m)=>{$('#bar').style.width=(n/m*100)+'%';if(n%6===0)render()});
     render();
     const p2=n=>String(n).padStart(2,'0'),now=new Date();

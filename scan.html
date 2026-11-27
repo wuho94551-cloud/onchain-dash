@@ -67,7 +67,7 @@ details{border:1px solid var(--line);padding:12px 16px}
 summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:700px){.hide-sm{display:none}table{font-size:13px}dl.leg{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=20">
+<link rel="stylesheet" href="./theme.css?v=21">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -116,7 +116,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   </details>
 </section>
 
-<script src="./common.js?v=22"></script>
+<script src="./common.js?v=23"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -190,13 +190,13 @@ async function scan(){
       ['상승 / 하락 종목',`${ups} / ${all.length-ups}`,`상승 비율 ${breadth.toFixed(0)}%`],
       ['시장 체제',`<span class="${regime[1]}">${regime[0]}</span>`,'BTC 방향과 상승 종목 비율 기준']
     ].map(([l,v,r])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="r">${r}</div></div>`).join('');
-    const rows=top.map(x=>{const base=x.symbol.replace(/USDT$/,'');return{sym:x.symbol,base:base.replace(/^(1000000|10000|1000)/,''),p:Number(x.lastPrice),c24:Number(x.price24hPcnt)*100,fr:Number(x.fundingRate)*100,oiv:Number(x.openInterestValue),hi:Number(x.highPrice24h),lo:Number(x.lowPrice24h)}});
+    const rows=top.map(x=>{const base=x.symbol.replace(/USDT$/,'');return{sym:x.symbol,base:base.replace(/^(1000000|10000|1000)|(1000000|10000|1000)$/g,''),p:Number(x.lastPrice),c24:Number(x.price24hPcnt)*100,fr:Number(x.fundingRate)*100,oiv:Number(x.openInterestValue),hi:Number(x.highPrice24h),lo:Number(x.lowPrice24h)}});
     await OD.loadTypes();for(const r of rows)r.kind=OD.kindOf(r.sym);
     $('#stat').textContent=`${rows.length}개 종목 세부 분석 중…`;
     await pool(rows,6,async r=>{
       const [k,g,oi]=await Promise.allSettled([
         j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${r.sym}&interval=60&limit=25`),
-        OD.flowStats({sym:r.sym,base:r.base,scale:+(r.sym.match(/^(1000000|10000|1000)/)||[0,1])[1],hours:23}),
+        OD.flowStats({sym:r.sym,base:r.base,scale:OD.symScale(r.sym),hours:23}),
         j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${r.sym}&intervalTime=1h&limit=25`)]);
       // 미결제약정 24시간 변화: 다른 페이지와 같게 Bybit 계약 수량 기준 (지금 vs 24시간 전)
       if(oi.status==='fulfilled'){const l=oi.value.result?.list||[];if(l.length>=25){const n=+l[0].openInterest,o=+l[24].openInterest;r.doi=o?(n/o-1)*100:null}}

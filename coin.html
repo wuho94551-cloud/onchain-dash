@@ -92,8 +92,9 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 .addr{font-family:ui-monospace,Consolas,monospace;font-size:14px}
 @media(max-width:600px){table{font-size:13px}.fig{min-height:240px}.kpi .v{font-size:22px}.keyrow label{width:100%}}
 @media(prefers-reduced-motion:no-preference){.panel{animation:in .35s ease both}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
+tr.mu td{color:var(--mute)}
 </style>
-<link rel="stylesheet" href="./theme.css?v=20">
+<link rel="stylesheet" href="./theme.css?v=21">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -143,7 +144,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
     </div>
     <div class="fig" id="f-cvd"></div>
     <div class="kpis" id="cvdk"></div>
-    <p class="src"><b>출처</b>: CVD는 <span id="cvd-src">바이낸스 선물</span>의 시장가 매수 체결량 − 시장가 매도 체결량 누적(fapi.binance.com klines, 바이낸스에 없는 코인은 Gate.io contract_stats). 미결제약정·펀딩비는 Bybit(api.bybit.com). 청산 합계는 Gate.io(시간별 청산 기록을 무료로 주는 곳이 Gate.io뿐), 상위 트레이더 롱/숏은 바이낸스(futures/data topLongShortPositionRatio).</p>
+    <p class="src"><b>출처</b>: CVD는 <span id="cvd-src">바이낸스 선물</span>의 시장가 매수 체결량 − 시장가 매도 체결량 누적(fapi.binance.com klines, 바이낸스에 없는 코인은 Gate.io contract_stats). 미결제약정·펀딩비는 Bybit(api.bybit.com). 청산 합계는 OKX(liquidation-orders, 최근 약 24시간 청산 기록을 주는 곳), 상위 트레이더 롱/숏은 바이낸스(futures/data topLongShortPositionRatio).</p>
   </div>
 </section>
 
@@ -166,7 +167,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
     <div id="holders"><div class="empty">코인을 먼저 조회하세요.</div></div>
     <p class="src">Ethplorer (이더리움 메인넷 토큰). 주소를 누르면 Arkham에서 누구 지갑인지 확인할 수 있어요.</p>
     <div class="phead" style="margin-top:18px"><h2>상위 지갑 분산 흔적</h2><button type="button" id="sp-go" class="ghost">점검하기</button></div>
-    <p class="src" style="margin-top:0">상위 20개 지갑의 최근 토큰 이동 100건씩을 받아, 최근 7일·30일에 얼마나 내보냈고 몇 개 주소로 쪼갰는지 봐요. 상위 지갑끼리 옮긴 건 내부 이동으로 빼요. 무료 공용 키는 요청 제한이 있어서 1분 가까이 걸릴 수 있어요. 자주 쓰면 아래 설정에 Ethplorer 개인 키를 넣으세요.</p>
+    <p class="src" style="margin-top:0">상위 20개 지갑의 최근 토큰 이동을 받아, 최근 7일·30일에 얼마나 내보냈는지, 몇 개 주소로 쪼갰는지, 거래소 지갑으로 보냈는지 봐요. 상위 지갑끼리 옮긴 건 내부 이동으로 빼요. 이더리움·Base·Arbitrum·Optimism·Polygon 토큰이 돼요. 30초쯤 걸려요.</p>
     <div id="spread"></div>
   </div>
 </section>
@@ -183,7 +184,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   </details>
 </section>
 
-<script src="./common.js?v=22"></script>
+<script src="./common.js?v=23"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -283,17 +284,17 @@ async function loadCVD(){
   const box=$('#f-cvd');box.innerHTML='<div class="empty">불러오는 중…</div>';$('#cvdk').innerHTML='';
   const ct=C.sym+'_USDT';
   try{
-    let by=null;for(const s of [C.sym+'USDT','1000'+C.sym+'USDT','10000'+C.sym+'USDT','1000000'+C.sym+'USDT']){try{const r=await j(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${s}`);if(r.result?.list?.length){by={s,t:r.result.list[0]};break}}catch(e){}}
-    const bsyms=by?[by.s]:[C.sym+'USDT','1000'+C.sym+'USDT'];let K=null,bs=null;
+    let by=null;for(const s of [C.sym+'USDT','1000'+C.sym+'USDT','10000'+C.sym+'USDT','1000000'+C.sym+'USDT',C.sym+'1000USDT']){try{const r=await j(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${s}`);if(r.result?.list?.length){by={s,t:r.result.list[0]};break}}catch(e){}}
+    const bsyms=by?[OD.binSym(by.s)]:[C.sym+'USDT','1000'+C.sym+'USDT'];let K=null,bs=null;
     for(const s of bsyms){try{const r=await j(`https://fapi.binance.com/fapi/v1/klines?symbol=${s}&interval=${TF}&limit=200`);if(Array.isArray(r)&&r.length){K=r;bs=s;break}}catch(e){}}
-    const [gs,gi,tp]=await Promise.allSettled([j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${ct}&interval=${TF}&limit=200`),j('https://api.gateio.ws/api/v4/futures/usdt/contracts/'+ct),
-      bs?j(`https://fapi.binance.com/futures/data/topLongShortPositionRatio?symbol=${bs}&period=${TF}&limit=1`):Promise.reject()]);
-    const sc=bs?+(bs.match(/^(1000000|10000|1000)/)||[0,1])[1]:1;
+    const [gs,gi,tp,lq]=await Promise.allSettled([K?Promise.reject():j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${ct}&interval=${TF}&limit=200`),K?Promise.reject():j('https://api.gateio.ws/api/v4/futures/usdt/contracts/'+ct),
+      bs?j(`https://fapi.binance.com/futures/data/topLongShortPositionRatio?symbol=${bs}&period=${TF}&limit=1`):Promise.reject(),OD.okxLiq(C.sym,24,10)]);
+    const sc=bs?OD.symScale(bs):1;
     let cum=0,cumU=0;const pts=[];let liqL=0,liqS=0,src,mp;
     if(K){src='바이낸스 선물';for(const k of K){const d=(2*+k[9]-+k[5])*sc;cum+=d;cumU+=2*+k[10]-+k[7];pts.push([k[0],cum])}mp=+K.at(-1)[4]/sc}
     else if(gs.status==='fulfilled'&&gs.value.length){src='Gate.io 선물';const mult=gi.status==='fulfilled'?Number(gi.value.quanto_multiplier)||1:1;for(const r of gs.value){const d=((r.long_taker_size||0)-(r.short_taker_size||0))*mult;cum+=d;cumU+=d*(Number(r.mark_price)||0);pts.push([r.time*1000,cum])}mp=Number(gs.value.at(-1).mark_price)||C.price||0}
     else throw new Error('바이낸스·Gate.io 모두 데이터 없음');
-    const hasLiq=gs.status==='fulfilled'&&gs.value.length;if(hasLiq)for(const r of gs.value){liqL+=r.long_liq_usd||0;liqS+=r.short_liq_usd||0}
+    const LQ=lq.status==='fulfilled'?lq.value:null,hasLiq=!!LQ;if(LQ)for(const r of LQ.rows){liqL+=r.L;liqS+=r.S}
     chart(box,[{pts,color:'var(--acc)',name:'CVD',area:true}],(v,f)=>num(v)+(f?' '+C.sym:''),dfmt);
     $('#cvd-src').textContent=src;
     let oiV=null,oiChg=null,fr=null;if(by){oiV=+by.t.openInterestValue;fr=+by.t.fundingRate*100;try{const l=(await j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${by.s}&intervalTime=1h&limit=25`)).result.list;if(l.length>1)oiChg=(+l[0].openInterest/+l.at(-1).openInterest-1)*100}catch(e){}}
@@ -303,7 +304,7 @@ async function loadCVD(){
       ['순체결 (USD)',sgn(cumU,usd)],
       ['미결제약정 (Bybit)',oiV!=null?usd(oiV)+(oiChg!=null?` <span class="sub">24시간 ${oiChg>=0?'+':''}${oiChg.toFixed(1)}%</span>`:''):'–'],
       ['펀딩비 (Bybit)',fr!=null?sgn(fr,v=>v.toFixed(4)+'%'):'–'],
-      ['롱 청산 합계 (Gate.io)',hasLiq?usd(liqL):'–'],['숏 청산 합계 (Gate.io)',hasLiq?usd(liqS):'–'],
+      [`롱 청산 ${LQ?Math.round(LQ.hours)+'시간':''} (OKX)`,hasLiq?usd(liqL):'–'],[`숏 청산 ${LQ?Math.round(LQ.hours)+'시간':''} (OKX)`,hasLiq?usd(liqS):'–'],
       ['상위 트레이더 롱/숏 (바이낸스)',top!=null?top.toFixed(2):'–']
     ].map(([l,v])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
   }catch(e){empty('#f-cvd',`이 코인(${esc(C.sym)})의 선물 체결 데이터를 불러오지 못했어요 (${esc(e.message)})`)}
@@ -383,34 +384,40 @@ async function loadHolders(){
   }catch(er){empty('#holders','보유자를 불러오지 못했어요: '+esc(er.message)+(key==='freekey'?' · 무료 공용 키라 제한에 걸렸을 수 있어요. 아래에서 Ethplorer 키를 넣어보세요.':''))}
 }
 
-/* 상위 지갑 분산 흔적: 보유 상위 지갑이 최근 토큰을 여러 주소로 쪼개 내보냈는지 */
+/* 상위 지갑 분산 흔적: Blockscout(이더리움·Base·Arbitrum·Optimism·Polygon). 주소 라벨(거래소 등)도 같이 옴 */
 let HOLD=null;
-async function loadSpread(){const box=$('#spread');if(!C.eth||C.eth==='native'){box.innerHTML='<div class="empty">이더리움 메인넷 토큰만 점검할 수 있어요.</div>';return}
-  const key=store.get('k-ethp')||'freekey',tok=C.eth.toLowerCase(),dec=C.decimals,now=Date.now()/1000;$('#sp-go').disabled=true;
-  try{if(!HOLD||HOLD.tok!==tok){box.innerHTML='<div class="empty">보유자 불러오는 중…</div>';const d=await j(`https://api.ethplorer.io/getTopTokenHolders/${encodeURIComponent(tok)}?apiKey=${encodeURIComponent(key)}&limit=20`);HOLD={tok,hs:d.holders||[]}}
-    const hs=HOLD.hs,top=new Set(hs.map(h=>String(h.address).toLowerCase())),R=[];
-    for(let i=0;i<hs.length;i++){const a=String(hs[i].address).toLowerCase();box.innerHTML=`<div class="empty">지갑 이동 받는 중… ${i+1}/${hs.length}</div>`;
-      await new Promise(r=>setTimeout(r,key==='freekey'?2000:300));let ops=null,err='';
-      for(let n=0;n<4&&!ops;n++){try{const d=await j(`https://api.ethplorer.io/getAddressHistory/${a}?apiKey=${encodeURIComponent(key)}&token=${tok}&type=transfer&limit=100`);ops=d.operations||[]}catch(e){err=e.message;box.innerHTML=`<div class="empty">요청 제한, 잠시 쉬었다가 다시 받는 중… ${i+1}/${hs.length}</div>`;await new Promise(r=>setTimeout(r,5000*(n+1)))}}
-      if(!ops){R.push({a,h:hs[i],err:err==='Failed to fetch'?'요청 제한':err});continue}
-      const bal=Number(hs[i].rawBalance||hs[i].balance)/10**dec,w={};
-      for(const [k,days] of [['d7',7],['d30',30]]){let out=0,inn=0,intl=0;const to=new Map();
-        for(const o of ops){if(now-o.timestamp>days*86400)continue;const v=Number(o.value)/10**dec,f=String(o.from).toLowerCase(),t=String(o.to).toLowerCase();
-          if(f===a){if(top.has(t)){intl+=v;continue}out+=v;to.set(t,(to.get(t)||0)+v)}else if(t===a){if(top.has(f)){intl+=v;continue}inn+=v}}
+const BSCH=[['ethereum','eth','이더리움'],['base','base','Base'],['arbitrum-one','arbitrum','Arbitrum'],['optimistic-ethereum','optimism','Optimism'],['polygon-pos','polygon','Polygon']];
+const bsLabel=a=>{const t=a?.metadata?.tags||[];const nm=t.find(x=>x.tagType==='name')?.name||a?.name||'';const ex=t.some(x=>x.slug==='exchange'||/exchange/i.test(x.name))||!!t.find(x=>x.meta?.main_entity&&/binance|coinbase|okx|bybit|kraken|bitget|kucoin|gate|htx|huobi|upbit|bithumb|mexc|crypto\.com/i.test(x.meta.main_entity));return{nm,ex}};
+async function loadSpread(){const box=$('#spread');const pf=C.platforms||{};const ch=BSCH.find(([k])=>pf[k]);
+  if(!ch){box.innerHTML='<div class="empty">이더리움·Base·Arbitrum·Optimism·Polygon 토큰만 점검할 수 있어요. (솔라나 등은 아직 무료 공개 데이터가 없어요)</div>';return}
+  const tok=String(pf[ch[0]]).toLowerCase(),API=`https://${ch[1]}.blockscout.com/api/v2`,now=Date.now()/1000;$('#sp-go').disabled=true;
+  const bj=async u=>{for(let n=0;n<4;n++){try{await new Promise(r=>setTimeout(r,250));return await j(u)}catch(e){if(n===3)throw e;await new Promise(r=>setTimeout(r,2000*(n+1)))}}};
+  try{if(!HOLD||HOLD.tok!==tok){box.innerHTML='<div class="empty">보유자 불러오는 중…</div>';const d=await bj(`${API}/tokens/${tok}/holders`);HOLD={tok,hs:(d.items||[]).slice(0,20)}}
+    const hs=HOLD.hs;if(!hs.length)throw new Error('보유자 없음');const dec=+(hs[0].token?.decimals??18),sup=Number(hs[0].token?.total_supply||0)/10**dec;
+    const top=new Set(hs.map(h=>h.address.hash.toLowerCase())),R=[];
+    for(let i=0;i<hs.length;i++){const h=hs[i],a=h.address.hash.toLowerCase(),lb=bsLabel(h.address);box.innerHTML=`<div class="empty">지갑 이동 받는 중… ${i+1}/${hs.length}</div>`;
+      let ops=[],err='';try{let q='';for(let pg=0;pg<2;pg++){const d=await bj(`${API}/addresses/${a}/token-transfers?type=ERC-20&token=${tok}${q}`);ops.push(...(d.items||[]));if(!d.next_page_params)break;
+          const last=d.items?.at(-1);if(last&&now-Date.parse(last.timestamp)/1000>30*86400)break;q='&'+new URLSearchParams(d.next_page_params).toString()}}catch(e){err=e.message}
+      if(err&&!ops.length){R.push({a,h,lb,err});continue}
+      const bal=Number(h.value)/10**dec,w={};
+      for(const [k,days] of [['d7',7],['d30',30]]){let out=0,inn=0,cex=0,intl=0;const to=new Map();
+        for(const o of ops){const ts=Date.parse(o.timestamp)/1000;if(now-ts>days*86400)continue;const v=Number(o.total?.value||0)/10**dec,f=o.from.hash.toLowerCase(),t=o.to.hash.toLowerCase();
+          if(f===a){if(top.has(t)){intl+=v;continue}out+=v;to.set(t,(to.get(t)||0)+v);if(bsLabel(o.to).ex)cex+=v}else if(t===a){if(top.has(f)){intl+=v;continue}inn+=v}}
         const amts=[...to.values()].sort((x,y)=>y-x),big=amts.filter(v=>v>=out*.05);
-        w[k]={out,inn,net:inn-out,n:to.size,split:big.length>=5||(big.length>=3&&big.at(-1)>=big[0]*.5),pct:(bal+out-inn)>0?out/(bal+out-inn)*100:0,intl}}
-      R.push({a,h:hs[i],bal,w,full:ops.length>=100,last:ops[0]?.timestamp})}
-    const px=C.price||0,ok=R.filter(r=>!r.err),hot=ok.filter(r=>r.w.d7.pct>=5||(r.w.d7.split&&r.w.d7.pct>=1));
-    const out7=ok.reduce((s,r)=>s+r.w.d7.out,0),in7=ok.reduce((s,r)=>s+r.w.d7.inn,0),out30=ok.reduce((s,r)=>s+r.w.d30.out,0),in30=ok.reduce((s,r)=>s+r.w.d30.inn,0);
-    const lvl=hot.length>=3||(out7-in7)*px>5e6?'강함':hot.length?'약간':'뚜렷하지 않음';
+        w[k]={out,inn,net:inn-out,n:to.size,cex,split:big.length>=5||(big.length>=3&&big.at(-1)>=big[0]*.5),pct:(bal+out-inn)>0?out/(bal+out-inn)*100:0,intl}}
+      R.push({a,h,lb,bal,w,full:ops.length>=100,last:ops[0]?Date.parse(ops[0].timestamp)/1000:null})}
+    const px=C.price||0,ok=R.filter(r=>!r.err&&!r.lb.ex),hot=ok.filter(r=>r.w.d7.pct>=5||(r.w.d7.split&&r.w.d7.pct>=1)||r.w.d7.cex>0);
+    const sum=(f)=>ok.reduce((s,r)=>s+f(r),0),out7=sum(r=>r.w.d7.out),in7=sum(r=>r.w.d7.inn),out30=sum(r=>r.w.d30.out),in30=sum(r=>r.w.d30.inn),cex7=sum(r=>r.w.d7.cex);
+    const lvl=cex7*px>1e6||hot.length>=3||(out7-in7)*px>5e6?'강함':hot.length?'약간':'뚜렷하지 않음';
     const cell=x=>`${x.out?num(x.out):'–'}${x.out?` <small>${x.pct.toFixed(1)}%</small>`:''}`;
-    box.innerHTML=`<p style="margin:6px 0 10px;font-size:15px"><b>매도 압력 흔적: ${lvl}</b> · 최근 7일 상위 지갑 ${out7>=in7?'순유출':'순유입'} <b>${num(Math.abs(out7-in7))} ${esc(C.sym)}</b>${px?' ('+usd(Math.abs(out7-in7)*px)+')':''} · 30일 ${out30>=in30?'순유출':'순유입'} ${num(Math.abs(out30-in30))} · 많이 내보내거나 쪼갠 지갑 ${hot.length}/${ok.length}개</p>
-    <div class="scroll"><table><thead><tr><th class="l">#</th><th class="l">주소</th><th>지금 보유</th><th title="외부로 내보낸 양 · 7일 전 보유량 대비 %">7일 내보냄</th><th>7일 받은 양</th><th title="외부로 보낸 주소 수">받는 주소</th><th>30일 내보냄</th><th class="l">판정</th></tr></thead><tbody>${
-      R.map((r,i)=>{if(r.err)return`<tr><td class="l">${i+1}</td><td class="l">${r.a.slice(0,8)}…</td><td colspan="6" class="l">불러오지 못함: ${esc(r.err)}</td></tr>`;const d=r.w.d7,m=r.w.d30;
-        const tag=d.split&&d.pct>=1?'<b>쪼개서 내보냄</b>':d.pct>=5?'<b>많이 내보냄</b>':d.net>0&&d.inn>=r.bal*.05?'모으는 중':m.split&&m.pct>=1?'30일 안 쪼갠 흔적':'조용함';
-        return`<tr><td class="l">${i+1}</td><td class="l"><a class="addr" href="https://intel.arkm.com/explorer/address/${r.a}" target="_blank" rel="noopener">${r.a.slice(0,8)}…${r.a.slice(-6)}</a> <a class="sub" href="https://etherscan.io/token/${tok}?a=${r.a}" target="_blank" rel="noopener">이동 내역</a></td><td>${num(r.bal)} <small>${Number(r.h.share).toFixed(2)}%</small></td><td>${cell(d)}</td><td>${d.inn?num(d.inn):'–'}</td><td>${d.n||'–'}</td><td>${cell(m)}</td><td class="l">${tag}${r.full&&r.last&&now-r.last<7*86400?' <small title="최근 100건이 모두 7일 안이라 더 있을 수 있어요">100건+</small>':''}</td></tr>`}).join('')}</tbody></table></div>
-    <p class="src">거래소 지갑·브릿지·스테이킹 컨트랙트가 상위에 있으면 평소에도 이동이 많아요. 주소를 눌러 Arkham에서 누구 지갑인지 꼭 확인하세요. '쪼개서 내보냄'은 7일 안에 내보낸 양의 5% 이상을 받은 주소가 5개 이상이거나, 비슷한 크기로 3개 이상에 나눠 보낸 경우예요. 거래소 입금 주소로 쪼개 보내는 건 매도 직전에 자주 보이는 패턴이지만, 지갑 정리일 수도 있어요.</p>`;
-  }catch(er){box.innerHTML='<div class="empty">점검 실패: '+esc(er.message)+(key==='freekey'?' · 무료 공용 키 제한일 수 있어요. 아래에서 Ethplorer 키를 넣어보세요.':'')+'</div>'}finally{$('#sp-go').disabled=false}}
+    box.innerHTML=`<p style="margin:6px 0 10px;font-size:15px"><b>매도 압력 흔적: ${lvl}</b> · ${esc(ch[2])} · 거래소 지갑을 뺀 상위 지갑의 최근 7일 ${out7>=in7?'순유출':'순유입'} <b>${num(Math.abs(out7-in7))} ${esc(C.sym)}</b>${px?' ('+usd(Math.abs(out7-in7)*px)+')':''} · 그중 거래소로 보낸 양 <b>${num(cex7)}</b>${px?' ('+usd(cex7*px)+')':''} · 30일 ${out30>=in30?'순유출':'순유입'} ${num(Math.abs(out30-in30))} · 눈여겨볼 지갑 ${hot.length}/${ok.length}개</p>
+    <div class="scroll"><table><thead><tr><th class="l">#</th><th class="l">주소 · 라벨</th><th>지금 보유</th><th title="외부로 내보낸 양 · 7일 전 보유량 대비 %">7일 내보냄</th><th title="그중 거래소 라벨 주소로 보낸 양">거래소로</th><th>7일 받은 양</th><th title="외부로 보낸 주소 수">받는 주소</th><th>30일 내보냄</th><th class="l">판정</th></tr></thead><tbody>${
+      R.map((r,i)=>{const lab=r.lb.nm?` <small>${esc(r.lb.nm)}</small>`:'';const ad=`<a class="addr" href="https://${ch[1]}.blockscout.com/address/${r.a}" target="_blank" rel="noopener">${r.a.slice(0,8)}…${r.a.slice(-6)}</a>${lab}`;
+        if(r.err)return`<tr><td class="l">${i+1}</td><td class="l">${ad}</td><td colspan="7" class="l">불러오지 못함: ${esc(r.err)}</td></tr>`;const d=r.w.d7,m=r.w.d30;
+        const tag=r.lb.ex?'거래소 지갑 (판정 제외)':d.cex>0?'<b>거래소로 보냄</b>':d.split&&d.pct>=1?'<b>쪼개서 내보냄</b>':d.pct>=5?'<b>많이 내보냄</b>':d.net>0&&d.inn>=r.bal*.05?'모으는 중':m.split&&m.pct>=1?'30일 안 쪼갠 흔적':'조용함';
+        return`<tr${r.lb.ex?' class="mu"':''}><td class="l">${i+1}</td><td class="l">${ad}</td><td>${num(r.bal)} <small>${sup?(r.bal/sup*100).toFixed(2)+'%':''}</small></td><td>${cell(d)}</td><td>${d.cex?num(d.cex):'–'}</td><td>${d.inn?num(d.inn):'–'}</td><td>${d.n||'–'}</td><td>${cell(m)}</td><td class="l">${tag}${r.full&&r.last&&now-r.last<7*86400?' <small title="최근 100건이 모두 7일 안이라 더 있을 수 있어요">100건+</small>':''}</td></tr>`}).join('')}</tbody></table></div>
+    <p class="src">출처: Blockscout(${esc(ch[1])}.blockscout.com) 보유자·토큰 이동·주소 라벨(Open Labels Initiative 등). 라벨은 알려진 주소만 붙어 있어서, 거래소 입금 주소처럼 라벨 없는 주소로 간 건 '거래소로'에 안 잡혀요. '쪼개서 내보냄'은 7일 안에 내보낸 양의 5% 이상을 받은 주소가 5개 이상이거나, 비슷한 크기로 3개 이상에 나눠 보낸 경우예요. 거래소 지갑 자체는 평소에도 이동이 많아 판정에서 뺐어요.</p>`;
+  }catch(er){box.innerHTML='<div class="empty">점검 실패: '+esc(er.message)+'</div>'}finally{$('#sp-go').disabled=false}}
 $('#sp-go').onclick=loadSpread;
 
 /* exchange flows via Dune */
@@ -491,7 +498,7 @@ let PK=null,PKT=0,pkSel=0;
 async function pkData(){if(PK&&Date.now()-PKT<60e3)return PK;
   try{await OD.loadTypes()}catch(e){}
   const r=await j('https://api.bybit.com/v5/market/tickers?category=linear');
-  PK=r.result.list.filter(x=>x.symbol.endsWith('USDT')&&OD.kindOf(x.symbol)==='코인'&&+x.turnover24h>3e6).map(x=>{const b=x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,'');const hi=+x.highPrice24h,lo=+x.lowPrice24h;
+  PK=r.result.list.filter(x=>x.symbol.endsWith('USDT')&&OD.kindOf(x.symbol)==='코인'&&+x.turnover24h>3e6).map(x=>{const b=x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)|(1000000|10000|1000)$/g,'');const hi=+x.highPrice24h,lo=+x.lowPrice24h;
     return{b,p:+x.lastPrice,c:+x.price24hPcnt*100,rg:lo?(hi-lo)/lo*100:0,v:+x.turnover24h}}).sort((a,b)=>b.rg-a.rg);PKT=Date.now();return PK}
 function pkRender(){const q=$('#q').value.trim().toUpperCase();const all=PK||[];
   const L=(q?all.filter(x=>x.b.includes(q)).sort((a,b)=>(b.b===q)-(a.b===q)||(b.b.startsWith(q))-(a.b.startsWith(q))||b.rg-a.rg):all).slice(0,40);

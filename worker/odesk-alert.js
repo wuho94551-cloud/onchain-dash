@@ -107,6 +107,23 @@ function sigCond(d, P) { const C = [
   d.up != null ? (d.up > 0 && d.up >= d.dn * P.ratio) : null,
   d.pos != null ? d.pos <= P.pos / 100 : null].map((v, i) => P.on[i] ? v : null);
   return { C, hits: C.filter(x => x === true).length }; }
+/* 사이트와 같은 데이터: 바이낸스 선물 1시간 봉(시장가 매수 금액) + Bybit 미결제약정·롱숏 계정 비율. 바이낸스가 막히거나 없으면 Gate.io */
+const symScale = s => { const m = String(s).match(/^(1000000|10000|1000)(?=[A-Z])|(1000000|10000|1000)USDT$/); return m ? +(m[1] || m[2]) : 1; };
+const symBase = s => String(s).replace(/USDT$/, '').replace(/^(1000000|10000|1000)|(1000000|10000|1000)$/g, '');
+const binSym = s => { const k = symScale(s); return k > 1 ? k + symBase(s) + 'USDT' : String(s); };
+let GM = null, SRCS = {};
+async function flow(sym, sc, b, oiList) { const H = 3600e3;
+  try { const K = await j(`https://fapi.binance.com/fapi/v1/klines?symbol=${binSym(sym)}&interval=1h&limit=48`); if (!Array.isArray(K) || K.length < 5) throw new Error('바이낸스 없음');
+    const lr = await j(`https://api.bybit.com/v5/market/account-ratio?category=linear&symbol=${sym}&period=1h&limit=50`).then(d => new Map((d.result?.list || []).map(x => [+x.timestamp, +x.sellRatio ? +x.buyRatio / +x.sellRatio : 1]))).catch(() => new Map());
+    const OI = new Map(oiList.map(x => [+x.timestamp, +x.openInterest])); let po = null, pl = 1; const st = [], cs = [];
+    for (const k of K) { const t = k[0], c = +k[4], mp = c / sc, qv = +k[7], tbq = +k[10]; const oi = OI.get(t + H) ?? OI.get(t) ?? po; if (oi != null) po = oi; const r = lr.get(t + H) ?? lr.get(t) ?? pl; pl = r;
+      st.push({ time: t / 1000, open_interest_usd: po != null ? po * c : 0, lsr_account: r, mark_price: mp, long_taker_size: mp ? tbq / mp : 0, short_taker_size: mp ? (qv - tbq) / mp : 0 }); cs.push({ t: t / 1000, h: +k[2] / sc, l: +k[3] / sc }); }
+    SRCS.binance = (SRCS.binance || 0) + 1; return { st, cs, mult: 1, src: 'binance' };
+  } catch (e) {
+    if (!GM) { GM = {}; try { for (const x of await j('https://api.gateio.ws/api/v4/futures/usdt/contracts')) GM[x.name] = +x.quanto_multiplier || 1; } catch (e2) {} }
+    const g = b + '_USDT'; if (!GM[g]) throw new Error('바이낸스·Gate 모두 없음');
+    const [st, cs] = await Promise.all([j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=48`), j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`)]);
+    SRCS.gate = (SRCS.gate || 0) + 1; SRCS.why = e.message; return { st, cs, mult: GM[g], src: 'gate' }; } }
 async function checkSignals(env, cfg, out, errs) {
   const S = cfg.sig; if (!S || !S.n) return;
   const P = { on: [1, 1, 1, 1, 1], c24: 3, oi: 8, fr: 0, cvd: 'both', ratio: 1.3, pos: 40, ...(S.P || {}) }, K = S.k || 3, hold = S.hold || 72;
@@ -114,16 +131,15 @@ async function checkSignals(env, cfg, out, errs) {
   const top = t.result.list.filter(x => x.symbol.endsWith('USDT')).sort((a, b) => b.turnover24h - a.turnover24h).slice(0, Math.min(30, S.n));
   const per = 6, slices = Math.ceil(top.length / per), sl = env.SLICE != null ? env.SLICE : Math.floor(Date.now() / 60e3) % slices;
   const part = env.SLICE === 'all' ? top : top.slice(sl * per, sl * per + per);
-  const gc = await j('https://api.gateio.ws/api/v4/futures/usdt/contracts'); const gm = {}; for (const x of gc) gm[x.name] = +x.quanto_multiplier || 1;
   const NM = ['포지션 누적', '펀딩 음수', '체결 매수 우위', '숏 클러스터', '바닥권'];
   await Promise.all(part.map(async x => { try {
-    const b = x.symbol.replace(/USDT$/, '').replace(/^(1000000|10000|1000)/, ''), sc = +(x.symbol.match(/^(1000000|10000|1000)/) || [0, 1])[1], g = b + '_USDT', p = +x.lastPrice;
+    const b = symBase(x.symbol), sc = symScale(x.symbol), p = +x.lastPrice;
     const d = { c24: +x.price24hPcnt * 100, fr: +x.fundingRate * 100 };
-    const [oi, st, cs] = await Promise.allSettled([j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${x.symbol}&intervalTime=1h&limit=25`),
-      gm[g] ? j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=48`) : Promise.reject(), gm[g] ? j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`) : Promise.reject()]);
-    if (oi.status === 'fulfilled') { const l = oi.value.result.list; if (l.length > 1) d.doi = (+l[0].openInterest / +l.at(-1).openInterest - 1) * 100; }
-    if (st.status === 'fulfilled' && st.value.length > 4) { const s = st.value; let c = 0, c4 = 0; s.slice(-24).forEach((a, i, arr) => { const v = ((a.long_taker_size || 0) - (a.short_taker_size || 0)) * gm[g] * (+a.mark_price || 0); c += v; if (i >= arr.length - 4) c4 += v; }); d.cvd = c; d.cvd4 = c4;
-      if (cs.status === 'fulfilled' && cs.value.length) { const pg = p / sc, k = clusters(s, cs.value, pg); d.up = k.up; d.dn = k.dn; const H = Math.max(...cs.value.map(y => +y.h)), L = Math.min(...cs.value.map(y => +y.l)); d.pos = H > L ? (pg - L) / (H - L) : null; } }
+    const oiL = await j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${x.symbol}&intervalTime=1h&limit=50`).then(r => r.result?.list || []).catch(() => []);
+    if (oiL.length >= 25) d.doi = (+oiL[0].openInterest / +oiL[24].openInterest - 1) * 100;
+    const f = await flow(x.symbol, sc, b, oiL).catch(() => null);
+    if (f && f.st.length > 4) { const s = f.st; let c = 0, c4 = 0; s.slice(-24).forEach((a, i, arr) => { const v = ((a.long_taker_size || 0) - (a.short_taker_size || 0)) * f.mult * (+a.mark_price || 0); c += v; if (i >= arr.length - 4) c4 += v; }); d.cvd = c; d.cvd4 = c4;
+      if (f.cs.length) { const pg = p / sc, cs = f.cs.slice(-48), k = clusters(s.slice(-48), cs, pg); d.up = k.up; d.dn = k.dn; const H = Math.max(...cs.map(y => +y.h)), L = Math.min(...cs.map(y => +y.l)); d.pos = H > L ? (pg - L) / (H - L) : null; } }
     const { C, hits } = sigCond(d, P), key = 'sg:' + b, prev = env.STATE ? await env.STATE.get(key) : null, now = Date.now();
     const on = C.map((v, i) => v ? NM[i] : '').filter(Boolean).join(', ');
     if (!prev) {
@@ -142,7 +158,7 @@ async function checkSignals(env, cfg, out, errs) {
 async function checkLines(env, cfg, out) {
   if (!env.STATE) return; const L = JSON.parse(await env.STATE.get('lines') || '[]'); if (!L.length) return;
   const t = await j('https://api.bybit.com/v5/market/tickers?category=linear'); const px = {};
-  for (const x of t.result.list) { const b = x.symbol.replace(/USDT$/, '').replace(/^(1000000|10000|1000)/, ''); const sc = +(x.symbol.match(/^(1000000|10000|1000)/) || [0, 1])[1]; if (x.symbol.endsWith('USDT') && px[b] == null) px[b] = { p: +x.lastPrice, sc }; }
+  for (const x of t.result.list) { const b = symBase(x.symbol); const sc = symScale(x.symbol); if (x.symbol.endsWith('USDT') && px[b] == null) px[b] = { p: +x.lastPrice, sc }; }
   const keep = [];
   for (const l of L) { const q = px[l.sym]; if (!q) { keep.push(l); continue; } const p = q.p;
     const hit = l.dir === 'above' ? q.p >= l.price : q.p <= l.price;
@@ -168,10 +184,10 @@ async function checkWeekly(env, cfg, out) {
 }
 
 async function run(env) {
-  const cfg = typeof env.CONFIG === 'object' ? env.CONFIG : JSON.parse(env.CONFIG || '{}'); const out = [], errs = [];
+  const cfg = typeof env.CONFIG === 'object' ? env.CONFIG : JSON.parse(env.CONFIG || '{}'); const out = [], errs = []; SRCS = {};
   for (const f of [checkPrice, checkKimp, checkWallets, checkSignals, checkLines, checkWeekly]) { try { await f(env, cfg, out, errs); } catch (e) { errs.push(e.message); } }
   if (out.length && !env.DRY) await tg(env, cfg, out.join('\n'));
-  return { count: out.length, sent: out.length > 0 && !env.DRY, out, errs };
+  return { count: out.length, sent: out.length > 0 && !env.DRY, out, errs, src: SRCS };
 }
 
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type,x-key' };

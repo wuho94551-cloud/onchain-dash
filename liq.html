@@ -85,7 +85,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:600px){table{font-size:13px}th,td{padding:6px 6px}.tot .v{font-size:22px}.arow label{width:100%}}
 @media(prefers-reduced-motion:reduce){tr.new{animation:none}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=20">
+<link rel="stylesheet" href="./theme.css?v=21">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -107,7 +107,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 
 <header class="band">
   <h1>실시간 청산</h1>
-  <p style="margin:8px 0 0;font-size:15px">OKX · Bybit · Gate 무기한 선물 실시간 청산</p>
+  <p style="margin:8px 0 0;font-size:15px">바이낸스 · OKX · Bybit · Gate 무기한 선물 실시간 청산</p>
   <p class="sub" id="conn"></p>
   <div class="phead" style="margin:14px 0 0"><span class="sub" style="margin:0">합계 구간</span><div class="seg" id="win"></div></div>
   <div class="tot" id="tot"></div>
@@ -156,7 +156,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 </section>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="./common.js?v=22"></script>
+<script src="./common.js?v=23"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -171,10 +171,10 @@ const hm=t=>{const d=new Date(t);return p2(d.getHours())+':'+p2(d.getMinutes())}
 
 /* events: {t, ex, coin, side:'L'|'S', usd, px} */
 const EV=[];const MAXEV=20000;
-const EXS={okx:'OKX',bybit:'Bybit',gate:'Gate'};
-const st={okx:false,bybit:false,gate:false};
+const EXS={binance:'바이낸스',okx:'OKX',bybit:'Bybit',gate:'Gate'};
+const st={binance:false,okx:false,bybit:false,gate:false};
 let MINQ=Number(store.get('liq-min')||10000),WIN=Number(store.get('liq-win')||3600e3),paused=false,coinF='';
-let exOn=JSON.parse(store.get('liq-ex')||'{"okx":true,"bybit":true,"gate":true}');
+let exOn=JSON.parse(store.get('liq-ex')||'{"okx":true,"bybit":true,"gate":true}');if(exOn.binance==null)exOn.binance=true;
 
 function add(e){
   if(!(e.usd>0)||!isFinite(e.usd))return;
@@ -197,6 +197,13 @@ function rebuildRows(){
   $('#rows').innerHTML=out.join('')||`<tr><td colspan="6" class="l" style="color:var(--mute)">조건에 맞는 청산을 기다리는 중…</td></tr>`;
 }
 
+/* ---- 바이낸스: 전체 USDⓈ-M 선물 청산 (바이낸스는 종목마다 1초에 최대 1건만 보내서 실제보다 적게 잡힐 수 있음) ---- */
+function binance(){
+  sock('binance','wss://fstream.binance.com/ws/!forceOrder@arr',()=>{},d=>{
+    const o=d&&d.o;if(!o)return;const q=Number(o.z||o.q),p=Number(o.ap||o.p);if(!q||!p)return;
+    add({t:Number(o.T)||Date.now(),ex:'binance',coin:OD.symBase(o.s),side:o.S==='SELL'?'L':'S',px:p,usd:q*p})
+  },()=>0);
+}
 /* ---- OKX: all swaps ---- */
 const okxCt={};
 async function okx(){
@@ -326,7 +333,7 @@ $('#aform').addEventListener('submit',async e=>{e.preventDefault();
   $('#amsg').textContent=msg});
 $('#a-test').addEventListener('click',async()=>{try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();await actx.resume()}catch(e){}fire('테스트 알림','이렇게 알려드려요')});
 
-rebuildRows();conn();okx();bybit();gate();
+rebuildRows();conn();binance();okx();bybit();gate();
 }
 document.getElementById('a-fav')?.addEventListener('click',()=>{const f=OD.favs();const i=document.getElementById('a-coins');i.value=f.length?f.join(', '):i.value;if(!f.length)OD.toast('관심 코인이 없어요','코인 선택 창이나 코인 분석·호가 감시·CVD에서 ☆를 눌러 추가하세요.',{ms:5000})});
 </script>

@@ -61,7 +61,7 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
 .chk{display:flex;align-items:center;gap:6px;font-size:14px}
 .chk input{min-height:auto;width:18px;height:18px}
 </style>
-<link rel="stylesheet" href="./theme.css?v=20">
+<link rel="stylesheet" href="./theme.css?v=21">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -122,7 +122,7 @@ ul.st li{padding:8px 0;border-bottom:1px solid var(--line)}
   </div>
 </section>
 
-<script src="./common.js?v=22"></script>
+<script src="./common.js?v=23"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -260,7 +260,7 @@ function verdict(){
 }
 async function startWatch(q){
   q=q.trim().toUpperCase().replace(/USDT$/,'');if(!q)return;$('#stat').textContent='종목 확인 중…';
-  let sym=null;for(const s of [q+'USDT','1000'+q+'USDT','10000'+q+'USDT']){try{const r=await j(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${s}`);if(r.result?.list?.length){sym=s;break}}catch(e){}}
+  let sym=null;for(const s of [q+'USDT','1000'+q+'USDT','10000'+q+'USDT',q+'1000USDT']){try{const r=await j(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${s}`);if(r.result?.list?.length){sym=s;break}}catch(e){}}
   if(!sym){$('#stat').textContent=`Bybit 무기한 선물에 ${q}가 없어요.`;return}
   SYM=sym;BASE=q;bids.clear();asks.clear();walls.clear();exec.clear();iceSeen.clear();cvdP.clear();cvdS.clear();LOG.length=0;start=Date.now();vp=null;ms=null;
   $('#log').innerHTML='<div class="sub">감시 시작. 이상 징후가 생기면 여기에 기록돼요.</div>';

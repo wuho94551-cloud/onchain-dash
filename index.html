@@ -58,7 +58,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 @media(max-width:700px){table{font-size:13px}.hide-sm{display:none}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=20">
+<link rel="stylesheet" href="./theme.css?v=21">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -119,7 +119,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   </details>
 </section>
 
-<script src="./common.js?v=22"></script>
+<script src="./common.js?v=23"></script>
 <script>if(location.hash.length>1)location.replace("./coin.html"+location.hash);</script>
 <script>
 {
@@ -160,7 +160,7 @@ async function run(){
   try{
     const t=await j('https://api.bybit.com/v5/market/tickers?category=linear');
     const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')).sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,TOPN)
-      .map(x=>({sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),p:+x.lastPrice,sc:+(x.symbol.match(/^(1000000|10000|1000)/)||[0,1])[1],c24:+x.price24hPcnt*100,fr:+x.fundingRate*100}));
+      .map(x=>({sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)|(1000000|10000|1000)$/g,''),p:+x.lastPrice,sc:OD.symScale(x.symbol),c24:+x.price24hPcnt*100,fr:+x.fundingRate*100}));
     await OD.loadTypes();for(const d of top)d.kind=OD.kindOf(d.sym);
     DATA=top;
     await pool(top,6,async d=>{
@@ -178,6 +178,7 @@ async function run(){
     const nowHits=new Map(DATA.filter(d=>d.C).map(d=>[d.base,d.hits]));
     if(PREV){for(const d of DATA){if(d.hits>=3&&PREV.has(d.base)&&PREV.get(d.base)<3){d.fresh=true;
         if($('#newal').checked)OD.notify(`${d.base} 급등 준비 ${d.hits}/${SMAX}`,`새로 3개 이상 충족 · 24시간 ${d.c24>=0?'+':''}${d.c24.toFixed(1)}% · OI ${d.doi!=null?(d.doi>=0?'+':'')+d.doi.toFixed(1)+'%':'–'}`,{side:'B',href:'./'})}}}
+    for(const d of DATA)if(d.C&&d.hits>=3)OD.sigLog.add({kind:'급등 준비',base:d.base,sym:d.sym,p:d.p,why:`${d.hits}/${SMAX} 충족`});/* 실전 기록 */
     PREV=nowHits;LASTRUN=Date.now();
     render();tickStat();
   }catch(e){$('#stat').textContent='점검 실패: '+e.message}

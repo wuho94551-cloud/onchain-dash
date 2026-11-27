@@ -43,7 +43,7 @@ td.l small{display:block;color:var(--mute);font-size:12px;white-space:normal;max
 .pill.f{border-color:var(--ink);color:var(--ink)}
 .bar{display:inline-block;height:8px;background:#d23b3b;vertical-align:middle;margin-left:6px;opacity:.8}
 </style>
-<link rel="stylesheet" href="./theme.css?v=20">
+<link rel="stylesheet" href="./theme.css?v=21">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -82,7 +82,7 @@ td.l small{display:block;color:var(--mute);font-size:12px;white-space:normal;max
     <li>데이터는 6시간 동안 브라우저에 저장해서 다시 열 때 빨라요.</li>
   </ul></details>
 </section>
-<script src="./common.js?v=22"></script>
+<script src="./common.js?v=23"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -106,7 +106,7 @@ async function getIndex(){const U='https://defillama-datasets.llama.fi/emissions
 async function load(){
   $('#pg').style.width='20%';
   try{const [idx,tk]=await Promise.all([getIndex(),fetch('https://api.bybit.com/v5/market/tickers?category=linear').then(r=>r.json()).catch(()=>null)]);
-    if(tk)for(const x of tk.result.list)if(x.symbol.endsWith('USDT'))PERP.add(x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''));
+    if(tk)for(const x of tk.result.list)if(x.symbol.endsWith('USDT'))PERP.add(x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)|(1000000|10000|1000)$/g,''));
     $('#pg').style.width='70%';const now=Date.now()/1000;EV=[];
     for(const x of idx.data||[]){const tp=x.tokenPrice&&x.tokenPrice[0];const price=tp?.price,sym=(tp?.symbol||'').toUpperCase();
       for(const e of x.unlockEvents||[]){if(e.timestamp<now||e.timestamp>now+90*86400)continue;const amt=e.summary?.totalTokensCliff;if(!amt)continue;

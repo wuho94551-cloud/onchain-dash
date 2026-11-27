@@ -61,7 +61,7 @@ dialog#pv::backdrop{background:rgb(0 0 0/.45)}
 .pvt td,.pvt th{padding:5px 8px}
 @media(max-width:700px){.hide-sm{display:none}.pvc{height:260px}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=20">
+<link rel="stylesheet" href="./theme.css?v=21">
 </head>
 <body>
 <nav class="top"><div class="band"></div></nav>
@@ -82,7 +82,7 @@ dialog#pv::backdrop{background:rgb(0 0 0/.45)}
     <p class="sub">'세력'을 직접 볼 수는 없어요. 여기 나오는 건 작업이 있을 때 자주 같이 보이는 흔적일 뿐이고, 같은 흔적이 급락 전에도 나와요. 승률·기대값은 신호 검증에서 계산한 과거 값이라 앞으로도 같다는 보장이 없어요. 익절·손절은 신호가 뜬 시점 가격 기준이에요. 7일 안에 둘 다 안 닿으면 7일 뒤 종가로 정리한 결과예요. 롱·숏 평단은 Gate 선물에서 최근 7일 미결제약정이 늘어난 시간마다 시장가 매수 비중만큼 롱, 나머지는 숏이 새로 열렸다고 보고 가격을 가중평균한 추정치예요. 실제 세력의 평단을 아는 방법은 없어요. 현재가가 롱 평단보다 아래면 롱이 손실 중(아래로 털릴 연료), 숏 평단보다 위면 숏이 손실 중(위로 털릴 연료)이라는 뜻으로 보세요.</p></details>
   <dialog id="pv" aria-labelledby="pv-t"><div class="pvh"><span id="pv-i"></span><h2 id="pv-t"></h2><span id="pv-p" style="font-family:var(--mono)"></span><button type="button" class="x" id="pv-x">닫기</button></div><div class="pvb" id="pv-b"></div></dialog>
 </section>
-<script src="./common.js?v=22"></script>
+<script src="./common.js?v=23"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -109,14 +109,16 @@ let DATA=[],busy=false;
 async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').style.width='2%';$('#stat').textContent='종목 불러오는 중…';
   try{const t=await j('https://api.bybit.com/v5/market/tickers?category=linear');
     await OD.loadTypes();
-    const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')&&OD.kindOf(x.symbol)==='코인').sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,TOPN).map(x=>{const m=x.symbol.match(/^(1000000|10000|1000)/);return{sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),scale:m?+m[1]:1,p:+x.lastPrice,c24:+x.price24hPcnt*100,fr:+x.fundingRate*100}});
+    const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')&&OD.kindOf(x.symbol)==='코인').sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,TOPN).map(x=>{const m=[0,OD.symScale(x.symbol)];return{sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)|(1000000|10000|1000)$/g,''),scale:m?+m[1]:1,p:+x.lastPrice,c24:+x.price24hPcnt*100,fr:+x.fundingRate*100}});
     const P=B?.P||OD.sigP();
     for(let w=0;w<40&&!window.OD_MOOD?.tr;w++)await sleep(250);const RBb=B?.rb||OD.ALLN.length,RG=window.OD_MOOD?.tr==='up'?1<<RBb:window.OD_MOOD?.tr==='dn'?1<<(RBb+1):0;
     await pool(top,4,async c=>{
-      const [k,oi,st]=await Promise.allSettled([j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${c.sym}&interval=60&limit=240`),j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${c.sym}&intervalTime=1h&limit=200`),
-        OD.flowStats({sym:c.sym,base:c.base,scale:c.scale,hours:170})]);const fs=st.status==='fulfilled'?st.value:null;if(fs)c.src=fs.src;
+      const [k,st]=await Promise.allSettled([j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${c.sym}&interval=60&limit=240`),
+        OD.flowStats({sym:c.sym,base:c.base,scale:c.scale,hours:200})]);const fs=st.status==='fulfilled'?st.value:null;if(fs)c.src=fs.src;
+      /* 미결제약정은 위 묶음에 이미 있음(바이비트). Gate로 대신한 코인만 따로 받음 */
+      const oiL=fs&&fs.oi?fs.oi:await j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${c.sym}&intervalTime=1h&limit=200`).then(r=>r.result.list.map(a=>[+a.timestamp,+a.openInterest]).sort((a,b)=>a[0]-b[0])).catch(()=>[]);
       if(k.status!=='fulfilled')throw new Error('캔들 없음');
-      const d={k:k.value.result.list.map(a=>[+a[0],+a[1],+a[2],+a[3],+a[4],+a[6]]).sort((a,b)=>a[0]-b[0]),oi:oi.status==='fulfilled'?oi.value.result.list.map(a=>[+a.timestamp,+a.openInterest]).sort((a,b)=>a[0]-b[0]):[],fr:[[0,c.fr]],scale:c.scale,
+      const d={k:k.value.result.list.map(a=>[+a[0],+a[1],+a[2],+a[3],+a[4],+a[6]]).sort((a,b)=>a[0]-b[0]),oi:oiL,fr:[[0,c.fr]],scale:c.scale,
         st:fs?fs.st.map(a=>({time:a.time,oiu:+a.open_interest_usd||0,lsr:+a.lsr_account||1,mp:+a.mark_price||0,lt:+a.long_taker_size||0,stk:+a.short_taker_size||0})):[],cs:fs?fs.cs:[]};
       const S=OD.btSeries(d,fs?fs.mult:1);c.cb=await OD.costBasis(c.sym,c.scale).catch(()=>null);
       /* 선물 전체 신규 평단(바이낸스 체결 비율 × Bybit 미결제약정, 없으면 Gate): 최근 7일 미결제약정이 늘어난 시간마다, 시장가 매수 비중만큼 롱·나머지는 숏이 새로 열렸다고 보고 가격을 가중평균 */
@@ -125,7 +127,10 @@ async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').s
       /* 맞는 조합 중 뒤 기간 확률이 가장 높은 것 (통과 조합 우선) */
       const cand=OK.filter(x=>(c.m&x.m)===x.m).sort((a,b)=>(b.te.exp||0)-(a.te.exp||0));c.best=cand[0]||null;c.vb=VOK.filter(x=>(c.m&x.m)===x.m).sort((a,b)=>b.te.big-a.te.big)[0]||null;c.bk=BOK.filter(x=>(c.m&x.m)===x.m).sort((a,b)=>b.te.exp-a.te.exp)[0]||null},
       (n,m)=>{$('#bar').style.width=(2+n/m*96)+'%';$('#stat').textContent=`점검 중… ${n}/${m}`});
-    DATA=top.filter(c=>c.r);render();$('#bar').style.width='100%';
+    DATA=top.filter(c=>c.r);render();
+    /* 실전 기록: 검증 통과 조합에 맞은 코인을 그때 가격으로 저장 → 신호 검증 페이지에서 1·3·7일 뒤 결과 확인 */
+    for(const c of DATA){if(c.vb)OD.sigLog.add({kind:'큰 움직임 조합',base:c.base,sym:c.sym,p:c.p,why:c.vb.name});if(c.bk)OD.sigLog.add({kind:'돌파 진입',base:c.base,sym:c.sym,p:c.p,why:`${c.bk.name} · ±${c.bk.E}%`});
+      if(c.best&&c.best.ok)OD.sigLog.add({kind:'방향 규칙',base:c.base,sym:c.sym,p:c.p,why:c.best.name,dir:c.best.dir,tp:c.best.tp,sl:c.best.sl})}$('#bar').style.width='100%';
     const tm=new Date();$('#stat').textContent=`${String(tm.getHours()).padStart(2,'0')}:${String(tm.getMinutes()).padStart(2,'0')} 점검 · ${DATA.length}개 코인 · 10분마다 자동 점검`;
   }catch(e){$('#stat').textContent='점검 실패: '+e.message}finally{busy=false;$('#go').disabled=false}}
 function render(){const cnt=m=>{let n=0;for(let i=5;i<10;i++)if(m&1<<i)n++;return n};

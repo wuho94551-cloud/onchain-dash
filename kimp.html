@@ -73,7 +73,7 @@ tr.lock td:first-child{box-shadow:inset 3px 0 0 #d23b3b}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;font-weight:600;display:none;z-index:9;max-width:92vw}
 @media(max-width:600px){table{font-size:13px}th,td{padding:6px}.arow label{width:100%}.hide-sm{display:none}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=20">
+<link rel="stylesheet" href="./theme.css?v=21">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -146,7 +146,7 @@ tr.lock td:first-child{box-shadow:inset 3px 0 0 #d23b3b}
 </section>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="./common.js?v=22"></script>
+<script src="./common.js?v=23"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -158,9 +158,9 @@ const kp=v=>v==null||!isFinite(v)?'–':`<span class="${v>=0?'pos':'neg'}">${v>=
 const p2=n=>String(n).padStart(2,'0');const hm=t=>{const d=new Date(t);return p2(d.getHours())+':'+p2(d.getMinutes())};
 async function j(u){const r=await fetch(u);if(r.status===429)throw new Error('429');if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
 
-let FX=null,FXT=0,names={},up={},bt={},ref={},REF=store.get('kimp-ref')||'bybit',KMIN=Number(store.get('kimp-min')||0),useUSDT=store.get('kimp-usdt')==='1';
+let FX=null,FXT=0,names={},up={},bt={},ref={},REF=store.get('kimp-ref')||'binance',KMIN=Number(store.get('kimp-min')||0),useUSDT=store.get('kimp-usdt')==='1';
 let sortK='kimp',sortD=-1,q='';const hist=[];
-const REFS=[['bybit','Bybit'],['okx','OKX'],['gate','Gate']];
+const REFS=[['binance','바이낸스'],['bybit','Bybit'],['okx','OKX'],['gate','Gate']];
 
 async function loadFX(){try{const d=await j('https://open.er-api.com/v6/latest/USD');FX=d.rates.KRW;FXT=d.time_last_update_unix*1000}catch(e){}}
 /* 한글 이름은 하루 동안 저장해 두고 재사용 (업비트 초당 요청 제한을 덜 쓰려고) */
@@ -170,7 +170,8 @@ async function loadUpbit(){const d=await j('https://api.upbit.com/v1/ticker/all?
 async function loadBithumb(){try{const d=await j('https://api.bithumb.com/public/ticker/ALL_KRW');bt={};for(const [k,v] of Object.entries(d.data||{}))if(v&&v.closing_price)bt[k]={p:Number(v.closing_price),v:Number(v.acc_trade_value_24H)}}catch(e){}}
 async function loadRef(){
   ref={};
-  if(REF==='bybit'){const d=await j('https://api.bybit.com/v5/market/tickers?category=spot');for(const t of d.result.list)if(t.symbol.endsWith('USDT'))ref[t.symbol.slice(0,-4)]=Number(t.lastPrice)}
+  if(REF==='binance'){const d=await j('https://data-api.binance.vision/api/v3/ticker/price');for(const t of d)if(t.symbol.endsWith('USDT'))ref[t.symbol.slice(0,-4)]=Number(t.price)}
+  else if(REF==='bybit'){const d=await j('https://api.bybit.com/v5/market/tickers?category=spot');for(const t of d.result.list)if(t.symbol.endsWith('USDT'))ref[t.symbol.slice(0,-4)]=Number(t.lastPrice)}
   else if(REF==='okx'){const d=await j('https://www.okx.com/api/v5/market/tickers?instType=SPOT');for(const t of d.data)if(t.instId.endsWith('-USDT'))ref[t.instId.slice(0,-5)]=Number(t.last)}
   else{const d=await j('https://api.gateio.ws/api/v4/spot/tickers');for(const t of d)if(t.currency_pair.endsWith('_USDT'))ref[t.currency_pair.slice(0,-5)]=Number(t.last)}
 }
