@@ -184,7 +184,7 @@ tr.mu td{color:var(--mute)}
   </details>
 </section>
 
-<script src="./common.js?v=23"></script>
+<script src="./common.js?v=24"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -387,7 +387,7 @@ async function loadHolders(){
 /* 상위 지갑 분산 흔적: Blockscout(이더리움·Base·Arbitrum·Optimism·Polygon). 주소 라벨(거래소 등)도 같이 옴 */
 let HOLD=null;
 const BSCH=[['ethereum','eth','이더리움'],['base','base','Base'],['arbitrum-one','arbitrum','Arbitrum'],['optimistic-ethereum','optimism','Optimism'],['polygon-pos','polygon','Polygon']];
-const bsLabel=a=>{const t=a?.metadata?.tags||[];const nm=t.find(x=>x.tagType==='name')?.name||a?.name||'';const EXR=/binance|coinbase|kraken|okx|bybit|bitget|kucoin|gate\.io|htx|huobi|upbit|bithumb|mexc|crypto\.com|robinhood|bitfinex|gemini|bitstamp|bingx/i;const ex=t.some(x=>x.slug==='exchange'||/exchange/i.test(x.name))||EXR.test(nm)||!!t.find(x=>x.meta?.main_entity&&/binance|coinbase|okx|bybit|kraken|bitget|kucoin|gate|htx|huobi|upbit|bithumb|mexc|crypto\.com/i.test(x.meta.main_entity));return{nm,ex}};
+const bsLabel=a=>{const t=a?.metadata?.tags||[];const nm=t.find(x=>x.tagType==='name')?.name||a?.name||'';const EXR=/binance|coinbase|kraken|okx|bybit|bitget|kucoin|gate\.io|htx|huobi|upbit|bithumb|mexc|crypto\.com|robinhood|bitfinex|gemini|bitstamp|bingx/i;const ex=t.some(x=>x.slug==='exchange'||/exchange/i.test(x.name))||EXR.test(nm)||!!t.find(x=>x.meta?.main_entity&&/binance|coinbase|okx|bybit|kraken|bitget|kucoin|gate|htx|huobi|upbit|bithumb|mexc|crypto\.com/i.test(x.meta.main_entity));const pr=!ex&&(t.some(x=>x.tagType==='protocol')||/aave|compound|staking|stake|pool|bridge|vault|lending|uniswap|curve|lido|morpho|spark|eigen|wrapped|gateway|router/i.test(nm));return{nm,ex,pr}};
 async function loadSpread(){const box=$('#spread');const pf=C.platforms||{};const ch=BSCH.find(([k])=>pf[k]);
   if(!ch){box.innerHTML='<div class="empty">이더리움·Base·Arbitrum·Optimism·Polygon 토큰만 점검할 수 있어요. (솔라나 등은 아직 무료 공개 데이터가 없어요)</div>';return}
   const tok=String(pf[ch[0]]).toLowerCase(),API=`https://${ch[1]}.blockscout.com/api/v2`,now=Date.now()/1000;$('#sp-go').disabled=true;
@@ -418,17 +418,17 @@ async function loadSpread(){const box=$('#spread');const pf=C.platforms||{};cons
         const amts=[...to.values()].sort((x,y)=>y-x),big=amts.filter(v=>v>=out*.05);
         w[k]={out,inn,net:inn-out,n:to.size,cex,split:big.length>=5||(big.length>=3&&big.at(-1)>=big[0]*.5),pct:(bal+out-inn)>0?out/(bal+out-inn)*100:0,intl}}
       R.push({a,h,lb,bal,w,full:ops.length>=(ch[1]==="eth"?100:150),last:ops[0]?+ops[0].timeStamp:null})}
-    const px=C.price||0,ok=R.filter(r=>!r.err&&!r.lb.ex),hot=ok.filter(r=>r.w.d7.pct>=5||(r.w.d7.split&&r.w.d7.pct>=1)||r.w.d7.cex>0);
+    const px=C.price||0,ok=R.filter(r=>!r.err&&!r.lb.ex&&!r.lb.pr),hot=ok.filter(r=>r.w.d7.pct>=5||(r.w.d7.split&&r.w.d7.pct>=1)||r.w.d7.cex>0);
     const sum=(f)=>ok.reduce((s,r)=>s+f(r),0),out7=sum(r=>r.w.d7.out),in7=sum(r=>r.w.d7.inn),out30=sum(r=>r.w.d30.out),in30=sum(r=>r.w.d30.inn),cex7=sum(r=>r.w.d7.cex);
     const lvl=cex7*px>1e6||hot.length>=3||(out7-in7)*px>5e6?'강함':hot.length?'약간':'뚜렷하지 않음';
     const cell=x=>`${x.out?num(x.out):'–'}${x.out?` <small>${x.pct.toFixed(1)}%</small>`:''}`;
-    box.innerHTML=`<p style="margin:6px 0 10px;font-size:15px"><b>매도 압력 흔적: ${lvl}</b> · ${esc(ch[2])} · 거래소 지갑을 뺀 상위 지갑의 최근 7일 ${out7>=in7?'순유출':'순유입'} <b>${num(Math.abs(out7-in7))} ${esc(C.sym)}</b>${px?' ('+usd(Math.abs(out7-in7)*px)+')':''} · 그중 거래소로 보낸 양 <b>${num(cex7)}</b>${px?' ('+usd(cex7*px)+')':''} · 30일 ${out30>=in30?'순유출':'순유입'} ${num(Math.abs(out30-in30))} · 눈여겨볼 지갑 ${hot.length}/${ok.length}개</p>
+    box.innerHTML=`<p style="margin:6px 0 10px;font-size:15px"><b>매도 압력 흔적: ${lvl}</b> · ${esc(ch[2])} · 거래소·프로토콜을 뺀 상위 지갑의 최근 7일 ${out7>=in7?'순유출':'순유입'} <b>${num(Math.abs(out7-in7))} ${esc(C.sym)}</b>${px?' ('+usd(Math.abs(out7-in7)*px)+')':''} · 그중 거래소로 보낸 양 <b>${num(cex7)}</b>${px?' ('+usd(cex7*px)+')':''} · 30일 ${out30>=in30?'순유출':'순유입'} ${num(Math.abs(out30-in30))} · 눈여겨볼 지갑 ${hot.length}/${ok.length}개</p>
     <div class="scroll"><table><thead><tr><th class="l">#</th><th class="l">주소 · 라벨</th><th>지금 보유</th><th title="외부로 내보낸 양 · 7일 전 보유량 대비 %">7일 내보냄</th><th title="그중 거래소 라벨 주소로 보낸 양">거래소로</th><th>7일 받은 양</th><th title="외부로 보낸 주소 수">받는 주소</th><th>30일 내보냄</th><th class="l">판정</th></tr></thead><tbody>${
       R.map((r,i)=>{const lab=r.lb.nm?` <small>${esc(r.lb.nm)}</small>`:'';const ad=`<a class="addr" href="https://${ch[1]}.blockscout.com/address/${r.a}" target="_blank" rel="noopener">${r.a.slice(0,8)}…${r.a.slice(-6)}</a>${lab}`;
         if(r.err)return`<tr><td class="l">${i+1}</td><td class="l">${ad}</td><td colspan="7" class="l">불러오지 못함: ${esc(r.err)}</td></tr>`;const d=r.w.d7,m=r.w.d30;
-        const tag=r.lb.ex?'거래소 지갑 (판정 제외)':d.cex>0?'<b>거래소로 보냄</b>':d.split&&d.pct>=1?'<b>쪼개서 내보냄</b>':d.pct>=5?'<b>많이 내보냄</b>':d.net>0&&d.inn>=r.bal*.05?'모으는 중':m.split&&m.pct>=1?'30일 안 쪼갠 흔적':'조용함';
-        return`<tr${r.lb.ex?' class="mu"':''}><td class="l">${i+1}</td><td class="l">${ad}</td><td>${num(r.bal)} <small>${sup?(r.bal/sup*100).toFixed(2)+'%':''}</small></td><td>${cell(d)}</td><td>${d.cex?num(d.cex):'–'}</td><td>${d.inn?num(d.inn):'–'}</td><td>${d.n||'–'}</td><td>${cell(m)}</td><td class="l">${tag}${r.full&&r.last&&now-r.last<7*86400?' <small title="최근 받은 이동이 모두 7일 안이라 더 있을 수 있어요">더 있음</small>':''}</td></tr>`}).join('')}</tbody></table></div>
-    <p class="src">출처: Blockscout(${esc(ch[1])}.blockscout.com) 보유자·주소 라벨(Open Labels Initiative 등)${ch[1]==='eth'?', 토큰 이동은 Ethplorer':'·토큰 이동'}. 라벨은 알려진 주소만 붙어 있고, 7일 동안 많이 받은 주소 15곳만 확인해요. 거래소 입금 주소처럼 라벨 없는 주소로 간 건 '거래소로'에 안 잡혀요. '쪼개서 내보냄'은 7일 안에 내보낸 양의 5% 이상을 받은 주소가 5개 이상이거나, 비슷한 크기로 3개 이상에 나눠 보낸 경우예요. 거래소 지갑 자체는 평소에도 이동이 많아 판정에서 뺐어요.</p>`;
+        const tag=r.lb.ex?'거래소 지갑 (판정 제외)':r.lb.pr?'디파이·브릿지 등 프로토콜 (판정 제외)':d.cex>0?'<b>거래소로 보냄</b>':d.split&&d.pct>=1?'<b>쪼개서 내보냄</b>':d.pct>=5?'<b>많이 내보냄</b>':d.net>0&&d.inn>=r.bal*.05?'모으는 중':m.split&&m.pct>=1?'30일 안 쪼갠 흔적':'조용함';
+        return`<tr${r.lb.ex||r.lb.pr?' class="mu"':''}><td class="l">${i+1}</td><td class="l">${ad}</td><td>${num(r.bal)} <small>${sup?(r.bal/sup*100).toFixed(2)+'%':''}</small></td><td>${cell(d)}</td><td>${d.cex?num(d.cex):'–'}</td><td>${d.inn?num(d.inn):'–'}</td><td>${d.n||'–'}</td><td>${cell(m)}</td><td class="l">${tag}${r.full&&r.last&&now-r.last<7*86400?' <small title="최근 받은 이동이 모두 7일 안이라 더 있을 수 있어요">더 있음</small>':''}</td></tr>`}).join('')}</tbody></table></div>
+    <p class="src">출처: Blockscout(${esc(ch[1])}.blockscout.com) 보유자·주소 라벨(Open Labels Initiative 등)${ch[1]==='eth'?', 토큰 이동은 Ethplorer':'·토큰 이동'}. 라벨은 알려진 주소만 붙어 있고, 7일 동안 많이 받은 주소 15곳만 확인해요. 거래소 입금 주소처럼 라벨 없는 주소로 간 건 '거래소로'에 안 잡혀요. '쪼개서 내보냄'은 7일 안에 내보낸 양의 5% 이상을 받은 주소가 5개 이상이거나, 비슷한 크기로 3개 이상에 나눠 보낸 경우예요. 거래소 지갑과 디파이·브릿지·스테이킹 같은 프로토콜 주소는 평소에도 이동이 많아 판정에서 뺐어요.</p>`;
   }catch(er){box.innerHTML='<div class="empty">점검 실패: '+esc(er.message)+'</div>'}finally{$('#sp-go').disabled=false}}
 $('#sp-go').onclick=loadSpread;
 
