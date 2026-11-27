@@ -387,22 +387,23 @@ async function loadHolders(){
 /* 상위 지갑 분산 흔적: Blockscout(이더리움·Base·Arbitrum·Optimism·Polygon). 주소 라벨(거래소 등)도 같이 옴 */
 let HOLD=null;
 const BSCH=[['ethereum','eth','이더리움'],['base','base','Base'],['arbitrum-one','arbitrum','Arbitrum'],['optimistic-ethereum','optimism','Optimism'],['polygon-pos','polygon','Polygon']];
-const bsLabel=a=>{const t=a?.metadata?.tags||[];const nm=t.find(x=>x.tagType==='name')?.name||a?.name||'';const ex=t.some(x=>x.slug==='exchange'||/exchange/i.test(x.name))||!!t.find(x=>x.meta?.main_entity&&/binance|coinbase|okx|bybit|kraken|bitget|kucoin|gate|htx|huobi|upbit|bithumb|mexc|crypto\.com/i.test(x.meta.main_entity));return{nm,ex}};
+const bsLabel=a=>{const t=a?.metadata?.tags||[];const nm=t.find(x=>x.tagType==='name')?.name||a?.name||'';const EXR=/binance|coinbase|kraken|okx|bybit|bitget|kucoin|gate\.io|htx|huobi|upbit|bithumb|mexc|crypto\.com|robinhood|bitfinex|gemini|bitstamp|bingx/i;const ex=t.some(x=>x.slug==='exchange'||/exchange/i.test(x.name))||EXR.test(nm)||!!t.find(x=>x.meta?.main_entity&&/binance|coinbase|okx|bybit|kraken|bitget|kucoin|gate|htx|huobi|upbit|bithumb|mexc|crypto\.com/i.test(x.meta.main_entity));return{nm,ex}};
 async function loadSpread(){const box=$('#spread');const pf=C.platforms||{};const ch=BSCH.find(([k])=>pf[k]);
   if(!ch){box.innerHTML='<div class="empty">이더리움·Base·Arbitrum·Optimism·Polygon 토큰만 점검할 수 있어요. (솔라나 등은 아직 무료 공개 데이터가 없어요)</div>';return}
   const tok=String(pf[ch[0]]).toLowerCase(),API=`https://${ch[1]}.blockscout.com/api/v2`,now=Date.now()/1000;$('#sp-go').disabled=true;
-  const bj=async(u,ms=15000)=>{for(let n=0;n<3;n++){const ac=new AbortController(),tt=setTimeout(()=>ac.abort(),ms);try{const r=await fetch(u,{signal:ac.signal});clearTimeout(tt);if(r.status===429||r.status>=500)throw new Error('HTTP '+r.status);if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}catch(e){clearTimeout(tt);if(n===2)throw new Error(e.name==='AbortError'?'응답이 너무 느림':e.message);await new Promise(r=>setTimeout(r,1500*(n+1)))}}};
+  let BQ=0;const bpace=async()=>{const t=Math.max(Date.now(),BQ);BQ=t+450;const w=t-Date.now();if(w>0)await new Promise(r=>setTimeout(r,w))};
+  const bj=async(u,ms=15000)=>{for(let n=0;n<4;n++){await bpace();const ac=new AbortController(),tt=setTimeout(()=>ac.abort(),ms);try{const r=await fetch(u,{signal:ac.signal});clearTimeout(tt);if(r.status===429||r.status>=500)throw new Error('HTTP '+r.status);if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}catch(e){clearTimeout(tt);if(n===3)throw new Error(e.name==='AbortError'?'응답이 너무 느림':e.message==='HTTP 429'?'요청 제한':e.message);await new Promise(r=>setTimeout(r,3000*(n+1)))}}};
   try{if(!HOLD||HOLD.tok!==tok){box.innerHTML='<div class="empty">보유자 불러오는 중…</div>';const d=await bj(`${API}/tokens/${tok}/holders`);HOLD={tok,hs:(d.items||[]).slice(0,20)}}
     const hs=HOLD.hs;if(!hs.length)throw new Error('보유자 없음');const dec=+(hs[0].token?.decimals??18),sup=Number(hs[0].token?.total_supply||0)/10**dec;
     const top=new Set(hs.map(h=>h.address.hash.toLowerCase())),R=[];
     /* 토큰 이동은 빠른 Etherscan 호환 API(tokentx)로 받고, 받는 주소 라벨은 많이 받은 주소만 따로 조회 */
     const OPS=new Array(hs.length);let done=0,qi=0;
-    await Promise.all([0,1,2,3].map(async()=>{while(qi<hs.length){const i=qi++,a=hs[i].address.hash.toLowerCase();
+    await Promise.all([0,1].map(async()=>{while(qi<hs.length){const i=qi++,a=hs[i].address.hash.toLowerCase();
       try{const d=await bj(`https://${ch[1]}.blockscout.com/api?module=account&action=tokentx&address=${a}&contractaddress=${tok}&page=1&offset=200&sort=desc`);OPS[i]=Array.isArray(d.result)?d.result:[]}catch(e){OPS[i]={err:e.message}}
       done++;box.innerHTML=`<div class="empty">지갑 이동 받는 중… ${done}/${hs.length}</div>`}}));
     const recv=new Map();hs.forEach((h,i)=>{const a=h.address.hash.toLowerCase();if(!Array.isArray(OPS[i]))return;for(const o of OPS[i]){if(now-+o.timeStamp>7*86400)continue;const t=String(o.to).toLowerCase();if(String(o.from).toLowerCase()===a&&!top.has(t))recv.set(t,(recv.get(t)||0)+Number(o.value)/10**dec)}});
     const LAB=new Map(hs.map(h=>[h.address.hash.toLowerCase(),bsLabel(h.address)]));const cand=[...recv.entries()].sort((x,y)=>y[1]-x[1]).slice(0,15).map(x=>x[0]);let li=0,ld=0;
-    await Promise.all([0,1,2,3,4].map(async()=>{while(li<cand.length){const t=cand[li++];try{LAB.set(t,bsLabel(await bj(`${API}/addresses/${t}`,12000)))}catch(e){}ld++;box.innerHTML=`<div class="empty">받는 주소 라벨 확인 중… ${ld}/${cand.length}</div>`}}));
+    await Promise.all([0,1,2].map(async()=>{while(li<cand.length){const t=cand[li++];try{LAB.set(t,bsLabel(await bj(`${API}/addresses/${t}`,12000)))}catch(e){}ld++;box.innerHTML=`<div class="empty">받는 주소 라벨 확인 중… ${ld}/${cand.length}</div>`}}));
     const isEx=t=>LAB.get(t)?.ex||false;
     for(let i=0;i<hs.length;i++){const h=hs[i],a=h.address.hash.toLowerCase(),lb=LAB.get(a);
       if(!Array.isArray(OPS[i])){R.push({a,h,lb,err:OPS[i]?.err||'실패'});continue}const ops=OPS[i];
