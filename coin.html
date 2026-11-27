@@ -166,7 +166,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
     <div id="holders"><div class="empty">코인을 먼저 조회하세요.</div></div>
     <p class="src">Ethplorer (이더리움 메인넷 토큰). 주소를 누르면 Arkham에서 누구 지갑인지 확인할 수 있어요.</p>
     <div class="phead" style="margin-top:18px"><h2>상위 지갑 분산 흔적</h2><button type="button" id="sp-go" class="ghost">점검하기</button></div>
-    <p class="src" style="margin-top:0">상위 20개 지갑의 최근 토큰 이동 100건씩을 받아, 최근 7일·30일에 얼마나 내보냈고 몇 개 주소로 쪼갰는지 봐요. 상위 지갑끼리 옮긴 건 내부 이동으로 빼요. 무료 키는 1초에 1번이라 20초쯤 걸려요.</p>
+    <p class="src" style="margin-top:0">상위 20개 지갑의 최근 토큰 이동 100건씩을 받아, 최근 7일·30일에 얼마나 내보냈고 몇 개 주소로 쪼갰는지 봐요. 상위 지갑끼리 옮긴 건 내부 이동으로 빼요. 무료 공용 키는 요청 제한이 있어서 1분 가까이 걸릴 수 있어요. 자주 쓰면 아래 설정에 Ethplorer 개인 키를 넣으세요.</p>
     <div id="spread"></div>
   </div>
 </section>
@@ -385,8 +385,9 @@ async function loadSpread(){const box=$('#spread');if(!C.eth||C.eth==='native'){
   try{if(!HOLD||HOLD.tok!==tok){box.innerHTML='<div class="empty">보유자 불러오는 중…</div>';const d=await j(`https://api.ethplorer.io/getTopTokenHolders/${encodeURIComponent(tok)}?apiKey=${encodeURIComponent(key)}&limit=20`);HOLD={tok,hs:d.holders||[]}}
     const hs=HOLD.hs,top=new Set(hs.map(h=>String(h.address).toLowerCase())),R=[];
     for(let i=0;i<hs.length;i++){const a=String(hs[i].address).toLowerCase();box.innerHTML=`<div class="empty">지갑 이동 받는 중… ${i+1}/${hs.length}</div>`;
-      await new Promise(r=>setTimeout(r,key==='freekey'?1100:250));let ops=[];
-      try{const d=await j(`https://api.ethplorer.io/getAddressHistory/${a}?apiKey=${encodeURIComponent(key)}&token=${tok}&type=transfer&limit=100`);ops=d.operations||[]}catch(e){R.push({a,h:hs[i],err:e.message});continue}
+      await new Promise(r=>setTimeout(r,key==='freekey'?2000:300));let ops=null,err='';
+      for(let n=0;n<4&&!ops;n++){try{const d=await j(`https://api.ethplorer.io/getAddressHistory/${a}?apiKey=${encodeURIComponent(key)}&token=${tok}&type=transfer&limit=100`);ops=d.operations||[]}catch(e){err=e.message;box.innerHTML=`<div class="empty">요청 제한, 잠시 쉬었다가 다시 받는 중… ${i+1}/${hs.length}</div>`;await new Promise(r=>setTimeout(r,5000*(n+1)))}}
+      if(!ops){R.push({a,h:hs[i],err:err==='Failed to fetch'?'요청 제한':err});continue}
       const bal=Number(hs[i].rawBalance||hs[i].balance)/10**dec,w={};
       for(const [k,days] of [['d7',7],['d30',30]]){let out=0,inn=0,intl=0;const to=new Map();
         for(const o of ops){if(now-o.timestamp>days*86400)continue;const v=Number(o.value)/10**dec,f=String(o.from).toLowerCase(),t=String(o.to).toLowerCase();
