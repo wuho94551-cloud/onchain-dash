@@ -455,5 +455,51 @@ async function checkLinesHere(){const L=getLines();if(!L.length)return;try{const
   const keep=[];for(const l of L){const p=px[l.sym];if(p!=null&&(l.dir==='above'?p>=l.price:p<=l.price))notify(`${l.sym} ${l.dir==='above'?'상향 돌파':'하향 이탈'} ${l.price}`,`지금 ${p}${l.note?' · '+l.note:''}`,{side:l.dir==='above'?'B':'S',href:'./view.html#'+l.sym});else keep.push(l)}
   if(keep.length!==L.length)setLines(keep)}catch(e){}}
 setInterval(()=>{if(!document.hidden)checkLinesHere()},60e3);setTimeout(checkLinesHere,5000);
-window.OD={getLines,setLines,workerCfg,workerPut,sigP,sigSave,sigCond,sigText,SIG_DEF,coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
+/* ---- 지금과 같은 청산 추정 모델 ---- */
+const LEV=[[10,.25],[20,.25],[25,.2],[50,.2],[100,.1]],MMR=.005;
+function clusters(st,cs,price){const n=cs.length,smn=new Float64Array(n+1).fill(Infinity),smx=new Float64Array(n+1).fill(-Infinity);
+  for(let k=n-1;k>=0;k--){smn[k]=Math.min(smn[k+1],cs[k].l);smx[k]=Math.max(smx[k+1],cs[k].h)}
+  let up=0,dn=0,ci=0;for(let i=1;i<st.length;i++){const a=st[i],d=a.oiu-st[i-1].oiu;if(d<=0)continue;const p=a.mp;if(!p)continue;
+    while(ci<n&&cs[ci].t<a.time)ci++;const mn=smn[ci],mx=smx[ci],ls=a.lsr/(1+a.lsr);
+    for(const [lev,w] of LEV){const lp=p*(1-1/lev+MMR),sp=p*(1+1/lev-MMR);
+      if(!(mn<=lp)&&lp>=price*.92&&lp<price)dn+=d*ls*w;if(!(mx>=sp)&&sp<=price*1.08&&sp>price)up+=d*(1-ls)*w}}
+  return{up,dn}}
+
+/* ---- 코인 하나: 매시 조건 계산 ---- */
+function btSeries(c,mult){const H=3600e3;const K=c.k;if(K.length<60)return null;const n=K.length;
+  const oiAt=(()=>{let p=0;return T=>{while(p+1<c.oi.length&&c.oi[p+1][0]<=T)p++;return c.oi[p]&&c.oi[p][0]<=T?c.oi[p][1]:null}})();
+  const oiAt2=(()=>{let p=0;return T=>{while(p+1<c.oi.length&&c.oi[p+1][0]<=T)p++;return c.oi[p]&&c.oi[p][0]<=T?c.oi[p][1]:null}})();
+  let fp=0,sp=0,cp=0;const S=[];
+  for(let i=0;i<n;i++){const T=K[i][0]+H,price=K[i][4];const r={T,price,hi:K[i][2],lo:K[i][3]};S.push(r);if(i<48)continue;
+    r.c24=(price/K[i-24][4]-1)*100;const o=oiAt(T),o0=oiAt2(T-24*H);r.doi=o&&o0?(o/o0-1)*100:null;
+    while(fp+1<c.fr.length&&c.fr[fp+1][0]<=T)fp++;r.fr=c.fr[fp]&&c.fr[fp][0]<=T?c.fr[fp][1]:null;
+    if(c.st&&c.st.length){while(sp<c.st.length&&c.st[sp].time*1000+H<=T)sp++;/* Gate 행은 그 시각부터 1시간 구간: 끝난 구간만 */
+      if(sp>=24){let s24=0,s4=0;for(let q=sp-24;q<sp;q++){const a=c.st[q],v=(a.lt-a.stk)*mult*a.mp;s24+=v;if(q>=sp-4)s4+=v}r.cvd=s24;r.cvd4=s4}
+      while(cp<c.cs.length&&c.cs[cp].t*1000<T)cp++;
+      if(cp>=48&&sp>=48){const cs=c.cs.slice(cp-48,cp),st=c.st.slice(sp-48,sp);const pg=price/(c.scale||1),k=clusters(st,cs,pg);r.up=k.up;r.dn=k.dn;
+        let Hh=-Infinity,Ll=Infinity;for(const x of cs){if(x.h>Hh)Hh=x.h;if(x.l<Ll)Ll=x.l}r.pos=Hh>Ll?(pg-Ll)/(Hh-Ll):null}}
+    }
+  /* 세력 흔적 지표 (1시간 봉 거래대금·미결제약정 기반) */
+  const tv=K.map(k=>k[5]||0),cum=[0];for(const v of tv)cum.push(cum.at(-1)+v);const t24=i=>cum[i+1]-cum[i-23];
+  const rg=i=>{let h=-Infinity,l=Infinity;for(let q=i-23;q<=i;q++){if(K[q][2]>h)h=K[q][2];if(K[q][3]<l)l=K[q][3]}return(h-l)/K[i][4]};
+  const oiAt4=(()=>{let p=0;return T=>{while(p+1<c.oi.length&&c.oi[p+1][0]<=T)p++;return c.oi[p]&&c.oi[p][0]<=T?c.oi[p][1]:null}})();
+  const oiAt3=(()=>{let p=0;return T=>{while(p+1<c.oi.length&&c.oi[p+1][0]<=T)p++;return c.oi[p]&&c.oi[p][0]<=T?c.oi[p][1]:null}})();
+  for(let i=192;i<n;i++){const r=S[i],T=r.T,now=t24(i);let prev=0;for(let d=1;d<=7;d++)prev+=t24(i-24*d);prev/=7;r.vs=prev?now/prev:null;
+    let rs=0;for(let d=1;d<=7;d++)rs+=rg(i-24*d);rs/=7;r.sq=rs?rg(i)/rs:null;
+    const o=oiAt3(T-168*H);r.c7=(r.price/K[i-168][4]-1)*100;const on=oiAt4(T);r.doi7=o&&on?(on/o-1)*100:null;
+    }
+  {let p=0;for(let i=24;i<n;i++){const T=S[i].T;while(p+1<c.oi.length&&c.oi[p+1][0]<=T)p++;const o=c.oi[p]&&c.oi[p][0]<=T?c.oi[p][1]:null;const t=t24(i);S[i].oit=o&&t?o*S[i].price/t:null}}
+  return S}
+
+/* ---- 세력 흔적 조건 (신호 검증 '조합 찾기'·세력 의심 화면이 같이 씀) ---- */
+const PUMP=[['⑥ 거래대금 급증','24시간 거래대금이 지난 7일 하루 평균의 2배 이상',r=>r.vs!=null?r.vs>=2:null],
+  ['⑦ 변동성 압축','24시간 고저폭이 지난 7일 평균의 60% 이하',r=>r.sq!=null?r.sq<=.6:null],
+  ['⑧ 레버리지 쏠림','미결제약정(달러)이 24시간 거래대금의 1.5배 이상',r=>r.oit!=null?r.oit>=1.5:null],
+  ['⑨ 조용한 매집','7일 가격 ±8% 안, 미결제약정 7일 +25% 이상',r=>r.doi7!=null&&r.c7!=null?(Math.abs(r.c7)<=8&&r.doi7>=25):null],
+  ['⑩ 펀딩 극단 음수','펀딩비 −0.02% 이하',r=>r.fr!=null?r.fr<=-0.02:null]];
+const ALLN=['① 포지션 누적','② 펀딩 음수','③ 체결 매수 우위','④ 상단 숏 클러스터','⑤ 바닥권',...PUMP.map(x=>x[0])];
+/* 10개 조건을 비트로: 참이면 1. 데이터 없으면 0 */
+function allMask(r,P){if(r.c24==null)return 0;const g=sigCond(r,{...P,on:[1,1,1,1,1]});let m=0;g.C.forEach((v,i)=>{if(v===true)m|=1<<i});PUMP.forEach((x,i)=>{if(x[2](r)===true)m|=1<<(5+i)});return m}
+
+window.OD={btSeries,allMask,ALLN,PUMP,getLines,setLines,workerCfg,workerPut,sigP,sigSave,sigCond,sigText,SIG_DEF,coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
 })();

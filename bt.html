@@ -136,6 +136,12 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
   <p class="d">신호 뒤 조건이 깨지면 바로 판다고 했을 때와, 보유 기간 끝까지 들고 갔을 때를 비교해요. 청산은 그 시간 봉의 종가 기준이에요. 조건은 시간마다 자주 바뀌어서, 무효화 규칙을 쓰면 대부분 하루 안에 청산돼요. 짧게 들고 나온 결과와 비교하는 셈이라는 점을 같이 봐 주세요.</p>
   <div class="tbl"><table><thead><tr><th class="l">청산 규칙</th><th>신호 수</th><th>승률</th><th>평균 수익</th><th>중앙값</th><th title="보유 기간 끝까지 가기 전에 청산된 비율">중간 청산</th><th>평균 보유</th></tr></thead><tbody id="t-inv"></tbody></table></div>
 
+  <h2 class="s">세력 흔적 조합 찾기</h2>
+  <p class="d">조건 10개(①~⑤ + 세력 흔적 ⑥~⑩) 중 1~3개 조합마다, 그 조합이 맞았을 때 <b>7일 안에 +20% 이상 오른 비율</b>을 계산해요. 과거에 끼워 맞추는 걸 막으려고, <b>앞 60% 기간으로 조합을 고르고 뒤 40% 기간으로 다시 확인</b>해요. 뒤 기간에서도 기준선보다 1.5배 이상이고 15건 이상이면 '검증 통과'예요.</p>
+  <details class="pbox"><summary>⑥~⑩ 세력 흔적 조건 설명</summary><ul id="pdesc" style="font-size:14px;margin:6px 0"></ul></details>
+  <div class="ctl"><button type="button" id="combo">조합 찾기</button><span class="sub" id="cst" style="margin:0"></span></div>
+  <div class="tbl"><table><thead><tr><th class="l">조합</th><th>앞 기간 건수</th><th>앞 기간 +20%</th><th>뒤 기간 건수</th><th>뒤 기간 +20%</th><th>뒤 기간 기준선</th><th title="뒤 기간 +20% ÷ 기준선">배수</th><th title="7일 안에 -10%를 먼저 맞은 비율 (뒤 기간)">-10% 먼저</th><th>7일 평균 (뒤)</th><th class="l">판정</th></tr></thead><tbody id="t-combo"><tr><td colspan="10" class="l mu">검증 시작 후 '조합 찾기'를 누르세요.</td></tr></tbody></table></div>
+
   <h2 class="s">최근 신호</h2>
   <p class="d">'신호 기준' 이상으로 뜬 최근 신호 40개예요. 보유 기간이 아직 안 끝난 건 '진행 중'이에요.</p>
   <div class="tbl" style="max-height:60vh"><table class="ev"><thead><tr><th class="l">시각</th><th class="l">코인</th><th>충족</th><th class="l">조건</th><th>미결제약정 24h</th><th>진입가</th><th>1일</th><th>3일</th><th>7일</th></tr></thead><tbody id="t-ev"></tbody></table></div>
@@ -151,7 +157,7 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
     <li>데이터: Bybit(가격·미결제약정·펀딩비), Gate.io(체결 CVD·롱숏 비율·미결제약정 달러값·캔들).</li>
   </ul></details>
 </section>
-<script src="./common.js?v=18"></script>
+<script src="./common.js?v=19"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -185,39 +191,15 @@ $('#fund').onchange=()=>{FUND=$('#fund').checked?1:0;store.set('bt-fund',FUND);i
 pform();if(matchMedia('(max-width:700px)').matches)$('.pbox').open=false;
 
 /* ---- 과거 데이터 받기 (코인마다 6시간 저장) ---- */
-async function cached(key,fn){try{const c=await caches.open('od-bt-v1');const h=await c.match(key);if(h){const o=await h.json();if(Date.now()-o.t<6*H)return o.d}
+async function cached(key,fn){try{const c=await caches.open('od-bt-v2');const h=await c.match(key);if(h){const o=await h.json();if(Date.now()-o.t<6*H)return o.d}
   const d=await fn();try{await c.put(key,new Response(JSON.stringify({t:Date.now(),d}),{headers:{'content-type':'application/json'}}))}catch(e){}return d}catch(e){return fn()}}
-async function bybitKlines(sym,from,to){const out=new Map();for(let s=from;s<to;s+=1000*H){const r=await j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${sym}&interval=60&start=${s}&end=${Math.min(to,s+1000*H-1)}&limit=1000`);for(const a of r.result.list)out.set(+a[0],[+a[0],+a[1],+a[2],+a[3],+a[4]])}return [...out.values()].sort((a,b)=>a[0]-b[0])}
+async function bybitKlines(sym,from,to){const out=new Map();for(let s=from;s<to;s+=1000*H){const r=await j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${sym}&interval=60&start=${s}&end=${Math.min(to,s+1000*H-1)}&limit=1000`);for(const a of r.result.list)out.set(+a[0],[+a[0],+a[1],+a[2],+a[3],+a[4],+a[6]])}return [...out.values()].sort((a,b)=>a[0]-b[0])}
 async function bybitOI(sym,from,to){const out=new Map();for(let s=from;s<to;s+=200*H){const r=await j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${sym}&intervalTime=1h&startTime=${s}&endTime=${Math.min(to,s+200*H-1)}&limit=200`);for(const a of r.result.list)out.set(+a.timestamp,+a.openInterest)}return [...out.entries()].sort((a,b)=>a[0]-b[0])}
 async function bybitFunding(sym,from,to){const out=new Map();let end=to;for(let n=0;n<60;n++){const r=await j(`https://api.bybit.com/v5/market/funding/history?category=linear&symbol=${sym}&startTime=${from}&endTime=${end}&limit=200`);const l=r.result.list;for(const a of l)out.set(+a.fundingRateTimestamp,+a.fundingRate*100);if(l.length<200)break;const oldest=Math.min(...l.map(a=>+a.fundingRateTimestamp));if(oldest<=from)break;end=oldest-1}return [...out.entries()].sort((a,b)=>a[0]-b[0])}
 async function gateStats(c,from,to){const out=new Map();let s=Math.floor(from/1000);const end=Math.floor(to/1000);while(s<end){const r=await j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${c}&interval=1h&from=${s}&limit=1000`);if(!r.length)break;for(const a of r)out.set(a.time,{time:a.time,oiu:+a.open_interest_usd||0,lsr:+a.lsr_account||1,mp:+a.mark_price||0,lt:+a.long_taker_size||0,stk:+a.short_taker_size||0});const last=r.at(-1).time;if(last<=s||r.length<2)break;s=last+3600}return [...out.values()].sort((a,b)=>a.time-b.time)}
 async function gateCandles(c,from,to){const out=new Map();for(let s=Math.floor(from/1000);s<to/1000;s+=1999*3600){const r=await j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${c}&interval=1h&from=${s}&to=${Math.min(Math.floor(to/1000),s+1999*3600)}`);for(const a of r)out.set(+a.t,{t:+a.t,h:+a.h,l:+a.l})}return [...out.values()].sort((a,b)=>a.t-b.t)}
 
-/* ---- 지금과 같은 청산 추정 모델 ---- */
-const LEV=[[10,.25],[20,.25],[25,.2],[50,.2],[100,.1]],MMR=.005;
-function clusters(st,cs,price){const n=cs.length,smn=new Float64Array(n+1).fill(Infinity),smx=new Float64Array(n+1).fill(-Infinity);
-  for(let k=n-1;k>=0;k--){smn[k]=Math.min(smn[k+1],cs[k].l);smx[k]=Math.max(smx[k+1],cs[k].h)}
-  let up=0,dn=0,ci=0;for(let i=1;i<st.length;i++){const a=st[i],d=a.oiu-st[i-1].oiu;if(d<=0)continue;const p=a.mp;if(!p)continue;
-    while(ci<n&&cs[ci].t<a.time)ci++;const mn=smn[ci],mx=smx[ci],ls=a.lsr/(1+a.lsr);
-    for(const [lev,w] of LEV){const lp=p*(1-1/lev+MMR),sp=p*(1+1/lev-MMR);
-      if(!(mn<=lp)&&lp>=price*.92&&lp<price)dn+=d*ls*w;if(!(mx>=sp)&&sp<=price*1.08&&sp>price)up+=d*(1-ls)*w}}
-  return{up,dn}}
-
-/* ---- 코인 하나: 매시 조건 계산 ---- */
-function series(c,mult){const K=c.k;if(K.length<60)return null;const n=K.length;
-  const oiAt=(()=>{let p=0;return T=>{while(p+1<c.oi.length&&c.oi[p+1][0]<=T)p++;return c.oi[p]&&c.oi[p][0]<=T?c.oi[p][1]:null}})();
-  const oiAt2=(()=>{let p=0;return T=>{while(p+1<c.oi.length&&c.oi[p+1][0]<=T)p++;return c.oi[p]&&c.oi[p][0]<=T?c.oi[p][1]:null}})();
-  let fp=0,sp=0,cp=0;const S=[];
-  for(let i=0;i<n;i++){const T=K[i][0]+H,price=K[i][4];const r={T,price,hi:K[i][2],lo:K[i][3]};S.push(r);if(i<48)continue;
-    r.c24=(price/K[i-24][4]-1)*100;const o=oiAt(T),o0=oiAt2(T-24*H);r.doi=o&&o0?(o/o0-1)*100:null;
-    while(fp+1<c.fr.length&&c.fr[fp+1][0]<=T)fp++;r.fr=c.fr[fp]&&c.fr[fp][0]<=T?c.fr[fp][1]:null;
-    if(c.st&&c.st.length){while(sp<c.st.length&&c.st[sp].time*1000+H<=T)sp++;/* Gate 행은 그 시각부터 1시간 구간: 끝난 구간만 */
-      if(sp>=24){let s24=0,s4=0;for(let q=sp-24;q<sp;q++){const a=c.st[q],v=(a.lt-a.stk)*mult*a.mp;s24+=v;if(q>=sp-4)s4+=v}r.cvd=s24;r.cvd4=s4}
-      while(cp<c.cs.length&&c.cs[cp].t*1000<T)cp++;
-      if(cp>=48&&sp>=48){const cs=c.cs.slice(cp-48,cp),st=c.st.slice(sp-48,sp);const pg=price/(c.scale||1),k=clusters(st,cs,pg);r.up=k.up;r.dn=k.dn;
-        let Hh=-Infinity,Ll=Infinity;for(const x of cs){if(x.h>Hh)Hh=x.h;if(x.l<Ll)Ll=x.l}r.pos=Hh>Ll?(pg-Ll)/(Hh-Ll):null}}
-    }
-  return S}
+const series=(c,m)=>OD.btSeries(c,m);
 /* 비용: 수수료(왕복) + 보유 중 낸 펀딩비(롱 기준, 양수면 지불) */
 function cost(c,T0,T1){let f=2*FEE;if(FUND)for(const [t,v] of c.fr){if(t>T0&&t<=T1)f+=v}return f}
 /* 보유 결과: 신호 뒤 DLY시간 늦게 진입, 수익(비용 뺀 값), 최대 하락, +10%/-5% 중 먼저 */
@@ -237,6 +219,29 @@ const rgAt=T=>RES.rg.get(Math.floor(T/(4*H))*4*H);
 function applyP(){if(!RES)return;for(const c of RES.top)for(const r of c.S){if(r.c24==null){r.C=[null,null,null,null,null];r.hits=0;continue}const g=OD.sigCond(r,P);r.C=g.C;r.hits=g.hits}}
 
 let RES=null;
+$('#pdesc').innerHTML=OD.PUMP.map(x=>`<li><b>${x[0]}</b>: ${x[1]}</li>`).join('');
+/* 7일 결과: +20% 도달, -10% 먼저, 7일 수익 */
+function pumpOut(S,i){const H7=168;if(i+H7>=S.length)return null;const e=S[i].price;let up=false,first=null;
+  for(let q=i+1;q<=i+H7;q++){const hi=S[q].hi/e-1,lo=S[q].lo/e-1;if(hi>=.2)up=true;if(first==null){if(lo<=-.1)first='dn';else if(hi>=.2)first='up'}}
+  return{up,dn:first==='dn',ret:(S[i+H7].price/e-1)*100}}
+function findCombos(){if(!RES)return;const t0=performance.now();const start=RES.from+2*24*H+7*24*H,end=RES.to,split=start+(end-start)*.6;
+  /* 코인마다 매시 마스크·결과 */
+  const D=RES.top.map(c=>{const S=c.S;const rows=[];for(let i=192;i<S.length;i++){if(S[i].T<start)continue;const o=pumpOut(S,i);if(!o)continue;rows.push({i,T:S[i].T,m:OD.allMask(S[i],P),o,tr:S[i].T+7*24*H<split,te:S[i].T>=split})}return rows});
+  const st=(list)=>{const n=list.length;if(!n)return{n:0};return{n,p:list.filter(x=>x.up).length/n*100,dn:list.filter(x=>x.dn).length/n*100,avg:list.reduce((a,x)=>a+x.ret,0)/n}};
+  const pick=(m,f)=>{const out=[];for(const rows of D){let last=-1e9;for(const r of rows){if(!f(r))continue;if((r.m&m)===m&&r.i-last>=24){last=r.i;out.push(r.o)}}}return out};
+  const base=f=>{const out=[];for(const rows of D)for(const r of rows)if(f(r)&&r.i%24===0)out.push(r.o);return out};
+  const bTr=st(base(r=>r.tr)),bTe=st(base(r=>r.te));
+  const masks=[];for(let a=0;a<10;a++){masks.push(1<<a);for(let b=a+1;b<10;b++){masks.push(1<<a|1<<b);for(let c=b+1;c<10;c++)masks.push(1<<a|1<<b|1<<c)}}
+  const R=masks.map(m=>({m,tr:st(pick(m,r=>r.tr))})).filter(x=>x.tr.n>=25).sort((a,b)=>b.tr.p-a.tr.p).slice(0,15).map(x=>({...x,te:st(pick(x.m,r=>r.te))}));
+  const nm=m=>OD.ALLN.filter((_,i)=>m&1<<i).join(' + ');
+  const f0=v=>v==null?'–':v.toFixed(0)+'%';
+  $('#t-combo').innerHTML=`<tr class="base"><td class="l">기준선 <small>아무 때나</small></td><td>${bTr.n}</td><td>${f0(bTr.p)}</td><td>${bTe.n}</td><td>${f0(bTe.p)}</td><td></td><td></td><td>${f0(bTe.dn)}</td><td>${pct(bTe.avg,1)}</td><td></td></tr>`+
+    R.map(x=>{const lift=x.te.n&&bTe.p?x.te.p/bTe.p:null,ok=x.te.n>=15&&lift>=1.5;x.ok=ok;x.lift=lift;
+      return`<tr class="${x.te.n<15?'few':''}"><td class="l">${nm(x.m)}</td><td>${x.tr.n}</td><td>${f0(x.tr.p)}</td><td>${x.te.n}</td><td>${f0(x.te.p)}</td><td>${f0(bTe.p)}</td><td>${lift!=null?lift.toFixed(1)+'x':'–'}</td><td>${f0(x.te.dn)}</td><td>${x.te.n?pct(x.te.avg,1):'–'}</td><td class="l">${ok?'<b>검증 통과</b>':x.te.n<15?'표본 부족':'뒤 기간에서 약해짐'}</td></tr>`}).join('');
+  const passed=R.filter(x=>x.ok);
+  $('#cst').textContent=`${RES.top.length}개 코인 · 조합 ${masks.length}개 확인 · 앞 기간 상위 15개 표시 · 검증 통과 ${passed.length}개 · ${((performance.now()-t0)/1000).toFixed(1)}초`;
+  localStorage.setItem('bt-pump',JSON.stringify({at:Date.now(),days:DAYS,top:TOPN,P,base:{tr:bTr,te:bTe},combos:R.map(x=>({m:x.m,name:nm(x.m),tr:x.tr,te:x.te,lift:x.lift,ok:x.ok}))}))}
+
 async function run(){const b=$('#go');b.disabled=true;$('#pg').style.width='2%';
   try{$('#stat').textContent='대상 코인 고르는 중…';
     const [t,gc]=await Promise.all([j('https://api.bybit.com/v5/market/tickers?category=linear'),j('https://api.gateio.ws/api/v4/futures/usdt/contracts')]);
@@ -249,7 +254,7 @@ async function run(){const b=$('#go');b.disabled=true;$('#pg').style.width='2%';
     RES={top:top.filter(c=>c.S),fail:top.filter(c=>!c.S).map(c=>c.base),from,to};$('#pg').style.width='100%';regime();applyP();render();$('#out').hidden=false;
     $('#stat').textContent=`${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} 계산 · ${RES.top.length}개 코인 · 최근 ${DAYS}일`+(RES.fail.length?` · 데이터 부족으로 뺀 코인: ${RES.fail.join(', ')}`:'');
   }catch(e){$('#stat').textContent='검증 실패: '+e.message}finally{b.disabled=false}}
-$('#go').onclick=run;
+$('#go').onclick=run;$('#combo').onclick=()=>{if(!RES){$('#cst').textContent='먼저 위에서 검증 시작을 눌러 주세요.';return}$('#cst').textContent='계산 중…';setTimeout(findCombos,30)};
 
 /* ---- 집계 ---- */
 const pct=(v,d=1)=>v==null||!isFinite(v)?'–':`<span class="${v>0?'up':v<0?'dn':''}">${v>0?'+':''}${v.toFixed(d)}%</span>`;
