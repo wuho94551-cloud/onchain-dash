@@ -99,3 +99,23 @@ nav.top .od-sub a[aria-current]{background:var(--ink);color:var(--bg);border-col
 a{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:3px}
 a:visited{color:var(--ink)}
 @media(max-width:700px){#od-sync{display:none}}
+
+/* 시장 분위기 줄 */
+nav.top .od-mood{display:flex;gap:4px 18px;flex-wrap:wrap;max-width:1240px;margin:0 auto;padding:0 max(4vw,14px) 8px;font-family:var(--mono);font-size:12px;color:var(--mute)}
+nav.top .od-mood:empty{display:none}
+.od-mood i{font-style:normal;font-family:var(--sans);margin-right:5px}.od-mood b{font-weight:500;color:var(--ink)}.od-mood b.u{color:var(--up)}.od-mood b.d{color:var(--dn)}
+/* / 검색 팝업 */
+.od-srch{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:30;width:0;height:0}
+.od-srch>button{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;padding:0;min-height:0;border:0}
+.od-srch .odp{left:50%;transform:translateX(-50%)}
+/* 폰 하단 탭바 */
+.od-bb{display:none}
+@media(max-width:700px){
+  .od-bb{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  .od-bb a{flex:1;text-align:center;min-height:52px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--mute);text-decoration:none}
+  .od-bb a[aria-current]{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
+  body{padding-bottom:calc(56px + env(safe-area-inset-bottom))}
+  nav.top a.g{display:none}
+  nav.top .od-mood{padding-inline:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .od-srch{top:20px}
+}

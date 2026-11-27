@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<script>try{const t=localStorage.getItem("od-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>한눈에 · 온체인 데스크</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{color-scheme:light dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5;overflow-x:clip}
+.band{padding:clamp(14px,2.4vw,32px) max(4vw,14px);max-width:1240px;margin:0 auto}
+h1,h2{margin:0;line-height:1.02}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+button{font:inherit;font-size:15px;min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button[disabled]{opacity:.5;cursor:wait}
+input,select{font:inherit;min-height:44px;padding:0 12px;color:var(--ink);border:1px solid var(--line);background:transparent}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:14px 0 10px}
+.lab{font-size:13px;color:var(--mute);margin-right:4px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:middle}
+th{font-weight:500;color:var(--mute);font-size:13px;position:sticky;top:0;background:var(--bg)}
+td{font-family:var(--mono)}td.l,th.l{text-align:left}td.l{font-family:var(--sans)}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
+details{border:1px solid var(--line);padding:12px 16px;margin-top:18px}
+summary{cursor:pointer;font-weight:600;min-height:28px}
+details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
+.empty{padding:28px 10px;color:var(--mute);text-align:center}
+.prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);margin:14px 0}
+.kp div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:9px 13px}
+.kp small{display:block;font-size:12px;color:var(--mute)}.kp b{font-family:var(--mono);font-weight:400;font-size:19px}
+.kp i{display:block;font-style:normal;font-size:12px;color:var(--mute)}
+.sig{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 0;font-size:13px}
+.sig span{border:1px solid var(--line);padding:2px 8px}.sig span.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+.pn h2{font-size:17px;margin:0 0 2px}.pn p{margin:0 0 6px;font-size:13px;color:var(--mute)}
+.mini{height:200px;border:1px solid var(--line)}
+.lq{border:1px solid var(--line);font-family:var(--mono);font-size:12px}
+.lq div{display:grid;grid-template-columns:78px 1fr 70px;gap:8px;align-items:center;padding:1px 8px}
+.lq div.cur{background:color-mix(in srgb,var(--ink) 8%,transparent);font-weight:600}
+.lq i{display:block;height:9px}.lq .u i{background:var(--up)}.lq .d i{background:var(--dn)}
+.lq span:last-child{text-align:right;color:var(--mute)}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
+</style>
+<link rel="stylesheet" href="./theme.css?v=16">
+</head>
+<body>
+<nav class="top"><div class="band"></div></nav>
+<header class="band" style="padding-bottom:0">
+  <h1><button type="button" class="odp-btn" id="pick" title="눌러서 코인 바꾸기"><span id="sym" style="display:inline-flex;align-items:center;gap:10px">BTC</span><span class="car" aria-hidden="true">▾</span></button></h1>
+  <p class="sub" id="stat">불러오는 중…</p>
+  <div class="kp" id="kp"></div>
+  <div class="sig" id="sig"></div>
+</header>
+<section class="band" style="padding-top:14px">
+  <div id="chart"></div>
+  <div class="grid2">
+    <div class="pn"><h2>미결제약정 (7일)</h2><p>Bybit · 1시간 단위 · 계약 수량 기준</p><div class="mini" id="c-oi"></div></div>
+    <div class="pn"><h2>누적 CVD (7일)</h2><p>Gate 체결 기준 · 시장가 매수 − 매도 (달러)</p><div class="mini" id="c-cvd"></div></div>
+    <div class="pn"><h2>펀딩비 (최근 정산 60회)</h2><p>Bybit · 양수면 롱이 숏에게 지불</p><div class="mini" id="c-fr"></div></div>
+    <div class="pn"><h2>청산 추정 구간 (현재가 ±8%)</h2><p>최근 48시간 새로 열린 포지션 기준 추정 · 초록 = 숏 청산(위), 빨강 = 롱 청산(아래)</p><div class="lq" id="lq"></div></div>
+  </div>
+  <p class="sub" style="margin-top:14px">데이터: Bybit 선물(가격·미결제약정·펀딩비), Gate.io 선물(체결 CVD·롱숏 비율·청산 추정). 1분마다 새로 받아요. <a href="./watch.html" id="lw">호가 감시 →</a> <a href="./coin.html" id="lc">코인 분석 →</a></p>
+</section>
+<script src="./common.js?v=16"></script>
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function j(u){for(let n=0;;n++){const r=await fetch(u);if((r.status===429||r.status>=500)&&n<3){await new Promise(z=>setTimeout(z,1500*(n+1)));continue}if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}}
+const H=3600e3,pc=(v,d=2)=>v==null||!isFinite(v)?'–':`<span class="${v>0?'up':v<0?'dn':''}">${v>0?'+':''}${v.toFixed(d)}%</span>`;
+const usd=v=>{const a=Math.abs(v),s=v<0?'−':'';return a>=1e9?s+'$'+(a/1e9).toFixed(2)+'B':a>=1e6?s+'$'+(a/1e6).toFixed(2)+'M':a>=1e3?s+'$'+(a/1e3).toFixed(1)+'K':s+'$'+a.toFixed(0)};
+const fp=n=>n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:2}):n>=1?(+n.toFixed(4)).toString():n.toPrecision(4);
+const LEV=[[10,.25],[20,.25],[25,.2],[50,.2],[100,.1]],MMR=.005;
+let BASE=(decodeURIComponent(location.hash.slice(1))||localStorage.getItem('vw-last')||'BTC').toUpperCase(),CH=null,MC={},timer=0,GM=null;
+function mini(id){if(MC[id])return MC[id];const el=document.getElementById(id),cs=getComputedStyle(document.documentElement),m=cs.getPropertyValue('--mute').trim(),l=cs.getPropertyValue('--line').trim();
+  const c=LightweightCharts.createChart(el,{autoSize:true,layout:{background:{type:'solid',color:'transparent'},textColor:m,fontFamily:'JetBrains Mono, monospace',fontSize:10},grid:{vertLines:{visible:false},horzLines:{color:l}},rightPriceScale:{borderColor:l},timeScale:{borderColor:l,timeVisible:true},localization:{locale:'ko-KR'},handleScroll:false,handleScale:false});
+  return MC[id]=c}
+const cv=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+async function resolve(b){for(const s of [b+'USDT','1000'+b+'USDT','10000'+b+'USDT','1000000'+b+'USDT']){const r=await j(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${s}`).catch(()=>null);if(r?.result?.list?.length)return{s,t:r.result.list[0],sc:+(s.match(/^(1000000|10000|1000)/)||[0,1])[1]}}return null}
+function clusterBins(st,cs,price){const n=cs.length,smn=new Float64Array(n+1).fill(Infinity),smx=new Float64Array(n+1).fill(-Infinity);
+  for(let k=n-1;k>=0;k--){smn[k]=Math.min(smn[k+1],cs[k].l);smx[k]=Math.max(smx[k+1],cs[k].h)}
+  const NB=32,lo=price*.92,st8=price*.16/NB,bins=new Float64Array(NB),side=new Int8Array(NB);let up=0,dn=0,ci=0;
+  for(let i=1;i<st.length;i++){const a=st[i],d=a.oiu-st[i-1].oiu;if(d<=0)continue;const p=a.mp;if(!p)continue;while(ci<n&&cs[ci].t<a.time)ci++;const mn=smn[ci],mx=smx[ci],ls=a.lsr/(1+a.lsr);
+    for(const [lev,w] of LEV){const lp=p*(1-1/lev+MMR),sp=p*(1+1/lev-MMR);
+      if(!(mn<=lp)&&lp>=lo&&lp<price){const v=d*ls*w;dn+=v;bins[Math.min(NB-1,Math.floor((lp-lo)/st8))]+=v}
+      if(!(mx>=sp)&&sp<=price*1.08&&sp>price){const v=d*(1-ls)*w;up+=v;bins[Math.min(NB-1,Math.floor((sp-lo)/st8))]+=v}}}
+  return{up,dn,bins,lo,st8,NB}}
+async function load(){const b=BASE;$('#stat').textContent='불러오는 중…';
+  const R=await resolve(b);if(!R){$('#stat').textContent=`Bybit 무기한 선물에 ${b}가 없어요.`;return}
+  if(!GM){GM={};try{for(const x of await j('https://api.gateio.ws/api/v4/futures/usdt/contracts'))GM[x.name]=+x.quanto_multiplier||1}catch(e){}}
+  const g=b+'_USDT',hasG=GM[g]!=null,t=R.t,p=+t.lastPrice,pg=p/R.sc;
+  const [oi,fr,st,cs]=await Promise.allSettled([j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${R.s}&intervalTime=1h&limit=169`),j(`https://api.bybit.com/v5/market/funding/history?category=linear&symbol=${R.s}&limit=60`),
+    hasG?j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=168`):Promise.reject(new Error('Gate 없음')),hasG?j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`):Promise.reject()]);
+  if(b!==BASE)return;
+  const d={c24:+t.price24hPcnt*100,fr:+t.fundingRate*100};
+  const O=oi.status==='fulfilled'?oi.value.result.list.map(a=>[+a.timestamp,+a.openInterest]).sort((x,y)=>x[0]-y[0]):[];
+  if(O.length>24){d.doi=(O.at(-1)[1]/O.at(-25)[1]-1)*100}
+  let S=[],lsr=null;if(st.status==='fulfilled'&&st.value.length>4){const m=GM[g];S=st.value.map(a=>({time:a.time,v:((a.long_taker_size||0)-(a.short_taker_size||0))*m*(+a.mark_price||0),oiu:+a.open_interest_usd||0,lsr:+a.lsr_account||1,mp:+a.mark_price||0}));
+    let c=0,c4=0;S.slice(-24).forEach((a,i,arr)=>{c+=a.v;if(i>=arr.length-4)c4+=a.v});d.cvd=c;d.cvd4=c4;lsr=S.at(-1).lsr}
+  let K=null;if(S.length&&cs.status==='fulfilled'&&cs.value.length){const C=cs.value.map(x=>({t:+x.t,h:+x.h,l:+x.l}));K=clusterBins(S.slice(-48),C,pg);d.up=K.up;d.dn=K.dn;
+    const Hh=Math.max(...C.map(x=>x.h)),Ll=Math.min(...C.map(x=>x.l));d.pos=Hh>Ll?(pg-Ll)/(Hh-Ll):null}
+  const P=OD.sigP(),sg=OD.sigCond(d,P);
+  const nf=+t.nextFundingTime,left=nf?Math.max(0,Math.round((nf-Date.now())/60e3)):null;
+  $('#kp').innerHTML=[['가격',fp(p),pc(d.c24)+' · 24시간'],['미결제약정',usd(+t.openInterestValue),'24시간 '+pc(d.doi,1)],['펀딩비',pc(d.fr,4),left!=null?`다음 정산 ${Math.floor(left/60)}시간 ${left%60}분 뒤`:''],
+    ['CVD 24시간',d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–',d.cvd4!=null?`4시간 <span class="${d.cvd4>=0?'up':'dn'}">${usd(d.cvd4)}</span>`:'Gate 데이터 없음'],
+    ['롱숏 계정 비율',lsr!=null?lsr.toFixed(2):'–','Gate · 1보다 크면 롱 계정이 많음'],['위·아래 청산 비',d.up!=null&&d.dn?(d.up/d.dn).toFixed(2)+'x':d.up?'위쪽만':'–','숏 청산(위) ÷ 롱 청산(아래)'],
+    ['48시간 위치',d.pos!=null?(d.pos*100).toFixed(0)+'%':'–','0% = 48시간 최저'],['급등 준비',`${sg.hits}/${sg.max}`,'충족 조건 수']].map(([a,b,c])=>`<div><small>${a}</small><b>${b}</b><i>${c}</i></div>`).join('');
+  const NM=['① 포지션 누적','② 펀딩 음수','③ 체결 매수 우위','④ 상단 숏 클러스터','⑤ 바닥권'];
+  $('#sig').innerHTML=NM.map((n,i)=>P.on[i]?`<span class="${sg.C[i]?'on':''}" title="${esc(OD.sigText(P)[i])}">${n}${sg.C[i]==null?' (데이터 없음)':''}</span>`:'').join('');
+  // mini charts
+  const ink=cv('--ink'),up=cv('--up'),dn=cv('--dn');
+  const co=mini('c-oi');if(!co._s)co._s=co.addLineSeries({color:ink,lineWidth:2,priceLineVisible:false});co._s.setData(O.map(([ts,v])=>({time:ts/1000,value:v})));co.timeScale().fitContent();
+  const cc=mini('c-cvd');if(!cc._s)cc._s=cc.addAreaSeries({lineColor:ink,topColor:'rgba(0,0,0,0)',bottomColor:'rgba(0,0,0,0)',lineWidth:2,priceLineVisible:false,priceFormat:{type:'custom',formatter:usd}});let acc=0;cc._s.setData(S.map(a=>({time:a.time,value:acc+=a.v})));cc.timeScale().fitContent();
+  const cf=mini('c-fr');if(!cf._s)cf._s=cf.addHistogramSeries({priceFormat:{type:'custom',formatter:v=>v.toFixed(4)+'%'},priceLineVisible:false});
+  const F=fr.status==='fulfilled'?fr.value.result.list.map(a=>({time:+a.fundingRateTimestamp/1000,value:+a.fundingRate*100})).sort((x,y)=>x.time-y.time):[];cf._s.setData(F.map(x=>({...x,color:x.value>=0?up:dn})));cf.timeScale().fitContent();
+  // liquidation ladder (top = higher price)
+  if(K){const mx=Math.max(...K.bins)||1,ci=Math.floor((pg-K.lo)/K.st8);let h='';for(let i=K.NB-1;i>=0;i--){const pr=(K.lo+(i+.5)*K.st8)*R.sc,above=i>ci;
+      if(i===ci)h+=`<div class="cur"><span>${fp(p)}</span><span>현재가</span><span></span></div>`;else h+=`<div class="${above?'u':'d'}"><span>${fp(pr)}</span><span><i style="width:${(K.bins[i]/mx*100).toFixed(1)}%"></i></span><span>${K.bins[i]?usd(K.bins[i]):''}</span></div>`}
+    $('#lq').innerHTML=h}else $('#lq').innerHTML='<div><span></span><span class="mu">Gate에 이 코인 선물이 없어서 추정할 수 없어요</span><span></span></div>';
+  const tm=new Date();$('#stat').textContent=`${String(tm.getHours()).padStart(2,'0')}:${String(tm.getMinutes()).padStart(2,'0')} 기준 · ${R.s} 무기한 선물`;
+}
+async function open(b){BASE=b.toUpperCase();localStorage.setItem('vw-last',BASE);if(location.hash.slice(1)!==BASE)history.replaceState(null,'','#'+encodeURIComponent(BASE));
+  $('#sym').innerHTML=OD.coinIcon(BASE,34)+esc(BASE);document.title=BASE+' 한눈에 · 온체인 데스크';$('#lw').href='./watch.html#'+encodeURIComponent(BASE);$('#lc').href='./coin.html#'+encodeURIComponent(BASE);
+  if(CH)CH.destroy();CH=null;$('#chart').innerHTML='';OD.mountChart($('#chart'),BASE,{links:false}).then(c=>{CH=c;load().catch(e=>$('#stat').textContent='불러오기 실패: '+e.message)}).catch(e=>$('#stat').textContent='차트 실패: '+e.message)}
+OD.picker($('#pick'),s=>open(s),{searchLabel:'보기'});
+window.addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1)).toUpperCase();if(h&&h!==BASE)open(h)});
+setInterval(()=>{if(!document.hidden&&window.LightweightCharts)load().catch(()=>{})},60e3);
+open(BASE);
+}
+</script>
+</body>
+</html>

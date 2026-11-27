@@ -58,7 +58,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 @media(max-width:700px){table{font-size:13px}.hide-sm{display:none}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=15">
+<link rel="stylesheet" href="./theme.css?v=16">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -94,6 +94,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 </header>
 
 <section class="band" style="padding-top:0">
+  <p class="sub" id="rgw" hidden style="border:1px solid var(--line);padding:8px 12px;margin-bottom:10px"></p>
   <div class="ctl">
     <span><span class="lab">대상</span><span class="seg" id="topn"></span></span>
     <span><span class="lab">종류</span><span class="seg" id="kind"></span></span>
@@ -118,7 +119,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   </details>
 </section>
 
-<script src="./common.js?v=15"></script>
+<script src="./common.js?v=16"></script>
 <script>if(location.hash.length>1)location.replace("./coin.html"+location.hash);</script>
 <script>
 {
@@ -201,6 +202,8 @@ function render(){
 const SP=OD.sigP(),SMAX=OD.sigP().on.filter(Boolean).length;
 {const T=OD.sigText(SP);document.querySelectorAll('[data-ci]').forEach(el=>{const i=+el.dataset.ci;el.querySelector('span').textContent=SP.on[i]?T[i]:'꺼둠 (신호 검증에서 켤 수 있어요)';if(!SP.on[i])el.style.opacity=.5})}
 if(JSON.stringify(SP)!==JSON.stringify(OD.SIG_DEF))document.querySelector('.cdet summary').textContent+=' · 내 기준 적용 중';
+const rgw=()=>{const m=window.OD_MOOD;if(!m||!m.tr)return;const el=$('#rgw');el.hidden=m.tr==='up';el.innerHTML=m.tr==='dn'?'<b>BTC가 하락 추세예요.</b> 이럴 때 신호 결과가 어땠는지는 <a href="./bt.html">신호 검증</a>의 \'BTC 추세별\' 표에서 확인하세요.':'BTC 방향이 뚜렷하지 않아요. <a href="./bt.html">신호 검증</a>의 \'BTC 추세별\' 표를 같이 보세요.'};
+window.addEventListener('od-mood',rgw);rgw();
 $('#go').addEventListener('click',run);
 setInterval(()=>{if(!document.hidden)run()},300e3);
 $('#newal').checked=store.get('su-newal')!=='0';$('#newal').addEventListener('change',()=>store.set('su-newal',$('#newal').checked?'1':'0'));

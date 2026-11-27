@@ -85,7 +85,7 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
 .warn{border:1px solid var(--line);padding:10px 14px;font-size:14px;margin:10px 0}
 .ev td{font-size:13px}
 </style>
-<link rel="stylesheet" href="./theme.css?v=15">
+<link rel="stylesheet" href="./theme.css?v=16">
 </head>
 <body>
 <nav class="top"><div class="band"></div></nav>
@@ -128,6 +128,10 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
   <p class="d">신호 시점의 Bybit 미결제약정 24시간 변화로 나눴어요.</p>
   <div class="tbl"><table><thead><tr><th class="l">미결제약정 변화</th><th>신호 수</th><th>승률</th><th>평균 수익</th><th>중앙값</th><th>+10% 먼저</th><th>평균 최대 하락</th></tr></thead><tbody id="t-oi"></tbody></table></div>
 
+  <h2 class="s">BTC 추세별</h2>
+  <p class="d">신호가 뜬 시점의 BTC 추세로 나눴어요. 위쪽 '시장 분위기 줄'과 같은 기준(4시간 봉 20EMA 위아래와 기울기)이에요.</p>
+  <div class="tbl"><table><thead><tr><th class="l">BTC 추세</th><th>신호 수</th><th>승률</th><th>평균 수익</th><th>중앙값</th><th>+10% 먼저</th><th>평균 최대 하락</th></tr></thead><tbody id="t-rg"></tbody></table></div>
+
   <h2 class="s">무효화 청산 효과</h2>
   <p class="d">신호 뒤 조건이 깨지면 바로 판다고 했을 때와, 보유 기간 끝까지 들고 갔을 때를 비교해요. 청산은 그 시간 봉의 종가 기준이에요. 조건은 시간마다 자주 바뀌어서, 무효화 규칙을 쓰면 대부분 하루 안에 청산돼요. 짧게 들고 나온 결과와 비교하는 셈이라는 점을 같이 봐 주세요.</p>
   <div class="tbl"><table><thead><tr><th class="l">청산 규칙</th><th>신호 수</th><th>승률</th><th>평균 수익</th><th>중앙값</th><th title="보유 기간 끝까지 가기 전에 청산된 비율">중간 청산</th><th>평균 보유</th></tr></thead><tbody id="t-inv"></tbody></table></div>
@@ -147,7 +151,7 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
     <li>데이터: Bybit(가격·미결제약정·펀딩비), Gate.io(체결 CVD·롱숏 비율·미결제약정 달러값·캔들).</li>
   </ul></details>
 </section>
-<script src="./common.js?v=15"></script>
+<script src="./common.js?v=16"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -225,6 +229,11 @@ function exitRule(c,i,h,rule){const S=c.S,a=i+DLY;if(a+h>=S.length)return null;c
     if(rule==='cvd')x=r.cvd4!=null&&r.cvd4<0;else if(rule==='oi')x=r.doi!=null&&r.doi<0;else if(rule==='hits')x=r.hits<Math.max(1,KMIN-1);else if(rule==='stop')x=(r.lo/e-1)*100<=-5;
     if(x){const px=rule==='stop'?e*.95:r.price;return{ret:(px/e-1)*100-cost(c,S[a].T,r.T),held:q-a,early:q<a+h}}}
   return{ret:(S[a+h].price/e-1)*100-cost(c,S[a].T,S[a+h].T),held:h,early:false}}
+/* BTC 추세: 1시간 종가를 4시간 봉으로 묶어 20EMA, 6봉 전 대비 기울기 */
+function regime(){const b=RES.top.find(c=>c.sym==='BTCUSDT');RES.rg=new Map();if(!b)return;const S=b.S,c4=[],t4=[];
+  for(const r of S){if(r.T%(4*H)===0){c4.push(r.price);t4.push(r.T)}}const k=2/21;let e=c4[0];const E=c4.map(v=>e=v*k+e*(1-k));
+  for(let i=6;i<c4.length;i++){const up=E[i]>E[i-6];RES.rg.set(t4[i],c4[i]>E[i]&&up?'up':c4[i]<E[i]&&!up?'dn':'side')}}
+const rgAt=T=>RES.rg.get(Math.floor(T/(4*H))*4*H);
 function applyP(){if(!RES)return;for(const c of RES.top)for(const r of c.S){if(r.c24==null){r.C=[null,null,null,null,null];r.hits=0;continue}const g=OD.sigCond(r,P);r.C=g.C;r.hits=g.hits}}
 
 let RES=null;
@@ -237,7 +246,7 @@ async function run(){const b=$('#go');b.disabled=true;$('#pg').style.width='2%';
     await pool(top,4,async c=>{const g=c.base+'_USDT',has=!!gm[g];
       const d=await cached(`https://bt.local/${c.sym}/${tag}`,async()=>{const [k,oi,fr,st,cs]=await Promise.all([bybitKlines(c.sym,from,to),bybitOI(c.sym,from,to),bybitFunding(c.sym,from-3*24*H,to),has?gateStats(g,from,to):[],has?gateCandles(g,from,to):[]]);return{k,oi,fr,st,cs}});
       Object.assign(c,d);c.S=series(c,gm[g]||1)},(n,m)=>{$('#pg').style.width=(2+n/m*90)+'%';$('#stat').textContent=`과거 데이터 받는 중… ${n}/${m}개 코인`});
-    RES={top:top.filter(c=>c.S),fail:top.filter(c=>!c.S).map(c=>c.base),from,to};$('#pg').style.width='100%';applyP();render();$('#out').hidden=false;
+    RES={top:top.filter(c=>c.S),fail:top.filter(c=>!c.S).map(c=>c.base),from,to};$('#pg').style.width='100%';regime();applyP();render();$('#out').hidden=false;
     $('#stat').textContent=`${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} 계산 · ${RES.top.length}개 코인 · 최근 ${DAYS}일`+(RES.fail.length?` · 데이터 부족으로 뺀 코인: ${RES.fail.join(', ')}`:'');
   }catch(e){$('#stat').textContent='검증 실패: '+e.message}finally{b.disabled=false}}
 $('#go').onclick=run;
@@ -269,6 +278,7 @@ function render(){if(!RES)return;const h=HZ,start=RES.from+2*24*H;
   // OI 변화별
   const OB=[['감소 (0% 미만)',x=>x<0],['0 ~ +8%',x=>x>=0&&x<8],['+8 ~ +20%',x=>x>=8&&x<20],['+20% 이상',x=>x>=20]];
   $('#t-oi').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+OB.map(([l,f])=>row(l,agg(K.filter(e=>e.r.doi!=null&&f(e.r.doi)).map(e=>e.o)),base)).join('');
+  $('#t-rg').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+[['up','상승 추세'],['side','방향 없음'],['dn','하락 추세']].map(([k,l])=>row(l,agg(K.filter(e=>rgAt(e.r.T)===k).map(e=>e.o)),base)).join('');
   // 무효화
   const RU=[['hold','보유 기간 끝까지'],['cvd','4시간 CVD가 마이너스로 바뀌면 청산'],['oi','미결제약정 24h가 감소로 바뀌면 청산'],['hits',`충족 개수가 ${Math.max(1,KMIN-1)}개 밑으로 떨어지면 청산`],['stop','-5% 손절']];
   $('#t-inv').innerHTML=RU.map(([k,l])=>{const a=agg(K.map(e=>k==='hold'?(e.o?{ret:e.o.ret,held:h,early:false}:null):exitRule(e.c,e.i,h,k)));return row(l,a,base,'',x=>x.early!=null?x.early.toFixed(0)+'%':'–')}).join('');

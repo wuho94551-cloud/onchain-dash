@@ -130,7 +130,7 @@ function openSync(){shellStyle();document.querySelector('.od-sync')?.remove();co
   function confirmApply(n){const b=q('[data-apply]');if(b.dataset.sure)return true;b.dataset.sure=1;b.textContent=`덮어쓰기 확인 (${n}항목) · 한 번 더 누르세요`;q('[data-msg]').textContent='이 기기의 관심 코인·지갑·설정이 붙여넣은 내용으로 바뀌어요.';return false}}
 /* ---- 공통 메뉴: 4묶음 + 지금 묶음의 페이지 줄. 모든 페이지가 같은 메뉴를 쓰도록 여기서 그림 ---- */
 const NAV=[['시장',[['./','급등 준비'],['./scan.html','스캐너'],['./kimp.html','김프'],['./bt.html','신호 검증']]],
-  ['코인',[['./fav.html','★ 관심'],['./coin.html','코인 분석'],['./watch.html','호가 감시'],['./cvd.html','CVD']]],
+  ['코인',[['./fav.html','★ 관심'],['./view.html','한눈에'],['./coin.html','코인 분석'],['./watch.html','호가 감시'],['./cvd.html','CVD']]],
   ['청산',[['./liq.html','실시간 청산'],['./liqmap.html','청산 압력']]],
   ['온체인',[['./unlock.html','언락'],['./wallet.html','지갑']]]];
 function buildNav(){const nav=document.querySelector('nav.top');if(!nav||nav.dataset.built)return;nav.dataset.built=1;
@@ -139,7 +139,39 @@ function buildNav(){const nav=document.querySelector('nav.top');if(!nav||nav.dat
   nav.innerHTML=`<div class="band"><a class="brand" href="./" aria-label="홈으로"><em>Onchain</em>Desk</a>`+
     NAV.map((g,i)=>`<a class="g" href="${g[1][0][0]}"${i===gi?' aria-current="true"':''}>${g[0]}</a>`).join('')+
     `<a class="g od-ph" href="./alert.html"${here==='./alert.html'?' aria-current="page"':''} title="사이트를 꺼도 텔레그램으로 알림">📱 폰 알림</a><span class="od-tools" id="od-tools"></span></div>`+
-    (gi>=0?`<div class="od-sub">${NAV[gi][1].map(p=>`<a href="${p[0]}"${p[0]===here?' aria-current="page"':''}>${p[1]}</a>`).join('')}</div>`:'')}
+    (gi>=0?`<div class="od-sub">${NAV[gi][1].map(p=>`<a href="${p[0]}"${p[0]===here?' aria-current="page"':''}>${p[1]}</a>`).join('')}</div>`:'')+
+    `<div class="od-mood" id="od-mood" aria-live="polite"></div>`;
+  const bb=document.createElement('div');bb.className='od-bb';
+  bb.innerHTML=NAV.map((g,i)=>`<a href="${g[1][0][0]}"${i===gi?' aria-current="true"':''}>${g[0]}</a>`).join('')+'<a href="#" data-srch>검색</a>';
+  document.body.appendChild(bb);bb.querySelector('[data-srch]').onclick=e=>{e.preventDefault();openSearch()};
+  mood()}
+/* ---- 어디서나 코인 찾기: / 키 또는 폰 하단 '검색' → 한눈에 페이지 ---- */
+let SRB=null;
+function openSearch(){if(!SRB){const w=document.createElement('div');w.className='od-srch';w.innerHTML='<button type="button" aria-label="코인 검색"></button>';document.body.appendChild(w);SRB=w.querySelector('button');
+    picker(SRB,b=>{location.href='./view.html#'+encodeURIComponent(b)},{searchLabel:'보기'})}
+  SRB.click();setTimeout(()=>{const i=SRB.parentElement.querySelector('.odp input');i&&i.focus()},30)}
+document.addEventListener('keydown',e=>{if(e.key!=='/'||e.ctrlKey||e.metaKey||e.altKey)return;const t=e.target;if(t.closest&&t.closest('input,textarea,select,[contenteditable]'))return;e.preventDefault();openSearch()});
+/* ---- 시장 분위기 한 줄: BTC 추세, 상위 30 펀딩 평균, BTC 미결제약정, 김프 (2분 캐시) ---- */
+function ema(a,n){const k=2/(n+1);let e=a[0];const o=[e];for(let i=1;i<a.length;i++){e=a[i]*k+e*(1-k);o.push(e)}return o}
+async function moodData(){try{const c=JSON.parse(sessionStorage.getItem('od-mood')||'null');if(c&&Date.now()-c.t<120e3)return c}catch(e){}
+  const [tk,kl,oi,up,fx]=await Promise.allSettled([j('https://api.bybit.com/v5/market/tickers?category=linear'),j('https://api.bybit.com/v5/market/kline?category=linear&symbol=BTCUSDT&interval=240&limit=60'),
+    j('https://api.bybit.com/v5/market/open-interest?category=linear&symbol=BTCUSDT&intervalTime=1h&limit=25'),j('https://api.upbit.com/v1/ticker?markets=KRW-BTC'),
+    (async()=>{try{const c=JSON.parse(localStorage.getItem('od-fx')||'null');if(c&&Date.now()-c.t<3600e3)return c.v}catch(e){}const r=await j('https://open.er-api.com/v6/latest/USD');const v=r.rates.KRW;localStorage.setItem('od-fx',JSON.stringify({t:Date.now(),v}));return v})()]);
+  const m={t:Date.now()};
+  if(tk.status==='fulfilled'){const L=tk.value.result.list.filter(x=>x.symbol.endsWith('USDT'));const b=L.find(x=>x.symbol==='BTCUSDT');if(b){m.p=+b.lastPrice;m.c=+b.price24hPcnt*100}
+    const top=L.sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,30);m.fr=top.reduce((a,x)=>a+ +x.fundingRate*100,0)/top.length;m.neg=top.filter(x=>+x.fundingRate<0).length}
+  if(kl.status==='fulfilled'){const c=kl.value.result.list.map(a=>+a[4]).reverse(),e=ema(c,20),n=c.length-1;const r=e[n]>e[n-6];m.tr=c[n]>e[n]&&r?'up':c[n]<e[n]&&!r?'dn':'side'}
+  if(oi.status==='fulfilled'){const l=oi.value.result.list;if(l.length>1)m.oi=(+l[0].openInterest/+l.at(-1).openInterest-1)*100}
+  if(up.status==='fulfilled'&&fx.status==='fulfilled'&&m.p){m.kp=(up.value[0].trade_price/(m.p*fx.value)-1)*100}
+  try{sessionStorage.setItem('od-mood',JSON.stringify(m))}catch(e){}return m}
+async function mood(){const el=document.getElementById('od-mood');if(!el)return;try{const m=await moodData();
+  const sg=v=>v==null||!isFinite(v)?'–':(v>0?'+':'')+v.toFixed(2)+'%';const cl=v=>v>0?'u':v<0?'d':'';
+  const TR={up:['상승 추세','u'],dn:['하락 추세','d'],side:['방향 없음','']}[m.tr]||['–',''];
+  el.innerHTML=`<span title="4시간 봉 20EMA 위/아래 + 기울기"><i>BTC</i><b class="${TR[1]}">${TR[0]}</b></span><span><i>BTC</i>${m.p?m.p.toLocaleString('en-US',{maximumFractionDigits:0}):'–'} <b class="${cl(m.c)}">${sg(m.c)}</b></span>`+
+    `<span title="거래대금 상위 30개 무기한 선물 펀딩비 평균"><i>펀딩 평균</i><b class="${m.fr>0.01?'d':m.fr<0?'u':''}">${m.fr!=null?(m.fr>0?'+':'')+m.fr.toFixed(4)+'%':'–'}</b>${m.neg!=null?` · 음수 ${m.neg}/30`:''}</span>`+
+    `<span><i>BTC 미결제약정 24h</i><b>${sg(m.oi)}</b></span><span><i>김프</i><b>${sg(m.kp)}</b></span>`;
+  window.OD_MOOD=m;window.dispatchEvent(new Event('od-mood'))}catch(e){el.textContent=''}}
+setInterval(()=>{if(!document.hidden){sessionStorage.removeItem('od-mood');mood()}},120e3);
 buildNav();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',shell);else setTimeout(shell);
 
