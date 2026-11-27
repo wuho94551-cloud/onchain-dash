@@ -167,7 +167,7 @@ tr.mu td{color:var(--mute)}
     <div id="holders"><div class="empty">코인을 먼저 조회하세요.</div></div>
     <p class="src">Ethplorer (이더리움 메인넷 토큰). 주소를 누르면 Arkham에서 누구 지갑인지 확인할 수 있어요.</p>
     <div class="phead" style="margin-top:18px"><h2>상위 지갑 분산 흔적</h2><button type="button" id="sp-go" class="ghost">점검하기</button></div>
-    <p class="src" style="margin-top:0">상위 20개 지갑의 최근 토큰 이동을 받아, 최근 7일·30일에 얼마나 내보냈는지, 몇 개 주소로 쪼갰는지, 거래소 지갑으로 보냈는지 봐요. 상위 지갑끼리 옮긴 건 내부 이동으로 빼요. 이더리움·Base·Arbitrum·Optimism·Polygon 토큰이 돼요. 30초쯤 걸려요.</p>
+    <p class="src" style="margin-top:0">상위 20개 지갑의 최근 토큰 이동을 받아, 최근 7일·30일에 얼마나 내보냈는지, 몇 개 주소로 쪼갰는지, 거래소 지갑으로 보냈는지 봐요. 상위 지갑끼리 옮긴 건 내부 이동으로 빼요. 이더리움·Base·Arbitrum·Optimism·Polygon 토큰이 돼요. 1분 가까이 걸려요.</p>
     <div id="spread"></div>
   </div>
 </section>
@@ -396,10 +396,14 @@ async function loadSpread(){const box=$('#spread');const pf=C.platforms||{};cons
   try{if(!HOLD||HOLD.tok!==tok){box.innerHTML='<div class="empty">보유자 불러오는 중…</div>';const d=await bj(`${API}/tokens/${tok}/holders`);HOLD={tok,hs:(d.items||[]).slice(0,20)}}
     const hs=HOLD.hs;if(!hs.length)throw new Error('보유자 없음');const dec=+(hs[0].token?.decimals??18),sup=Number(hs[0].token?.total_supply||0)/10**dec;
     const top=new Set(hs.map(h=>h.address.hash.toLowerCase())),R=[];
-    /* 토큰 이동은 빠른 Etherscan 호환 API(tokentx)로 받고, 받는 주소 라벨은 많이 받은 주소만 따로 조회 */
+    /* 토큰 이동: 이더리움은 Ethplorer(빠름), 다른 체인은 Blockscout. 받는 주소 라벨은 많이 받은 주소만 Blockscout에서 따로 조회 */
+    const ekey=store.get('k-ethp')||'freekey';let EQ=0;const epace=async()=>{const t=Math.max(Date.now(),EQ);EQ=t+(ekey==='freekey'?1200:300);const w=t-Date.now();if(w>0)await new Promise(r=>setTimeout(r,w))};
+    const getOps=async a=>{if(ch[1]==='eth'){for(let n=0;n<4;n++){await epace();try{const d=await j(`https://api.ethplorer.io/getAddressHistory/${a}?apiKey=${encodeURIComponent(ekey)}&token=${tok}&type=transfer&limit=100`);return(d.operations||[]).map(o=>({from:o.from,to:o.to,value:o.value,timeStamp:o.timestamp}))}catch(e){if(n===3)throw new Error(/Failed to fetch|429/.test(e.message)?'요청 제한':e.message);await new Promise(r=>setTimeout(r,4000*(n+1)))}}}
+      const out=[];let q='';for(let pg=0;pg<3;pg++){const d=await bj(`${API}/addresses/${a}/token-transfers?type=ERC-20${q}`);for(const o of d.items||[]){const ta=String(o.token?.address_hash||o.token?.address||'').toLowerCase();if(ta===tok)out.push({from:o.from.hash,to:o.to.hash,value:o.total?.value||0,timeStamp:Date.parse(o.timestamp)/1000})}
+        const last=d.items?.at(-1);if(!d.next_page_params||(last&&now-Date.parse(last.timestamp)/1000>30*86400))break;q='&'+new URLSearchParams(d.next_page_params).toString()}return out};
     const OPS=new Array(hs.length);let done=0,qi=0;
-    await Promise.all([0,1].map(async()=>{while(qi<hs.length){const i=qi++,a=hs[i].address.hash.toLowerCase();
-      try{const d=await bj(`https://${ch[1]}.blockscout.com/api?module=account&action=tokentx&address=${a}&contractaddress=${tok}&page=1&offset=200&sort=desc`);OPS[i]=Array.isArray(d.result)?d.result:[]}catch(e){OPS[i]={err:e.message}}
+    await Promise.all([0,1,2].map(async()=>{while(qi<hs.length){const i=qi++,a=hs[i].address.hash.toLowerCase();
+      try{OPS[i]=await getOps(a)}catch(e){OPS[i]={err:e.message}}
       done++;box.innerHTML=`<div class="empty">지갑 이동 받는 중… ${done}/${hs.length}</div>`}}));
     const recv=new Map();hs.forEach((h,i)=>{const a=h.address.hash.toLowerCase();if(!Array.isArray(OPS[i]))return;for(const o of OPS[i]){if(now-+o.timeStamp>7*86400)continue;const t=String(o.to).toLowerCase();if(String(o.from).toLowerCase()===a&&!top.has(t))recv.set(t,(recv.get(t)||0)+Number(o.value)/10**dec)}});
     const LAB=new Map(hs.map(h=>[h.address.hash.toLowerCase(),bsLabel(h.address)]));const cand=[...recv.entries()].sort((x,y)=>y[1]-x[1]).slice(0,15).map(x=>x[0]);let li=0,ld=0;
@@ -413,7 +417,7 @@ async function loadSpread(){const box=$('#spread');const pf=C.platforms||{};cons
           if(f===a){if(top.has(t)){intl+=v;continue}out+=v;to.set(t,(to.get(t)||0)+v);if(isEx(t))cex+=v}else if(t===a){if(top.has(f)){intl+=v;continue}inn+=v}}
         const amts=[...to.values()].sort((x,y)=>y-x),big=amts.filter(v=>v>=out*.05);
         w[k]={out,inn,net:inn-out,n:to.size,cex,split:big.length>=5||(big.length>=3&&big.at(-1)>=big[0]*.5),pct:(bal+out-inn)>0?out/(bal+out-inn)*100:0,intl}}
-      R.push({a,h,lb,bal,w,full:ops.length>=200,last:ops[0]?+ops[0].timeStamp:null})}
+      R.push({a,h,lb,bal,w,full:ops.length>=(ch[1]==="eth"?100:150),last:ops[0]?+ops[0].timeStamp:null})}
     const px=C.price||0,ok=R.filter(r=>!r.err&&!r.lb.ex),hot=ok.filter(r=>r.w.d7.pct>=5||(r.w.d7.split&&r.w.d7.pct>=1)||r.w.d7.cex>0);
     const sum=(f)=>ok.reduce((s,r)=>s+f(r),0),out7=sum(r=>r.w.d7.out),in7=sum(r=>r.w.d7.inn),out30=sum(r=>r.w.d30.out),in30=sum(r=>r.w.d30.inn),cex7=sum(r=>r.w.d7.cex);
     const lvl=cex7*px>1e6||hot.length>=3||(out7-in7)*px>5e6?'강함':hot.length?'약간':'뚜렷하지 않음';
@@ -423,8 +427,8 @@ async function loadSpread(){const box=$('#spread');const pf=C.platforms||{};cons
       R.map((r,i)=>{const lab=r.lb.nm?` <small>${esc(r.lb.nm)}</small>`:'';const ad=`<a class="addr" href="https://${ch[1]}.blockscout.com/address/${r.a}" target="_blank" rel="noopener">${r.a.slice(0,8)}…${r.a.slice(-6)}</a>${lab}`;
         if(r.err)return`<tr><td class="l">${i+1}</td><td class="l">${ad}</td><td colspan="7" class="l">불러오지 못함: ${esc(r.err)}</td></tr>`;const d=r.w.d7,m=r.w.d30;
         const tag=r.lb.ex?'거래소 지갑 (판정 제외)':d.cex>0?'<b>거래소로 보냄</b>':d.split&&d.pct>=1?'<b>쪼개서 내보냄</b>':d.pct>=5?'<b>많이 내보냄</b>':d.net>0&&d.inn>=r.bal*.05?'모으는 중':m.split&&m.pct>=1?'30일 안 쪼갠 흔적':'조용함';
-        return`<tr${r.lb.ex?' class="mu"':''}><td class="l">${i+1}</td><td class="l">${ad}</td><td>${num(r.bal)} <small>${sup?(r.bal/sup*100).toFixed(2)+'%':''}</small></td><td>${cell(d)}</td><td>${d.cex?num(d.cex):'–'}</td><td>${d.inn?num(d.inn):'–'}</td><td>${d.n||'–'}</td><td>${cell(m)}</td><td class="l">${tag}${r.full&&r.last&&now-r.last<7*86400?' <small title="최근 200건이 모두 7일 안이라 더 있을 수 있어요">200건+</small>':''}</td></tr>`}).join('')}</tbody></table></div>
-    <p class="src">출처: Blockscout(${esc(ch[1])}.blockscout.com) 보유자·토큰 이동·주소 라벨(Open Labels Initiative 등). 라벨은 알려진 주소만 붙어 있고, 7일 동안 많이 받은 주소 15곳만 확인해요. 거래소 입금 주소처럼 라벨 없는 주소로 간 건 '거래소로'에 안 잡혀요. '쪼개서 내보냄'은 7일 안에 내보낸 양의 5% 이상을 받은 주소가 5개 이상이거나, 비슷한 크기로 3개 이상에 나눠 보낸 경우예요. 거래소 지갑 자체는 평소에도 이동이 많아 판정에서 뺐어요.</p>`;
+        return`<tr${r.lb.ex?' class="mu"':''}><td class="l">${i+1}</td><td class="l">${ad}</td><td>${num(r.bal)} <small>${sup?(r.bal/sup*100).toFixed(2)+'%':''}</small></td><td>${cell(d)}</td><td>${d.cex?num(d.cex):'–'}</td><td>${d.inn?num(d.inn):'–'}</td><td>${d.n||'–'}</td><td>${cell(m)}</td><td class="l">${tag}${r.full&&r.last&&now-r.last<7*86400?' <small title="최근 받은 이동이 모두 7일 안이라 더 있을 수 있어요">더 있음</small>':''}</td></tr>`}).join('')}</tbody></table></div>
+    <p class="src">출처: Blockscout(${esc(ch[1])}.blockscout.com) 보유자·주소 라벨(Open Labels Initiative 등)${ch[1]==='eth'?', 토큰 이동은 Ethplorer':'·토큰 이동'}. 라벨은 알려진 주소만 붙어 있고, 7일 동안 많이 받은 주소 15곳만 확인해요. 거래소 입금 주소처럼 라벨 없는 주소로 간 건 '거래소로'에 안 잡혀요. '쪼개서 내보냄'은 7일 안에 내보낸 양의 5% 이상을 받은 주소가 5개 이상이거나, 비슷한 크기로 3개 이상에 나눠 보낸 경우예요. 거래소 지갑 자체는 평소에도 이동이 많아 판정에서 뺐어요.</p>`;
   }catch(er){box.innerHTML='<div class="empty">점검 실패: '+esc(er.message)+'</div>'}finally{$('#sp-go').disabled=false}}
 $('#sp-go').onclick=loadSpread;
 
