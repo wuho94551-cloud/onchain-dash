@@ -83,10 +83,10 @@ const usd=v=>{const a=Math.abs(v),s=v<0?'−':'';return a>=1e9?s+'$'+(a/1e9).toF
 const fp=n=>n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:2}):n>=1?(+n.toFixed(4)).toString():n.toPrecision(4);
 const LEV=[[10,.25],[20,.25],[25,.2],[50,.2],[100,.1]],MMR=.005;
 let BASE=(decodeURIComponent(location.hash.slice(1))||localStorage.getItem('vw-last')||'BTC').toUpperCase(),CH=null,MC={},timer=0,GM=null;
-function mini(id){if(MC[id])return MC[id];const el=document.getElementById(id),cs=getComputedStyle(document.documentElement),m=cs.getPropertyValue('--mute').trim(),l=cs.getPropertyValue('--line').trim();
+function mini(id){if(MC[id])return MC[id];const el=document.getElementById(id),m=cv('--mute'),l=cv('--line');
   const c=LightweightCharts.createChart(el,{autoSize:true,layout:{background:{type:'solid',color:'transparent'},textColor:m,fontFamily:'JetBrains Mono, monospace',fontSize:10},grid:{vertLines:{visible:false},horzLines:{color:l}},rightPriceScale:{borderColor:l},timeScale:{borderColor:l,timeVisible:true},localization:{locale:'ko-KR'},handleScroll:false,handleScale:false});
   return MC[id]=c}
-const cv=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const cv=k=>{const e=document.createElement('span');e.style.color=`var(${k})`;document.body.appendChild(e);const c=getComputedStyle(e).color;e.remove();return c};
 async function resolve(b){for(const s of [b+'USDT','1000'+b+'USDT','10000'+b+'USDT','1000000'+b+'USDT']){const r=await j(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${s}`).catch(()=>null);if(r?.result?.list?.length)return{s,t:r.result.list[0],sc:+(s.match(/^(1000000|10000|1000)/)||[0,1])[1]}}return null}
 function clusterBins(st,cs,price){const n=cs.length,smn=new Float64Array(n+1).fill(Infinity),smx=new Float64Array(n+1).fill(-Infinity);
   for(let k=n-1;k>=0;k--){smn[k]=Math.min(smn[k+1],cs[k].l);smx[k]=Math.max(smx[k+1],cs[k].h)}
