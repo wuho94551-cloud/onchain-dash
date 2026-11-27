@@ -509,26 +509,25 @@ async function costBasis(sym,scale=1){const F='https://fapi.binance.com/futures/
   const [oi,tp,ga,tk]=await Promise.all(['openInterestHist','topLongShortPositionRatio','globalLongShortAccountRatio','takerlongshortRatio'].map(e=>bget(F+e+q)));
   if(!Array.isArray(oi)||oi.length<24)return null;
   const px=new Map(oi.map(a=>[+a.timestamp,{q:+a.sumOpenInterest,p:+a.sumOpenInterestValue/+a.sumOpenInterest}]));
-  /* 비율(롱 쪽 비중)이 '보유 물량'일 때: 롱·숏 각각의 물량 변화를 따라가며, 늘어난 만큼은 그 시간 가격으로 평단에 더하고 줄어든 만큼은 평단 그대로 덜어냄 */
-  const stock=R=>{if(!Array.isArray(R)||R.length<24)return null;const A={pos:0,c:0},B={pos:0,c:0};let pv=null;
+  /* 비율(롱 쪽 비중)이 '보유 물량'일 때: 롱·숏 물량 = 미결제약정 × 비중. 7일 동안 물량이 늘어난 시간마다 그 시간 가격으로 가중평균 (새로 들어온 물량의 평균가) */
+  const stock=R=>{if(!Array.isArray(R)||R.length<24)return null;const A=[0,0],B=[0,0];let pv=null,f0=null;
     for(const a of R.slice().sort((x,y)=>x.timestamp-y.timestamp)){const o=px.get(+a.timestamp);if(!o||!o.p)continue;const l=o.q*+a.longAccount,s=o.q*+a.shortAccount;
-      if(pv)for(const [st,now,was] of [[A,l,pv.l],[B,s,pv.s]]){const d=now-was;if(d>0){st.c=(st.c*st.pos+d*o.p)/(st.pos+d);st.pos+=d}else st.pos=Math.max(0,st.pos+d)}
-      pv={l,s,r:+a.longAccount}}
-    return pv?{L:A.pos>0?A.c/scale:null,S:B.pos>0?B.c/scale:null,Lsh:pv.l?A.pos/pv.l:0,Ssh:pv.s?B.pos/pv.s:0,lr:pv.r}:null};
+      if(pv){const dl=l-pv.l,ds=s-pv.s;if(dl>0){A[0]+=dl*o.p;A[1]+=dl}if(ds>0){B[0]+=ds*o.p;B[1]+=ds}}else f0={l,s};pv={l,s,r:+a.longAccount}}
+    return pv?{L:A[1]?A[0]/A[1]/scale:null,S:B[1]?B[0]/B[1]/scale:null,Lch:f0.l?(pv.l/f0.l-1)*100:null,Sch:f0.s?(pv.s/f0.s-1)*100:null,lr:pv.r}:null};
   /* 시장가 체결 비율은 '흐름'이라, 미결제약정이 늘어난 시간에만 매수 비중만큼 롱·나머지 숏으로 나눔 */
   const flow=R=>{if(!Array.isArray(R)||R.length<24)return null;const m=new Map(R.map(a=>[+a.timestamp,+a.buyVol/((+a.buyVol)+(+a.sellVol)||1)]));let L=0,Lw=0,S=0,Sw=0,pq=null;
     for(const [t,o] of [...px.entries()].sort((x,y)=>x[0]-y[0])){if(pq!=null){const d=o.q-pq,sh=m.get(t);if(d>0&&sh!=null){L+=d*sh*o.p;Lw+=d*sh;S+=d*(1-sh)*o.p;Sw+=d*(1-sh)}}pq=o.q}
     return{L:Lw?L/Lw/scale:null,S:Sw?S/Sw/scale:null,lr:Lw+Sw?Lw/(Lw+Sw):null}};
   const last=oi.at(-1);return{big:stock(tp),acct:stock(ga),all:flow(tk),oiUsd:+last.sumOpenInterestValue,from:+oi[0].timestamp,to:+last.timestamp}}
-/* 체결 크기별 평단: 7일을 win개 구간으로 나눠 구간 시작부터 체결 1000건씩 샘플 → 큰 체결(≥big$)·작은 체결(<small$)의 시장가 매수/매도 평균가 */
+/* 체결 크기별 평단: 현물은 7일, 선물은 최근 47시간(바이낸스 선물 체결 조회가 2일까지만 됨)을 win개 구간으로 나눠 구간 시작부터 체결 1000건씩 샘플 → 큰 체결(≥big$)·작은 체결(<small$)의 시장가 매수/매도 평균가 */
 async function sizeBasis(sym,spot,scale=1,win=28,big=5e4,small=1e3,prog){const H=3600e3,now=Date.now(),out={};let done=0;
-  for(const [k,base,sc] of [['fut',`https://fapi.binance.com/fapi/v1/aggTrades?symbol=${sym}`,scale],['spot',spot?`https://api.binance.com/api/v3/aggTrades?symbol=${spot}`:null,1]]){
+  for(const [k,base,sc,span] of [['fut',`https://fapi.binance.com/fapi/v1/aggTrades?symbol=${sym}`,scale,47],['spot',spot?`https://api.binance.com/api/v3/aggTrades?symbol=${spot}`:null,1,168]]){
     if(!base){out[k]=null;done+=win;continue}const acc={bB:[0,0,0],bS:[0,0,0],sB:[0,0,0],sS:[0,0,0],tot:0,n:0,ok:0};
-    const ts=Array.from({length:win},(_,i)=>now-(i+1)*(168/win)*H);let i=0,dead=false;
+    const ts=Array.from({length:win},(_,i)=>now-(i+1)*(span/win)*H);let i=0,dead=false;
     await Promise.all([0,1,2].map(async()=>{while(i<ts.length&&!dead){const t=Math.floor(ts[i++]);const d=await bget(`${base}&startTime=${t}&endTime=${t+H-1}&limit=1000`);done++;prog&&prog(done,win*2);
       if(d===null&&acc.ok===0&&i>=3){dead=true;break}if(!Array.isArray(d))continue;acc.ok++;
       for(const x of d){const p=+x.p/sc,v=+x.p*+x.q;if(!p||!v)continue;acc.tot+=v;acc.n++;const buy=!x.m,b=v>=big?(buy?acc.bB:acc.bS):v<small?(buy?acc.sB:acc.sS):null;if(b){b[0]+=v;b[1]+=v/p;b[2]++}}}}));
-    const f=a=>a[2]?{p:a[0]/a[1],v:a[0],n:a[2]}:null;out[k]=acc.ok?{bB:f(acc.bB),bS:f(acc.bS),sB:f(acc.sB),sS:f(acc.sS),tot:acc.tot,n:acc.n,ok:acc.ok,win}:null}
+    const f=a=>a[2]?{p:a[0]/a[1],v:a[0],n:a[2]}:null;out[k]=acc.ok?{bB:f(acc.bB),bS:f(acc.bS),sB:f(acc.sB),sS:f(acc.sS),tot:acc.tot,n:acc.n,ok:acc.ok,win,span}:null}
   return out}
 window.OD={costBasis,sizeBasis,btSeries,allMask,ALLN,PUMP,getLines,setLines,workerCfg,workerPut,sigP,sigSave,sigCond,sigText,SIG_DEF,coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
 })();

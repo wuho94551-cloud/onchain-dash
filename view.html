@@ -102,10 +102,10 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
     <p>누가 어디서 샀는지 나눠 봐요. 바이낸스 선물 공개 통계와 체결 샘플로 계산한 추정치라, 실제 개인별 평단은 아니에요. <button type="button" class="sm" id="cb-go">불러오기</button> <span id="cb-st" class="sub" style="margin:0"></span></p>
     <div style="overflow:auto"><table class="cbt"><thead><tr><th class="l">누구</th><th>롱 · 매수 평단</th><th>숏 · 매도 평단</th><th class="l">참고</th></tr></thead><tbody id="cb"></tbody></table></div>
     <details style="margin-top:8px"><summary class="sub" style="display:list-item">어떻게 계산하나요</summary><ul class="sub">
-      <li><b>큰손 선물</b>: 바이낸스 '상위 트레이더(증거금 상위 20% 계정)'의 롱·숏 보유 물량 비중 × 전체 미결제약정. 상위 트레이더가 미결제약정에서 차지하는 몫이 일정하다고 보고, 물량이 늘어난 시간의 가격으로 평단을 쌓고 줄면 덜어내요. '7일 안에 새로 연 물량'의 평단이고, 그 전부터 들고 있던 물량은 몰라요.</li>
+      <li><b>큰손 선물</b>: 바이낸스 '상위 트레이더(증거금 상위 20% 계정)'의 롱·숏 보유 물량 비중 × 전체 미결제약정. 상위 트레이더가 미결제약정에서 차지하는 몫이 일정하다고 보고, 7일 동안 물량이 늘어난 시간의 가격으로 가중평균해요. '7일 안에 새로 들어온 물량'의 평균가이고, 그 전부터 들고 있던 물량은 몰라요. 물량 변화가 플러스면 그쪽이 실제로 늘었다는 뜻이에요.</li>
       <li><b>다수 계정 선물</b>: 같은 방식인데 전체 계정 수 비율로 나눠요. 계정 수 기준이라 소액 계정이 많을수록 그쪽으로 기울어요. 개미 쪽 쏠림을 보는 용도예요.</li>
       <li><b>선물 전체 신규</b>: 미결제약정이 늘어난 시간마다 시장가 매수 비중만큼 롱, 나머지를 숏으로 봐요.</li>
-      <li><b>큰 체결 / 작은 체결</b>: 7일을 28구간으로 나눠 구간마다 체결 1000건을 받아서, 한 건이 5만 달러 이상인 시장가 매수·매도와 1000달러 미만인 것의 평균가를 따로 내요. 큰 주문이 여러 체결로 쪼개지면 작게 잡힐 수 있어요. 순매수는 샘플 안의 매수 금액에서 매도 금액을 뺀 값이에요.</li>
+      <li><b>큰 체결 / 작은 체결</b>: 현물은 7일, 선물은 최근 2일(바이낸스가 선물 체결은 2일까지만 조회돼요)을 28구간으로 나눠 구간마다 체결 1000건을 받아서, 한 건이 5만 달러 이상인 시장가 매수·매도와 1000달러 미만인 것의 평균가를 따로 내요. 큰 주문이 여러 체결로 쪼개지면 작게 잡힐 수 있어요. 순매수는 샘플 안의 매수 금액에서 매도 금액을 뺀 값이에요.</li>
       <li>현재가가 평단보다 위면 그쪽은 수익 중이에요. 큰손 롱이 수익 중이면 익절 물량, 손실 중이면 버티거나 손절 물량이 나올 자리로 볼 수 있어요.</li></ul></details>
   </div>
   <p class="sub" style="margin-top:14px">데이터: Bybit 선물(가격·미결제약정·펀딩비), Gate.io 선물(체결 CVD·롱숏 비율·청산 추정). 1분마다 새로 받아요. <a href="./watch.html" id="lw">호가 감시 →</a> <a href="./coin.html" id="lc">코인 분석 →</a></p>
@@ -206,11 +206,11 @@ async function loadCB(){const b=BASE;$('#cb-go').disabled=true;$('#cb').innerHTM
     if(b!==BASE)return;const rel=v=>v?`${fp(v)} <small class="${now>=v?'up':'dn'}">${now>=v?'+':''}${((now/v-1)*100).toFixed(1)}%</small>`:'–';
     const usd=v=>v>=1e9?(v/1e9).toFixed(2)+'B':v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v.toFixed(0);
     const rows=[];
-    if(cb){const st=(n,x,why)=>x&&rows.push([n,rel(x.L),rel(x.S),`롱 비중 ${(x.lr*100).toFixed(0)}% · 7일 새 물량이 지금 롱의 ${(x.Lsh*100).toFixed(0)}% / 숏의 ${(x.Ssh*100).toFixed(0)}% · ${why}`]);
+    if(cb){const st=(n,x,why)=>x&&rows.push([n,rel(x.L),rel(x.S),`롱 비중 ${(x.lr*100).toFixed(0)}% · 7일 물량 변화 롱 ${x.Lch>=0?'+':''}${x.Lch.toFixed(1)}% / 숏 ${x.Sch>=0?'+':''}${x.Sch.toFixed(1)}% · ${why}`]);
       st('큰손 선물',cb.big,'상위 트레이더 보유 물량 기준');st('다수 계정 선물',cb.acct,'계정 수 기준');
       if(cb.all)rows.push(['선물 전체 신규',rel(cb.all.L),rel(cb.all.S),`새로 열린 물량 중 롱 ${(cb.all.lr*100).toFixed(0)}% · 미결제약정 $${usd(cb.oiUsd)}`])}
     const sr=(n,x)=>{if(!x)return;const net=(x.bB?.v||0)-(x.bS?.v||0);rows.push([n+' 큰 체결 (≥$50K)',rel(x.bB?.p),rel(x.bS?.p),`매수 ${x.bB?.n||0}건 $${usd(x.bB?.v||0)} · 매도 ${x.bS?.n||0}건 $${usd(x.bS?.v||0)} · 순매수 <b class="${net>=0?'up':'dn'}">${net>=0?'+':'−'}$${usd(Math.abs(net))}</b> · 샘플 금액의 ${x.tot?(((x.bB?.v||0)+(x.bS?.v||0))/x.tot*100).toFixed(0):0}%`]);
-      rows.push([n+' 작은 체결 (<$1K)',rel(x.sB?.p),rel(x.sS?.p),`매수 ${x.sB?.n||0}건 · 매도 ${x.sS?.n||0}건 · ${x.ok}/${x.win}구간 · 체결 ${x.n.toLocaleString()}건`])};
+      rows.push([n+' 작은 체결 (<$1K)',rel(x.sB?.p),rel(x.sS?.p),`매수 ${x.sB?.n||0}건 · 매도 ${x.sS?.n||0}건 · 최근 ${x.span>=168?'7일':'2일'} ${x.ok}/${x.win}구간 · 체결 ${x.n.toLocaleString()}건`])};
     sr('선물',sz.fut);sr('현물',sz.spot);
     $('#cb').innerHTML=rows.map(r=>`<tr><td class="l"><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td class="l"><small>${r[3]}</small></td></tr>`).join('')||'<tr><td colspan="4" class="l mu">바이낸스에 이 코인 선물이 없어서 계산할 수 없어요.</td></tr>';
     $('#cb-st').textContent=`현재가 ${fp(now)} 기준 · 초록 = 지금 수익 중, 빨강 = 손실 중`+(sz.spot?'':' · 바이낸스 현물 없음')}
