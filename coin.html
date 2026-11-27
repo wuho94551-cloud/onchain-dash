@@ -399,7 +399,7 @@ async function loadSpread(){const box=$('#spread');if(!C.eth||C.eth==='native'){
     const out7=ok.reduce((s,r)=>s+r.w.d7.out,0),in7=ok.reduce((s,r)=>s+r.w.d7.inn,0),out30=ok.reduce((s,r)=>s+r.w.d30.out,0),in30=ok.reduce((s,r)=>s+r.w.d30.inn,0);
     const lvl=hot.length>=3||(out7-in7)*px>5e6?'강함':hot.length?'약간':'뚜렷하지 않음';
     const cell=x=>`${x.out?num(x.out):'–'}${x.out?` <small>${x.pct.toFixed(1)}%</small>`:''}`;
-    box.innerHTML=`<p style="margin:6px 0 10px;font-size:15px"><b>매도 압력 흔적: ${lvl}</b> · 최근 7일 상위 지갑 순유출 <b>${num(out7-in7)} ${esc(C.sym)}</b>${px?' ('+usd((out7-in7)*px)+')':''} · 30일 ${num(out30-in30)} · 많이 내보내거나 쪼갠 지갑 ${hot.length}/${ok.length}개</p>
+    box.innerHTML=`<p style="margin:6px 0 10px;font-size:15px"><b>매도 압력 흔적: ${lvl}</b> · 최근 7일 상위 지갑 ${out7>=in7?'순유출':'순유입'} <b>${num(Math.abs(out7-in7))} ${esc(C.sym)}</b>${px?' ('+usd(Math.abs(out7-in7)*px)+')':''} · 30일 ${out30>=in30?'순유출':'순유입'} ${num(Math.abs(out30-in30))} · 많이 내보내거나 쪼갠 지갑 ${hot.length}/${ok.length}개</p>
     <div class="scroll"><table><thead><tr><th class="l">#</th><th class="l">주소</th><th>지금 보유</th><th title="외부로 내보낸 양 · 7일 전 보유량 대비 %">7일 내보냄</th><th>7일 받은 양</th><th title="외부로 보낸 주소 수">받는 주소</th><th>30일 내보냄</th><th class="l">판정</th></tr></thead><tbody>${
       R.map((r,i)=>{if(r.err)return`<tr><td class="l">${i+1}</td><td class="l">${r.a.slice(0,8)}…</td><td colspan="6" class="l">불러오지 못함: ${esc(r.err)}</td></tr>`;const d=r.w.d7,m=r.w.d30;
         const tag=d.split&&d.pct>=1?'<b>쪼개서 내보냄</b>':d.pct>=5?'<b>많이 내보냄</b>':d.net>0&&d.inn>=r.bal*.05?'모으는 중':m.split&&m.pct>=1?'30일 안 쪼갠 흔적':'조용함';
