@@ -35,6 +35,9 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 .empty{padding:28px 10px;color:var(--mute);text-align:center}
 .prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.pbox{margin:6px 0 12px}.pf{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);margin-top:10px}
+.pc{display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 12px;font-size:14px}.pc.off{opacity:.5}
+.pc input[type=number],.pc select,#fee{font:inherit;font-family:var(--mono);font-size:14px;padding:2px 4px;border:1px solid var(--line);background:transparent;color:var(--ink)}
 .sub{color:var(--mute);font-size:14px;margin:4px 0 0}
 button{font:inherit;font-size:16px;min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap}
 button[disabled]{opacity:.5;cursor:wait}
@@ -96,6 +99,16 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
     <span><span class="lab">신호 기준</span><span class="seg" id="kmin"></span></span>
     <button type="button" id="go">검증 시작</button>
   </div>
+  <details class="pbox" open><summary>조건 기준 (바꾸면 바로 다시 계산해요)</summary>
+    <div class="pf" id="pf"></div>
+    <div class="ctl" style="margin-top:10px">
+      <span><span class="lab">수수료 (한쪽)</span><input type="number" id="fee" step="0.005" min="0" style="width:70px">%</span>
+      <label><input type="checkbox" id="fund"> 보유 중 펀딩비 반영</label>
+      <span><span class="lab">진입</span><span class="seg" id="dly"></span></span>
+      <button type="button" class="ghost" id="reset">기본값</button>
+      <button type="button" id="apply">이 기준을 급등 준비에 적용</button>
+    </div>
+  </details>
   <div class="prog"><i id="pg"></i></div>
   <p class="sub" id="stat">검증 시작을 누르면 과거 데이터를 받아 계산해요. 처음엔 1~2분 걸리고, 받은 데이터는 6시간 저장해요.</p>
 </header>
@@ -124,9 +137,9 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
   <div class="tbl" style="max-height:60vh"><table class="ev"><thead><tr><th class="l">시각</th><th class="l">코인</th><th>충족</th><th class="l">조건</th><th>미결제약정 24h</th><th>진입가</th><th>1일</th><th>3일</th><th>7일</th></tr></thead><tbody id="t-ev"></tbody></table></div>
 
   <details><summary>계산 방법과 한계</summary><ul>
-    <li>조건은 급등 준비 페이지와 같은 출처·같은 기준이에요. ① 가격 24시간 ±3% 안 + Bybit 미결제약정 24시간 +8% 이상, ② 펀딩비 0% 미만, ③ Gate 체결 기준 24시간·4시간 CVD 모두 플러스, ④ 위 +8% 안 숏 청산 추정 물량이 아래 롱 청산의 1.3배 이상(청산 압력 맵과 같은 모델), ⑤ 48시간 고저 범위 아래 40% 안. ⑥ 거래소 순유출은 과거 데이터를 무료로 못 받아서 빠져 있어요.</li>
+    <li>조건은 급등 준비 페이지와 같은 출처예요. 기본 기준은 아래와 같고, 위 '조건 기준'에서 바꿀 수 있어요. ① 가격 24시간 ±3% 안 + Bybit 미결제약정 24시간 +8% 이상, ② 펀딩비 0% 미만, ③ Gate 체결 기준 24시간·4시간 CVD 모두 플러스, ④ 위 +8% 안 숏 청산 추정 물량이 아래 롱 청산의 1.3배 이상(청산 압력 맵과 같은 모델), ⑤ 48시간 고저 범위 아래 40% 안. ⑥ 거래소 순유출은 과거 데이터를 무료로 못 받아서 빠져 있어요.</li>
     <li>매시 정각마다 점검해서, 충족 개수가 '신호 기준' 이상이 되면 신호로 기록해요. 같은 코인은 24시간 안에 다시 신호로 세지 않아요(같은 상승을 여러 번 세지 않으려고).</li>
-    <li>진입가는 신호 시점 Bybit 1시간 봉 종가, 수익은 보유 기간 뒤 종가 기준이에요. 수수료·슬리피지·펀딩비 지불은 빼지 않았어요.</li>
+    <li>진입가는 신호 시점(또는 1시간 뒤) Bybit 1시간 봉 종가, 수익은 보유 기간 뒤 종가 기준이에요. 수수료와 보유 중 펀딩비는 설정에 따라 빼고, 슬리피지는 빼지 않았어요. 기준선에도 같은 비용을 적용해요.</li>
     <li>Gate 체결 데이터는 시간 구간이 끝난 것만 써요(미래 데이터가 섞이지 않게). 실시간 페이지는 진행 중인 구간까지 보기 때문에, 신호가 최대 1시간 일찍 뜰 수 있어요.</li>
     <li>펀딩비는 실시간 예상값 대신 그 시점 직전에 정산된 값을 썼어요.</li>
     <li><b>생존 편향</b>: 대상은 '지금' 거래대금 상위 코인이에요. 그 사이 상장폐지됐거나 거래가 줄어든 코인은 빠져 있어서, 결과가 실제보다 좋게 나올 수 있어요.</li>
@@ -134,7 +147,7 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
     <li>데이터: Bybit(가격·미결제약정·펀딩비), Gate.io(체결 CVD·롱숏 비율·미결제약정 달러값·캔들).</li>
   </ul></details>
 </section>
-<script src="./common.js?v=14"></script>
+<script src="./common.js?v=15"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -143,12 +156,29 @@ const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),H=3600e3;
 async function j(u){for(let n=0;;n++){const r=await fetch(u);if((r.status===429||r.status>=500)&&n<4){await sleep(1500*(n+1));continue}if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}}
 async function pool(items,n,fn,prog){let i=0,d=0;await Promise.all(Array.from({length:n},async()=>{while(i<items.length){const x=items[i++];try{await fn(x)}catch(e){x.err=e.message}d++;prog&&prog(d,items.length)}}))}
+let P=OD.sigP(),FEE=store.get('bt-fee',0.055),FUND=store.get('bt-fund',1),DLY=store.get('bt-dly',0);const MAXH=()=>P.on.filter(Boolean).length;
+const costTxt=()=>FEE||FUND?`수수료 왕복 ${(2*FEE).toFixed(2)}%${FUND?'·보유 중 펀딩비':''}${DLY?'·1시간 늦은 진입':''}를 뺀 값이에요.`:'수수료는 빼지 않았어요.';
 let TOPN=store.get('bt-top',30),DAYS=store.get('bt-days',90),HZ=store.get('bt-hz',72),KMIN=store.get('bt-k',3);
 function seg(sel,opts,get,set){const el=$(sel),r=()=>{el.innerHTML=opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${v===get()}">${l}</button>`).join('')};r();el.onclick=e=>{const b=e.target.closest('button');if(!b)return;set(+b.dataset.v);r()}}
 seg('#topn',[[30,'상위 30'],[50,'상위 50']],()=>TOPN,v=>{TOPN=v;store.set('bt-top',v)});
 seg('#days',[[30,'30일'],[90,'90일'],[180,'180일']],()=>DAYS,v=>{DAYS=v;store.set('bt-days',v)});
 seg('#hz',[[24,'1일'],[72,'3일'],[168,'7일']],()=>HZ,v=>{HZ=v;store.set('bt-hz',v);if(RES)render()});
 seg('#kmin',[[2,'2개+'],[3,'3개+'],[4,'4개+']],()=>KMIN,v=>{KMIN=v;store.set('bt-k',v);if(RES)render()});
+seg('#dly',[[0,'바로'],[1,'1시간 뒤']],()=>DLY,v=>{DLY=v;store.set('bt-dly',v);if(RES)render()});
+/* 조건 기준 편집 */
+const CN=['① 포지션 누적','② 펀딩 음수','③ 체결 매수 우위','④ 상단 숏 클러스터','⑤ 바닥권'];
+function pform(){const n=(k,step,w=60)=>`<input type="number" step="${step}" data-k="${k}" value="${P[k]}" style="width:${w}px">`;
+  const F=[`가격 ±${n('c24',0.5)}% 안 · 미결제약정 ${n('oi',1)}% 이상`,`펀딩비 ${n('fr',0.005,70)}% 미만`,`<select data-k="cvd"><option value="both"${P.cvd==='both'?' selected':''}>24시간·4시간 모두 플러스</option><option value="24"${P.cvd==='24'?' selected':''}>24시간만 플러스</option></select>`,`위쪽 숏 청산이 아래의 ${n('ratio',0.1)}배 이상`,`48시간 범위 아래 ${n('pos',5)}% 안`];
+  $('#pf').innerHTML=CN.map((nm,i)=>`<label class="pc${P.on[i]?'':' off'}"><span><input type="checkbox" data-on="${i}"${P.on[i]?' checked':''}> <b>${nm}</b></span><span>${F[i]}</span></label>`).join('');
+  const same=JSON.stringify(P)===JSON.stringify(OD.sigP());$('#apply').disabled=same;$('#apply').textContent=same?'급등 준비에 적용됨':'이 기준을 급등 준비에 적용';}
+let pt;$('#pf').addEventListener('input',e=>{const t=e.target;if(t.dataset.on!=null)P.on[+t.dataset.on]=t.checked?1:0;else if(t.dataset.k){P[t.dataset.k]=t.tagName==='SELECT'?t.value:+t.value}
+  clearTimeout(pt);pt=setTimeout(()=>{if(t.dataset.on!=null)pform();else{const s=JSON.stringify(P)===JSON.stringify(OD.sigP());$('#apply').disabled=s;$('#apply').textContent=s?'급등 준비에 적용됨':'이 기준을 급등 준비에 적용'}if(RES){applyP();render()}},250)});
+$('#apply').onclick=()=>{OD.sigSave(P);pform();OD.toast('급등 준비 기준을 바꿨어요','급등 준비 페이지를 새로 열면 이 기준으로 점검해요')};
+$('#reset').onclick=()=>{P={...OD.SIG_DEF,on:[...OD.SIG_DEF.on]};pform();if(RES){applyP();render()}};
+$('#fee').value=FEE;$('#fund').checked=!!FUND;
+$('#fee').oninput=()=>{FEE=Math.max(0,+$('#fee').value||0);store.set('bt-fee',FEE);if(RES)render()};
+$('#fund').onchange=()=>{FUND=$('#fund').checked?1:0;store.set('bt-fund',FUND);if(RES)render()};
+pform();
 
 /* ---- 과거 데이터 받기 (코인마다 6시간 저장) ---- */
 async function cached(key,fn){try{const c=await caches.open('od-bt-v1');const h=await c.match(key);if(h){const o=await h.json();if(Date.now()-o.t<6*H)return o.d}
@@ -182,18 +212,20 @@ function series(c,mult){const K=c.k;if(K.length<60)return null;const n=K.length;
       while(cp<c.cs.length&&c.cs[cp].t*1000<T)cp++;
       if(cp>=48&&sp>=48){const cs=c.cs.slice(cp-48,cp),st=c.st.slice(sp-48,sp);const pg=price/(c.scale||1),k=clusters(st,cs,pg);r.up=k.up;r.dn=k.dn;
         let Hh=-Infinity,Ll=Infinity;for(const x of cs){if(x.h>Hh)Hh=x.h;if(x.l<Ll)Ll=x.l}r.pos=Hh>Ll?(pg-Ll)/(Hh-Ll):null}}
-    const C=[r.doi!=null?(Math.abs(r.c24)<=3&&r.doi>=8):null,r.fr!=null?r.fr<0:null,r.cvd!=null?(r.cvd>0&&r.cvd4>0):null,r.up!=null?(r.up>0&&r.up>=r.dn*1.3):null,r.pos!=null?r.pos<=.4:null];
-    r.C=C;r.hits=C.filter(x=>x===true).length}
+    }
   return S}
-/* 보유 결과: 수익, 최대 하락, +10%/-5% 중 먼저 */
-function outcome(S,i,h){const e=S[i].price;if(i+h>=S.length)return null;let mae=0,first=null;
-  for(let q=i+1;q<=i+h;q++){const hi=(S[q].hi/e-1)*100,lo=(S[q].lo/e-1)*100;if(lo<mae)mae=lo;if(first==null){if(lo<=-5)first='dn';else if(hi>=10)first='up'}}
-  return{ret:(S[i+h].price/e-1)*100,mae,up10:first==='up'}}
-function exitRule(S,i,h,rule){const e=S[i].price;if(i+h>=S.length)return null;
-  for(let q=i+1;q<=i+h;q++){const r=S[q];let x=false;
-    if(rule==='cvd')x=r.cvd4!=null&&r.cvd4<0;else if(rule==='oi')x=r.doi!=null&&r.doi<0;else if(rule==='hits')x=r.hits<2;else if(rule==='stop')x=(r.lo/e-1)*100<=-5;
-    if(x){const px=rule==='stop'?e*.95:r.price;return{ret:(px/e-1)*100,held:q-i,early:q<i+h}}}
-  return{ret:(S[i+h].price/e-1)*100,held:h,early:false}}
+/* 비용: 수수료(왕복) + 보유 중 낸 펀딩비(롱 기준, 양수면 지불) */
+function cost(c,T0,T1){let f=2*FEE;if(FUND)for(const [t,v] of c.fr){if(t>T0&&t<=T1)f+=v}return f}
+/* 보유 결과: 신호 뒤 DLY시간 늦게 진입, 수익(비용 뺀 값), 최대 하락, +10%/-5% 중 먼저 */
+function outcome(c,i,h){const S=c.S,a=i+DLY;if(a+h>=S.length)return null;const e=S[a].price;let mae=0,first=null;
+  for(let q=a+1;q<=a+h;q++){const hi=(S[q].hi/e-1)*100,lo=(S[q].lo/e-1)*100;if(lo<mae)mae=lo;if(first==null){if(lo<=-5)first='dn';else if(hi>=10)first='up'}}
+  return{ret:(S[a+h].price/e-1)*100-cost(c,S[a].T,S[a+h].T),mae,up10:first==='up'}}
+function exitRule(c,i,h,rule){const S=c.S,a=i+DLY;if(a+h>=S.length)return null;const e=S[a].price;
+  for(let q=a+1;q<=a+h;q++){const r=S[q];let x=false;
+    if(rule==='cvd')x=r.cvd4!=null&&r.cvd4<0;else if(rule==='oi')x=r.doi!=null&&r.doi<0;else if(rule==='hits')x=r.hits<Math.max(1,KMIN-1);else if(rule==='stop')x=(r.lo/e-1)*100<=-5;
+    if(x){const px=rule==='stop'?e*.95:r.price;return{ret:(px/e-1)*100-cost(c,S[a].T,r.T),held:q-a,early:q<a+h}}}
+  return{ret:(S[a+h].price/e-1)*100-cost(c,S[a].T,S[a+h].T),held:h,early:false}}
+function applyP(){if(!RES)return;for(const c of RES.top)for(const r of c.S){if(r.c24==null){r.C=[null,null,null,null,null];r.hits=0;continue}const g=OD.sigCond(r,P);r.C=g.C;r.hits=g.hits}}
 
 let RES=null;
 async function run(){const b=$('#go');b.disabled=true;$('#pg').style.width='2%';
@@ -205,7 +237,7 @@ async function run(){const b=$('#go');b.disabled=true;$('#pg').style.width='2%';
     await pool(top,4,async c=>{const g=c.base+'_USDT',has=!!gm[g];
       const d=await cached(`https://bt.local/${c.sym}/${tag}`,async()=>{const [k,oi,fr,st,cs]=await Promise.all([bybitKlines(c.sym,from,to),bybitOI(c.sym,from,to),bybitFunding(c.sym,from-3*24*H,to),has?gateStats(g,from,to):[],has?gateCandles(g,from,to):[]]);return{k,oi,fr,st,cs}});
       Object.assign(c,d);c.S=series(c,gm[g]||1)},(n,m)=>{$('#pg').style.width=(2+n/m*90)+'%';$('#stat').textContent=`과거 데이터 받는 중… ${n}/${m}개 코인`});
-    RES={top:top.filter(c=>c.S),fail:top.filter(c=>!c.S).map(c=>c.base),from,to};$('#pg').style.width='100%';render();$('#out').hidden=false;
+    RES={top:top.filter(c=>c.S),fail:top.filter(c=>!c.S).map(c=>c.base),from,to};$('#pg').style.width='100%';applyP();render();$('#out').hidden=false;
     $('#stat').textContent=`${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} 계산 · ${RES.top.length}개 코인 · 최근 ${DAYS}일`+(RES.fail.length?` · 데이터 부족으로 뺀 코인: ${RES.fail.join(', ')}`:'');
   }catch(e){$('#stat').textContent='검증 실패: '+e.message}finally{b.disabled=false}}
 $('#go').onclick=run;
@@ -219,18 +251,18 @@ function row(label,a,base,cls='',extra){const few=a.n<30?' few':'';const bar=a.w
   return`<tr class="${cls}${few}"><td class="l">${label}</td><td>${a.n}</td><td>${a.n?a.win.toFixed(0)+'%':'–'}${a.n?bar:''}</td><td>${pct(a.avg,2)}</td><td>${pct(a.med,2)}</td><td>${extra?extra(a):a.up10!=null?a.up10.toFixed(0)+'%':'–'}</td><td>${extra?(a.held!=null?(a.held/24).toFixed(1)+'일':'–'):a.mae!=null?pct(a.mae,1):'–'}</td></tr>`}
 function render(){if(!RES)return;const h=HZ,start=RES.from+2*24*H;
   const BASE=[],EVK={};
-  for(const c of RES.top){const S=c.S;for(let i=48;i<S.length;i++)if(S[i].T>=start&&i%24===0){const o=outcome(S,i,h);if(o)BASE.push(o)}}
+  for(const c of RES.top){const S=c.S;for(let i=48;i<S.length;i++)if(S[i].T>=start&&i%24===0){const o=outcome(c,i,h);if(o)BASE.push(o)}}
   /* 신호 = 충족 개수가 k개 이상이 된 시점 (같은 코인 24시간 안 재신호는 안 셈) */
   const evs=k=>EVK[k]||(EVK[k]=RES.top.flatMap(c=>{const S=c.S,out=[];let last=-1e9;
-    for(let i=48;i<S.length;i++){if(S[i].T<start)continue;if(S[i].hits>=k&&i-last>=24){last=i;out.push({c,S,i,r:S[i],o:outcome(S,i,h),o1:outcome(S,i,24),o3:outcome(S,i,72),o7:outcome(S,i,168)})}}return out}));
+    for(let i=48;i<S.length;i++){if(S[i].T<start)continue;if(S[i].hits>=k&&i-last>=24){last=i;out.push({c,S,i,r:S[i],o:outcome(c,i,h),o1:outcome(c,i,24),o3:outcome(c,i,72),o7:outcome(c,i,168)})}}return out}));
   const EV=evs(KMIN),K=EV.filter(e=>e.o),base=agg(BASE),kA=agg(K.map(e=>e.o));
   const hz={24:'1일',72:'3일',168:'7일'}[h];
   $('#kp').innerHTML=[[`${KMIN}개+ 신호`,EV.length+'개',`보유 끝난 것 ${K.length}개 · ${RES.top.length}개 코인`],[`${KMIN}개+ 신호 승률`,kA.n?kA.win.toFixed(0)+'%':'–',`${kA.n}개 · ${hz} 보유`],[`${KMIN}개+ 평균 수익`,kA.n?(kA.avg>0?'+':'')+kA.avg.toFixed(2)+'%':'–',`중앙값 ${kA.med!=null?(kA.med>0?'+':'')+kA.med.toFixed(2)+'%':'–'}`],['기준선 승률',base.n?base.win.toFixed(0)+'%':'–',`아무 때나 ${hz} 보유 · 평균 ${base.n?(base.avg>0?'+':'')+base.avg.toFixed(2)+'%':'–'}`]].map(([a,b,c])=>`<div><small>${a}</small><b>${b}</b><i>${c}</i></div>`).join('');
   const edge=kA.n&&base.n?kA.win-base.win:null;
   $('#warn').innerHTML=kA.n<30?`<b>표본이 적어요.</b> ${KMIN}개+ 신호가 ${kA.n}개뿐이라 결과를 믿기 어려워요. 기간을 늘리거나(180일) 대상을 넓혀(상위 50) 보세요.`:
-    `<b>요약:</b> ${KMIN}개+ 신호는 ${hz} 뒤 승률 ${kA.win.toFixed(0)}%로, 아무 때나 산 기준선(${base.win.toFixed(0)}%)보다 <b>${edge>=0?edge.toFixed(0)+'%p 높았어요':(-edge).toFixed(0)+'%p 낮았어요'}</b>. 평균 수익은 ${kA.avg>0?'+':''}${kA.avg.toFixed(2)}% (기준선 ${base.avg>0?'+':''}${base.avg.toFixed(2)}%). 수수료·생존 편향은 반영 안 됐어요.`;
+    `<b>요약:</b> ${KMIN}개+ 신호는 ${hz} 뒤 승률 ${kA.win.toFixed(0)}%로, 아무 때나 산 기준선(${base.win.toFixed(0)}%)보다 <b>${edge>=0?edge.toFixed(0)+'%p 높았어요':(-edge).toFixed(0)+'%p 낮았어요'}</b>. 평균 수익은 ${kA.avg>0?'+':''}${kA.avg.toFixed(2)}% (기준선 ${base.avg>0?'+':''}${base.avg.toFixed(2)}%). ${costTxt()} 생존 편향은 반영 안 됐어요.`;
   // 충족 개수별
-  $('#t-hits').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+[2,3,4,5].map(k=>row(`${k}개 이상 충족`,agg(evs(k).filter(e=>e.o).map(e=>e.o)),base)).join('');
+  $('#t-hits').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+[2,3,4,5].filter(k=>k<=MAXH()).map(k=>row(`${k}개 이상 충족`,agg(evs(k).filter(e=>e.o).map(e=>e.o)),base)).join('');
   // 조건별
   const NM=['① 포지션 누적','② 펀딩 음수','③ 체결 매수 우위 (CVD)','④ 상단 숏 클러스터','⑤ 바닥권'];
   $('#t-cond').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+NM.map((nm,ci)=>row(`${nm} <small>있음</small>`,agg(K.filter(e=>e.r.C[ci]===true).map(e=>e.o)),base)+row(`${nm} <small>없음</small>`,agg(K.filter(e=>e.r.C[ci]===false).map(e=>e.o)),base)).join('');
@@ -238,13 +270,13 @@ function render(){if(!RES)return;const h=HZ,start=RES.from+2*24*H;
   const OB=[['감소 (0% 미만)',x=>x<0],['0 ~ +8%',x=>x>=0&&x<8],['+8 ~ +20%',x=>x>=8&&x<20],['+20% 이상',x=>x>=20]];
   $('#t-oi').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+OB.map(([l,f])=>row(l,agg(K.filter(e=>e.r.doi!=null&&f(e.r.doi)).map(e=>e.o)),base)).join('');
   // 무효화
-  const RU=[['hold','보유 기간 끝까지'],['cvd','4시간 CVD가 마이너스로 바뀌면 청산'],['oi','미결제약정 24h가 감소로 바뀌면 청산'],['hits','충족 개수가 2개 밑으로 떨어지면 청산'],['stop','-5% 손절']];
-  $('#t-inv').innerHTML=RU.map(([k,l])=>{const a=agg(K.map(e=>k==='hold'?(e.o?{ret:e.o.ret,held:h,early:false}:null):exitRule(e.S,e.i,h,k)));return row(l,a,base,'',x=>x.early!=null?x.early.toFixed(0)+'%':'–')}).join('');
+  const RU=[['hold','보유 기간 끝까지'],['cvd','4시간 CVD가 마이너스로 바뀌면 청산'],['oi','미결제약정 24h가 감소로 바뀌면 청산'],['hits',`충족 개수가 ${Math.max(1,KMIN-1)}개 밑으로 떨어지면 청산`],['stop','-5% 손절']];
+  $('#t-inv').innerHTML=RU.map(([k,l])=>{const a=agg(K.map(e=>k==='hold'?(e.o?{ret:e.o.ret,held:h,early:false}:null):exitRule(e.c,e.i,h,k)));return row(l,a,base,'',x=>x.early!=null?x.early.toFixed(0)+'%':'–')}).join('');
   // 최근 신호
   const tm=T=>{const d=new Date(T);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}시`};
   const cf=C=>C.map((v,i)=>v===true?'①②③④⑤'[i]:'').join('');
   const rs=o=>o?pct(o.ret,1):'<span class="mu">진행 중</span>';
-  $('#t-ev').innerHTML=EV.slice().sort((a,b)=>b.r.T-a.r.T).slice(0,40).map(e=>`<tr><td class="l">${tm(e.r.T)}</td><td class="l">${OD.coinIcon(e.c.base,18)} <a href="./coin.html#${encodeURIComponent(e.c.base)}">${esc(e.c.base)}</a></td><td>${e.r.hits}/5</td><td class="l">${cf(e.r.C)}</td><td>${pct(e.r.doi,1)}</td><td>${e.r.price.toPrecision(5)}</td><td>${rs(e.o1)}</td><td>${rs(e.o3)}</td><td>${rs(e.o7)}</td></tr>`).join('')||'<tr><td colspan="9" class="empty">신호가 없어요</td></tr>';
+  $('#t-ev').innerHTML=EV.slice().sort((a,b)=>b.r.T-a.r.T).slice(0,40).map(e=>`<tr><td class="l">${tm(e.r.T)}</td><td class="l">${OD.coinIcon(e.c.base,18)} <a href="./coin.html#${encodeURIComponent(e.c.base)}">${esc(e.c.base)}</a></td><td>${e.r.hits}/${MAXH()}</td><td class="l">${cf(e.r.C)}</td><td>${pct(e.r.doi,1)}</td><td>${e.r.price.toPrecision(5)}</td><td>${rs(e.o1)}</td><td>${rs(e.o3)}</td><td>${rs(e.o7)}</td></tr>`).join('')||'<tr><td colspan="9" class="empty">신호가 없어요</td></tr>';
 }
 }
 </script>

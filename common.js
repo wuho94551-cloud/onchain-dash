@@ -391,5 +391,23 @@ async function openChart(base,meta={}){
   try{inst=await mountChart(back.querySelector('[data-r="body"]'),base)}catch(e){back.querySelector('[data-r="body"]').innerHTML=`<p class="odc-note">${esc(e.message)}</p>`}
 }
 
-window.OD={coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
+
+/* ---- 급등 준비 조건 (급등 준비·신호 검증이 같은 기준을 씀) ---- */
+const SIG_DEF={on:[1,1,1,1,1],c24:3,oi:8,fr:0,cvd:'both',ratio:1.3,pos:40};
+function sigP(){try{const v=JSON.parse(localStorage.getItem('od-sig')||'null');return v?{...SIG_DEF,...v,on:(v.on||SIG_DEF.on).slice(0,5)}:{...SIG_DEF,on:[...SIG_DEF.on]}}catch(e){return{...SIG_DEF,on:[...SIG_DEF.on]}}}
+function sigSave(P){localStorage.setItem('od-sig',JSON.stringify(P))}
+function sigCond(d,P){const C=[
+  d.doi!=null&&d.c24!=null?(Math.abs(d.c24)<=P.c24&&d.doi>=P.oi):null,
+  d.fr!=null?d.fr<P.fr:null,
+  d.cvd!=null?(P.cvd==='24'?d.cvd>0:d.cvd>0&&d.cvd4>0):null,
+  d.up!=null?(d.up>0&&d.up>=d.dn*P.ratio):null,
+  d.pos!=null?d.pos<=P.pos/100:null].map((v,i)=>P.on[i]?v:null);
+  return{C,hits:C.filter(x=>x===true).length,max:P.on.filter(Boolean).length}}
+function sigText(P){const sg=v=>(v>=0?'+':'')+v;return[
+  `가격은 24시간 ±${P.c24}% 안, 미결제약정은 ${sg(P.oi)}% 이상 변화`,
+  `펀딩비 ${P.fr}% 미만`,
+  P.cvd==='24'?'24시간 CVD가 플러스':'24시간 CVD와 최근 4시간 CVD가 모두 플러스',
+  `현재가 위 +8% 안의 숏 청산 추정 물량이 아래 롱 청산보다 ${P.ratio}배 이상`,
+  `48시간 고저 범위의 아래쪽 ${P.pos}% 안에 가격이 있음`]}
+window.OD={sigP,sigSave,sigCond,sigText,SIG_DEF,coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
 })();

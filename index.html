@@ -82,13 +82,14 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   <p style="margin:8px 0 0;font-size:15px">세력이 급등을 준비할 때 남기는 흔적이 몇 개나 겹쳤는지 종목별로 점검해요</p>
   <details class="cdet"><summary>점검하는 조건 6가지</summary>
   <div class="conds">
-    <div><b>① 포지션 누적</b><span>가격은 24시간 ±3% 안에서 횡보, 미결제약정은 +8% 이상 증가</span></div>
-    <div><b>② 펀딩 음수</b><span>펀딩비 0% 미만. 개미 숏을 받아주며 롱을 채우는 구간</span></div>
-    <div><b>③ 체결 매수 우위</b><span>24시간 CVD와 최근 4시간 CVD가 모두 플러스</span></div>
-    <div><b>④ 상단 숏 클러스터</b><span>현재가 위 +8% 안의 숏 청산 추정 물량이 아래 롱 청산보다 1.3배 이상</span></div>
-    <div><b>⑤ 바닥권</b><span>48시간 고저 범위의 아래쪽 40% 안에 가격이 있음</span></div>
+    <div data-ci="0"><b>① 포지션 누적</b><span></span></div>
+    <div data-ci="1"><b>② 펀딩 음수</b><span></span></div>
+    <div data-ci="2"><b>③ 체결 매수 우위</b><span></span></div>
+    <div data-ci="3"><b>④ 상단 숏 클러스터</b><span></span></div>
+    <div data-ci="4"><b>⑤ 바닥권</b><span></span></div>
     <div><b>⑥ 거래소 순유출</b><span>Dune 키가 있으면 코인 분석 화면에서 확인 (이 표에서는 자동 계산 안 함)</span></div>
   </div>
+  <p class="sub">기준은 <a href="./bt.html">신호 검증</a>에서 과거 결과를 보며 바꿀 수 있어요. 꺼둔 조건은 계산하지 않아요.</p>
   </details>
 </header>
 
@@ -117,7 +118,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   </details>
 </section>
 
-<script src="./common.js?v=14"></script>
+<script src="./common.js?v=15"></script>
 <script>if(location.hash.length>1)location.replace("./coin.html"+location.hash);</script>
 <script>
 {
@@ -172,18 +173,12 @@ async function run(){
       if(st.status==='fulfilled'&&st.value.length>4){const s=st.value,m=gm[g];let c=0,c4=0;s.slice(-24).forEach((a,i,arr)=>{const v=((a.long_taker_size||0)-(a.short_taker_size||0))*m*(+a.mark_price||0);c+=v;if(i>=arr.length-4)c4+=v});d.cvd=c;d.cvd4=c4;
         if(cs.status==='fulfilled'&&cs.value.length){const pg=d.p/d.sc,k=clusters(s,cs.value,pg);d.up=k.up;d.dn=k.dn;
           const H=Math.max(...cs.value.map(x=>+x.h)),L=Math.min(...cs.value.map(x=>+x.l));d.pos=H>L?(pg-L)/(H-L):null}}
-      const C=[];
-      C[0]=d.doi!=null?(Math.abs(d.c24)<=3&&d.doi>=8):null;
-      C[1]=d.fr<0;
-      C[2]=d.cvd!=null?(d.cvd>0&&d.cvd4>0):null;
-      C[3]=d.up!=null?(d.up>0&&d.up>=d.dn*1.3):null;
-      C[4]=d.pos!=null?d.pos<=.4:null;
-      d.C=C;d.hits=C.filter(x=>x===true).length;
+      const g2=OD.sigCond(d,SP);d.C=g2.C;d.hits=g2.hits;
     },(n,m)=>{$('#bar').style.width=(n/m*100)+'%'});
     // 직전 점검 대비 새로 3개 이상 충족한 종목
     const nowHits=new Map(DATA.filter(d=>d.C).map(d=>[d.base,d.hits]));
     if(PREV){for(const d of DATA){if(d.hits>=3&&PREV.has(d.base)&&PREV.get(d.base)<3){d.fresh=true;
-        if($('#newal').checked)OD.notify(`${d.base} 급등 준비 ${d.hits}/5`,`새로 3개 이상 충족 · 24시간 ${d.c24>=0?'+':''}${d.c24.toFixed(1)}% · OI ${d.doi!=null?(d.doi>=0?'+':'')+d.doi.toFixed(1)+'%':'–'}`,{side:'B',href:'./'})}}}
+        if($('#newal').checked)OD.notify(`${d.base} 급등 준비 ${d.hits}/${SMAX}`,`새로 3개 이상 충족 · 24시간 ${d.c24>=0?'+':''}${d.c24.toFixed(1)}% · OI ${d.doi!=null?(d.doi>=0?'+':'')+d.doi.toFixed(1)+'%':'–'}`,{side:'B',href:'./'})}}}
     PREV=nowHits;LASTRUN=Date.now();
     render();tickStat();
   }catch(e){$('#stat').textContent='점검 실패: '+e.message}
@@ -195,7 +190,7 @@ setInterval(tickStat,30e3);
 function cell(v){return v===true?'<span class="on">충족</span>':v===false?'<span class="off">–</span>':'<span class="na">데이터 없음</span>'}
 function render(){
   kindSeg();
-  const row=d=>`<tr data-s="${esc(d.base)}" data-k="${esc(d.kind)}"><td class="l"><b>${esc(d.base)}</b>${d.fresh?'<span class="kb" style="color:var(--up);border-color:var(--up)">NEW</span>':''}${KF==='전체'?'':`<span class="kb">${esc(d.kind)}</span>`}</td><td><span class="hit">${d.hits}</span>/5</td><td class="hide-sm">${px(d.p)}</td><td>${pc(d.c24)}</td><td>${pc(d.doi,1)}</td><td>${pc(d.fr,4)}</td><td class="hide-sm">${d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–'}</td><td class="hide-sm">${d.up!=null&&(d.up+d.dn)?(d.dn?(d.up/d.dn).toFixed(2)+'x':'위쪽만'):'–'}</td>${d.C.map(c=>`<td class="c">${cell(c)}</td>`).join('')}</tr>`;
+  const row=d=>`<tr data-s="${esc(d.base)}" data-k="${esc(d.kind)}"><td class="l"><b>${esc(d.base)}</b>${d.fresh?'<span class="kb" style="color:var(--up);border-color:var(--up)">NEW</span>':''}${KF==='전체'?'':`<span class="kb">${esc(d.kind)}</span>`}</td><td><span class="hit">${d.hits}</span>/${SMAX}</td><td class="hide-sm">${px(d.p)}</td><td>${pc(d.c24)}</td><td>${pc(d.doi,1)}</td><td>${pc(d.fr,4)}</td><td class="hide-sm">${d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–'}</td><td class="hide-sm">${d.up!=null&&(d.up+d.dn)?(d.dn?(d.up/d.dn).toFixed(2)+'x':'위쪽만'):'–'}</td>${d.C.map(c=>`<td class="c">${cell(c)}</td>`).join('')}</tr>`;
   const f=DATA.filter(d=>d.C&&d.hits>=MINH&&(KF==='전체'||d.kind===KF)).sort((a,b)=>b.hits-a.hits||(b.doi||0)-(a.doi||0));
   let html='';
   if(KF==='전체'){for(const k of OD.KINDS){const g=f.filter(d=>d.kind===k);if(!g.length)continue;const top3=g.filter(d=>d.hits>=3).length;
@@ -203,6 +198,9 @@ function render(){
   else html=f.map(row).join('');
   $('#rows').innerHTML=html||'<tr><td colspan="13" class="l">조건에 맞는 종목이 없어요.</td></tr>';
 }
+const SP=OD.sigP(),SMAX=OD.sigP().on.filter(Boolean).length;
+{const T=OD.sigText(SP);document.querySelectorAll('[data-ci]').forEach(el=>{const i=+el.dataset.ci;el.querySelector('span').textContent=SP.on[i]?T[i]:'꺼둠 (신호 검증에서 켤 수 있어요)';if(!SP.on[i])el.style.opacity=.5})}
+if(JSON.stringify(SP)!==JSON.stringify(OD.SIG_DEF))document.querySelector('.cdet summary').textContent+=' · 내 기준 적용 중';
 $('#go').addEventListener('click',run);
 setInterval(()=>{if(!document.hidden)run()},300e3);
 $('#newal').checked=store.get('su-newal')!=='0';$('#newal').addEventListener('change',()=>store.set('su-newal',$('#newal').checked?'1':'0'));
