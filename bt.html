@@ -37,7 +37,7 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 .prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
 .pbox{margin:6px 0 12px}.pf{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);margin-top:10px}
 .pc{display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 12px;font-size:14px}.pc.off{opacity:.5}
-.pc input[type=number],.pc select,#fee{font:inherit;font-family:var(--mono);font-size:14px;padding:2px 4px;border:1px solid var(--line);background:transparent;color:var(--ink)}
+.pc input[type=number],.pc select,#fee{min-height:0;height:30px;font:inherit;font-family:var(--mono);font-size:14px;padding:2px 4px;border:1px solid var(--line);background:transparent;color:var(--ink)}
 .sub{color:var(--mute);font-size:14px;margin:4px 0 0}
 button{font:inherit;font-size:16px;min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap}
 button[disabled]{opacity:.5;cursor:wait}
@@ -85,7 +85,7 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
 .warn{border:1px solid var(--line);padding:10px 14px;font-size:14px;margin:10px 0}
 .ev td{font-size:13px}
 </style>
-<link rel="stylesheet" href="./theme.css?v=16">
+<link rel="stylesheet" href="./theme.css?v=17">
 </head>
 <body>
 <nav class="top"><div class="band"></div></nav>
@@ -182,7 +182,7 @@ $('#reset').onclick=()=>{P={...OD.SIG_DEF,on:[...OD.SIG_DEF.on]};pform();if(RES)
 $('#fee').value=FEE;$('#fund').checked=!!FUND;
 $('#fee').oninput=()=>{FEE=Math.max(0,+$('#fee').value||0);store.set('bt-fee',FEE);if(RES)render()};
 $('#fund').onchange=()=>{FUND=$('#fund').checked?1:0;store.set('bt-fund',FUND);if(RES)render()};
-pform();
+pform();if(matchMedia('(max-width:700px)').matches)$('.pbox').open=false;
 
 /* ---- 과거 데이터 받기 (코인마다 6시간 저장) ---- */
 async function cached(key,fn){try{const c=await caches.open('od-bt-v1');const h=await c.match(key);if(h){const o=await h.json();if(Date.now()-o.t<6*H)return o.d}

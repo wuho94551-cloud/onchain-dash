@@ -52,7 +52,7 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 .lq span:last-child{text-align:right;color:var(--mute)}
 .up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
 </style>
-<link rel="stylesheet" href="./theme.css?v=16">
+<link rel="stylesheet" href="./theme.css?v=17">
 </head>
 <body>
 <nav class="top"><div class="band"></div></nav>
@@ -126,7 +126,7 @@ async function load(){const b=BASE;$('#stat').textContent='불러오는 중…';
   const F=fr.status==='fulfilled'?fr.value.result.list.map(a=>({time:+a.fundingRateTimestamp/1000,value:+a.fundingRate*100})).sort((x,y)=>x.time-y.time):[];cf._s.setData(F.map(x=>({...x,color:x.value>=0?up:dn})));cf.timeScale().fitContent();
   // liquidation ladder (top = higher price)
   if(K){const mx=Math.max(...K.bins)||1,ci=Math.floor((pg-K.lo)/K.st8);let h='';for(let i=K.NB-1;i>=0;i--){const pr=(K.lo+(i+.5)*K.st8)*R.sc,above=i>ci;
-      if(i===ci)h+=`<div class="cur"><span>${fp(p)}</span><span>현재가</span><span></span></div>`;else h+=`<div class="${above?'u':'d'}"><span>${fp(pr)}</span><span><i style="width:${(K.bins[i]/mx*100).toFixed(1)}%"></i></span><span>${K.bins[i]?usd(K.bins[i]):''}</span></div>`}
+      if(i===ci)h+=`<div class="cur"><span>${fp(p)}</span><span>현재가</span><span></span></div>`;else h+=`<div class="${above?'u':'d'}"><span>${fp(+pr.toPrecision(5))}</span><span><i style="width:${(K.bins[i]/mx*100).toFixed(1)}%"></i></span><span>${K.bins[i]?usd(K.bins[i]):''}</span></div>`}
     $('#lq').innerHTML=h}else $('#lq').innerHTML='<div><span></span><span class="mu">Gate에 이 코인 선물이 없어서 추정할 수 없어요</span><span></span></div>';
   const tm=new Date();$('#stat').textContent=`${String(tm.getHours()).padStart(2,'0')}:${String(tm.getMinutes()).padStart(2,'0')} 기준 · ${R.s} 무기한 선물`;
 }

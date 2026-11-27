@@ -119,3 +119,4 @@ nav.top .od-mood:empty{display:none}
   nav.top .od-mood{padding-inline:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
   .od-srch{top:20px}
 }
+nav.top .od-mood>span{white-space:nowrap}
