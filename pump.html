@@ -87,11 +87,14 @@ let TOPN=+(localStorage.getItem('pu-top')||50);
 const segR=()=>{$('#topn').innerHTML=[30,50,80].map(v=>`<button type="button" data-v="${v}" aria-pressed="${v===TOPN}">상위 ${v}</button>`).join('')};segR();
 $('#topn').onclick=e=>{const b=e.target.closest('button');if(!b)return;TOPN=+b.dataset.v;localStorage.setItem('pu-top',TOPN);segR();run()};
 $('#desc').innerHTML=OD.ALLN.map((n,i)=>`<li><b>${n}</b>: ${i<5?OD.sigText(OD.sigP())[i]:OD.PUMP[i-5][1]}</li>`).join('');
-const B=(()=>{try{return JSON.parse(localStorage.getItem('bt-pump')||'null')}catch(e){return null}})();
-const OK=B?B.combos.filter(x=>x.ok):[];
+let B=(()=>{try{return JSON.parse(localStorage.getItem('bt-pump')||'null')}catch(e){return null}})();
+(async()=>{})();
+let OK=[];
+async function init(){if(!B){try{B=await (await fetch('./pump-default.json?v=1')).json()}catch(e){}}OK=B?B.combos.filter(x=>x.ok):[];
 $('#src').className='box'+(B&&OK.length?'':' warn');
 $('#src').innerHTML=!B?'<b>아직 확률 데이터가 없어요.</b> <a href="./bt.html">신호 검증</a>에서 검증 시작 → \'조합 찾기\'를 한 번 누르면, 그 결과로 확률을 붙여요. 지금은 흔적만 보여줘요.':
-  `<b>확률 출처</b>: ${new Date(B.at).toLocaleDateString('ko-KR')} 신호 검증 (최근 ${B.days}일 · 상위 ${B.top}개). 뒤 기간 기준선(아무 때나)은 7일 안 +20%가 <b>${B.base.te.p.toFixed(0)}%</b>였어요. `+(OK.length?`검증 통과 조합 ${OK.length}개: ${OK.map(x=>esc(x.name)).join(' / ')}`:'<b>뒤 기간까지 통과한 조합이 없어요.</b> 그래서 아래 확률은 참고용(앞 기간 상위 조합)이에요.');
+  `<b>확률 출처</b>: ${new Date(B.at).toLocaleDateString('ko-KR')} 신호 검증${B.snapshot?' 기본값(이 기기에서 조합 찾기를 돌리면 그 결과로 바뀌어요)':''} (최근 ${B.days}일 · 상위 ${B.top}개). 뒤 기간 기준선(아무 때나)은 7일 안 +20%가 <b>${B.base.te.p.toFixed(0)}%</b>였어요. `+(OK.length?`검증 통과 조합 ${OK.length}개: ${OK.map(x=>esc(x.name)).join(' / ')}`:'<b>뒤 기간까지 통과한 조합이 없어요.</b> 그래서 아래 확률은 참고용(앞 기간 상위 조합)이에요.');
+}
 let DATA=[],busy=false;
 async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').style.width='2%';$('#stat').textContent='종목 불러오는 중…';
   try{const [t,gc]=await Promise.all([j('https://api.bybit.com/v5/market/tickers?category=linear'),j('https://api.gateio.ws/api/v4/futures/usdt/contracts')]);const gm={};for(const x of gc)gm[x.name]=+x.quanto_multiplier||1;
@@ -115,7 +118,7 @@ function render(){const cnt=m=>{let n=0;for(let i=5;i<10;i++)if(m&1<<i)n++;retur
   const L=DATA.slice().sort((a,b)=>((b.best?.te.p||0)-(a.best?.te.p||0))||(cnt(b.m)-cnt(a.m))||(b.r.vs||0)-(a.r.vs||0));
   $('#rows').innerHTML=L.map(c=>{const fl=OD.ALLN.map((n,i)=>`<span class="fl${c.m&1<<i?' on':''}" title="${esc(n)}">${n.slice(0,1)}</span>`).join('');
     return`<tr${c.best?'':' class="mu"'}><td class="l">${OD.coinIcon(c.base,18)} <a href="./view.html#${encodeURIComponent(c.base)}">${esc(c.base)}</a></td><td class="l">${c.best?esc(c.best.name)+(c.best.ok?'':' <small class="mu">(미검증)</small>'):'<span class="mu">–</span>'}</td><td>${c.best?`<b>${c.best.te.p.toFixed(0)}%</b> <small class="mu">${c.best.te.n}건</small>`:'–'}</td><td>${B?B.base.te.p.toFixed(0)+'%':'–'}</td><td class="l">${fl}</td><td class="hide-sm">${fp(c.p)}</td><td>${pc(c.c24)}</td><td class="hide-sm">${pc(c.r.doi)}</td><td class="hide-sm">${c.r.vs!=null?c.r.vs.toFixed(1)+'x':'–'}</td></tr>`}).join('')||'<tr><td colspan="9" class="l">결과가 없어요</td></tr>'}
-$('#go').onclick=run;run();setInterval(()=>{if(!document.hidden)run()},600e3);
+$('#go').onclick=run;init().then(run);setInterval(()=>{if(!document.hidden)run()},600e3);
 }
 </script>
 </body>
