@@ -129,7 +129,7 @@ function openSync(){shellStyle();document.querySelector('.od-sync')?.remove();co
     catch(e){q('[data-msg]').textContent='코드가 올바르지 않아요. OD1:로 시작하는 코드 전체를 붙여넣어 주세요.'}};
   function confirmApply(n){const b=q('[data-apply]');if(b.dataset.sure)return true;b.dataset.sure=1;b.textContent=`덮어쓰기 확인 (${n}항목) · 한 번 더 누르세요`;q('[data-msg]').textContent='이 기기의 관심 코인·지갑·설정이 붙여넣은 내용으로 바뀌어요.';return false}}
 /* ---- 공통 메뉴: 4묶음 + 지금 묶음의 페이지 줄. 모든 페이지가 같은 메뉴를 쓰도록 여기서 그림 ---- */
-const NAV=[['시장',[['./','급등 준비'],['./scan.html','스캐너'],['./kimp.html','김프'],['./bt.html','신호 검증']]],
+const NAV=[['시장',[['./','급등 준비'],['./scan.html','스캐너'],['./pump.html','세력 의심'],['./kimp.html','김프'],['./bt.html','신호 검증']]],
   ['코인',[['./fav.html','★ 관심'],['./view.html','한눈에'],['./coin.html','코인 분석'],['./watch.html','호가 감시'],['./cvd.html','CVD']]],
   ['청산',[['./liq.html','실시간 청산'],['./liqmap.html','청산 압력']]],
   ['온체인',[['./unlock.html','언락'],['./wallet.html','지갑']]],

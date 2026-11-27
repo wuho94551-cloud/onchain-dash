@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<script>try{const t=localStorage.getItem("od-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>세력 의심 · 온체인 데스크</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{color-scheme:light dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5;overflow-x:clip}
+.band{padding:clamp(14px,2.4vw,32px) max(4vw,14px);max-width:1240px;margin:0 auto}
+h1,h2{margin:0;line-height:1.02}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+button{font:inherit;font-size:15px;min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button[disabled]{opacity:.5;cursor:wait}
+input,select{font:inherit;min-height:44px;padding:0 12px;color:var(--ink);border:1px solid var(--line);background:transparent}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:14px 0 10px}
+.lab{font-size:13px;color:var(--mute);margin-right:4px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:middle}
+th{font-weight:500;color:var(--mute);font-size:13px;position:sticky;top:0;background:var(--bg)}
+td{font-family:var(--mono)}td.l,th.l{text-align:left}td.l{font-family:var(--sans)}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
+details{border:1px solid var(--line);padding:12px 16px;margin-top:18px}
+summary{cursor:pointer;font-weight:600;min-height:28px}
+details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
+.empty{padding:28px 10px;color:var(--mute);text-align:center}
+.prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:12px 0 10px}.lab{font-size:13px;color:var(--mute);margin-right:4px}
+.prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.tbl{max-height:75vh;overflow:auto;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right;font-family:var(--mono)}
+th{position:sticky;top:0;font-size:12px;color:var(--mute);font-weight:600;font-family:var(--sans);background:var(--bg);z-index:1}
+th.l,td.l{text-align:left;font-family:var(--sans)}
+.fl{display:inline-block;min-width:22px;text-align:center;font-size:12px;border:1px solid var(--line);margin-right:2px;padding:0 3px;color:var(--mute)}
+.fl.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.box{border:1px solid var(--line);padding:10px 14px;font-size:14px;margin:12px 0}
+.box.warn{border-color:var(--ink)}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
+@media(max-width:700px){.hide-sm{display:none}}
+</style>
+<link rel="stylesheet" href="./theme.css?v=18">
+</head>
+<body>
+<nav class="top"><div class="band"></div></nav>
+<header class="band" style="padding-bottom:4px">
+  <h1>세력 의심</h1>
+  <p style="margin:8px 0 0;font-size:15px">거래대금 급증, 변동성 압축, 레버리지 쏠림, 조용한 매집 같은 '작업' 흔적을 코인별로 점검하고, 신호 검증에서 뒤 기간까지 확인된 조합에 맞는 코인을 위로 올려요.</p>
+  <div class="box" id="src"></div>
+  <div class="ctl">
+    <span><span class="lab">대상</span><span class="seg" id="topn"></span></span>
+    <button type="button" id="go">다시 점검</button>
+  </div>
+  <div class="prog"><i id="bar"></i></div>
+  <p class="sub" id="stat">불러오는 중…</p>
+</header>
+<section class="band" style="padding-top:0">
+  <div class="tbl"><table><thead><tr><th class="l">코인</th><th class="l">맞는 조합</th><th title="그 조합이 맞았을 때 뒤 기간에 7일 안 +20% 이상 오른 비율">7일 +20% 확률</th><th>기준선</th><th class="l">흔적 (①~⑩)</th><th class="hide-sm">가격</th><th>24시간</th><th class="hide-sm">OI 24h</th><th class="hide-sm" title="24시간 거래대금 ÷ 지난 7일 하루 평균">거래대금 배수</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <details style="margin-top:14px;border:1px solid var(--line);padding:12px 16px"><summary>조건 설명과 한계</summary><ul id="desc" style="font-size:14px"></ul>
+    <p class="sub">'세력'을 직접 볼 수는 없어요. 여기 나오는 건 작업이 있을 때 자주 같이 보이는 흔적일 뿐이고, 같은 흔적이 급락 전에도 나와요. 확률은 신호 검증에서 계산한 과거 값이라 앞으로도 같다는 보장이 없어요. 7일 안 +20%는 '한 번이라도 닿았는지'라서, 그 전에 −10%를 먼저 맞은 경우도 포함돼요(신호 검증 표의 '-10% 먼저' 참고).</p></details>
+</section>
+<script src="./common.js?v=20"></script>
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms)),H=3600e3;
+let BYQ=0;const pace=async u=>{if(!u.includes('api.bybit.com'))return;const t=Math.max(Date.now(),BYQ);BYQ=t+150;const w=t-Date.now();if(w>0)await sleep(w)};
+async function j(u){for(let n=0;;n++){let r;try{await pace(u);r=await fetch(u)}catch(e){if(n<4){await sleep(2000*2**n);continue}throw new Error('요청 제한')}if((r.status===429||r.status>=500)&&n<4){await sleep(1500*(n+1));continue}if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}}
+async function pool(items,n,fn,prog){let i=0,d=0;await Promise.all(Array.from({length:n},async()=>{while(i<items.length){const x=items[i++];try{await fn(x)}catch(e){x.err=e.message}d++;prog&&prog(d,items.length)}}))}
+const pc=(v,d=1)=>v==null||!isFinite(v)?'–':`<span class="${v>0?'up':v<0?'dn':''}">${v>0?'+':''}${v.toFixed(d)}%</span>`;
+const fp=n=>n>=1000?n.toLocaleString('en-US',{maximumFractionDigits:2}):n>=1?(+n.toFixed(4)).toString():n.toPrecision(4);
+let TOPN=+(localStorage.getItem('pu-top')||50);
+const segR=()=>{$('#topn').innerHTML=[30,50,80].map(v=>`<button type="button" data-v="${v}" aria-pressed="${v===TOPN}">상위 ${v}</button>`).join('')};segR();
+$('#topn').onclick=e=>{const b=e.target.closest('button');if(!b)return;TOPN=+b.dataset.v;localStorage.setItem('pu-top',TOPN);segR();run()};
+$('#desc').innerHTML=OD.ALLN.map((n,i)=>`<li><b>${n}</b>: ${i<5?OD.sigText(OD.sigP())[i]:OD.PUMP[i-5][1]}</li>`).join('');
+const B=(()=>{try{return JSON.parse(localStorage.getItem('bt-pump')||'null')}catch(e){return null}})();
+const OK=B?B.combos.filter(x=>x.ok):[];
+$('#src').className='box'+(B&&OK.length?'':' warn');
+$('#src').innerHTML=!B?'<b>아직 확률 데이터가 없어요.</b> <a href="./bt.html">신호 검증</a>에서 검증 시작 → \'조합 찾기\'를 한 번 누르면, 그 결과로 확률을 붙여요. 지금은 흔적만 보여줘요.':
+  `<b>확률 출처</b>: ${new Date(B.at).toLocaleDateString('ko-KR')} 신호 검증 (최근 ${B.days}일 · 상위 ${B.top}개). 뒤 기간 기준선(아무 때나)은 7일 안 +20%가 <b>${B.base.te.p.toFixed(0)}%</b>였어요. `+(OK.length?`검증 통과 조합 ${OK.length}개: ${OK.map(x=>esc(x.name)).join(' / ')}`:'<b>뒤 기간까지 통과한 조합이 없어요.</b> 그래서 아래 확률은 참고용(앞 기간 상위 조합)이에요.');
+let DATA=[],busy=false;
+async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').style.width='2%';$('#stat').textContent='종목 불러오는 중…';
+  try{const [t,gc]=await Promise.all([j('https://api.bybit.com/v5/market/tickers?category=linear'),j('https://api.gateio.ws/api/v4/futures/usdt/contracts')]);const gm={};for(const x of gc)gm[x.name]=+x.quanto_multiplier||1;
+    await OD.loadTypes();
+    const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')&&OD.kindOf(x.symbol)==='코인').sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,TOPN).map(x=>{const m=x.symbol.match(/^(1000000|10000|1000)/);return{sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),scale:m?+m[1]:1,p:+x.lastPrice,c24:+x.price24hPcnt*100,fr:+x.fundingRate*100}});
+    const P=B?.P||OD.sigP();
+    await pool(top,4,async c=>{const g=c.base+'_USDT',has=gm[g]!=null;
+      const [k,oi,st,cs]=await Promise.allSettled([j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${c.sym}&interval=60&limit=240`),j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${c.sym}&intervalTime=1h&limit=200`),
+        has?j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=60`):Promise.reject(),has?j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`):Promise.reject()]);
+      if(k.status!=='fulfilled')throw new Error('캔들 없음');
+      const d={k:k.value.result.list.map(a=>[+a[0],+a[1],+a[2],+a[3],+a[4],+a[6]]).sort((a,b)=>a[0]-b[0]),oi:oi.status==='fulfilled'?oi.value.result.list.map(a=>[+a.timestamp,+a.openInterest]).sort((a,b)=>a[0]-b[0]):[],fr:[[0,c.fr]],scale:c.scale,
+        st:st.status==='fulfilled'?st.value.map(a=>({time:a.time,oiu:+a.open_interest_usd||0,lsr:+a.lsr_account||1,mp:+a.mark_price||0,lt:+a.long_taker_size||0,stk:+a.short_taker_size||0})):[],cs:cs.status==='fulfilled'?cs.value.map(x=>({t:+x.t,h:+x.h,l:+x.l})):[]};
+      const S=OD.btSeries(d,gm[g]||1);if(!S)throw new Error('데이터 부족');const r=S.at(-1);r.c24=c.c24;r.fr=c.fr;c.r=r;c.m=OD.allMask(r,P);
+      /* 맞는 조합 중 뒤 기간 확률이 가장 높은 것 (통과 조합 우선) */
+      const cand=(OK.length?OK:(B?B.combos.slice(0,5):[])).filter(x=>(c.m&x.m)===x.m).sort((a,b)=>(b.te.p||0)-(a.te.p||0));c.best=cand[0]||null},
+      (n,m)=>{$('#bar').style.width=(2+n/m*96)+'%';$('#stat').textContent=`점검 중… ${n}/${m}`});
+    DATA=top.filter(c=>c.r);render();$('#bar').style.width='100%';
+    const tm=new Date();$('#stat').textContent=`${String(tm.getHours()).padStart(2,'0')}:${String(tm.getMinutes()).padStart(2,'0')} 점검 · ${DATA.length}개 코인 · 10분마다 자동 점검`;
+  }catch(e){$('#stat').textContent='점검 실패: '+e.message}finally{busy=false;$('#go').disabled=false}}
+function render(){const cnt=m=>{let n=0;for(let i=5;i<10;i++)if(m&1<<i)n++;return n};
+  const L=DATA.slice().sort((a,b)=>((b.best?.te.p||0)-(a.best?.te.p||0))||(cnt(b.m)-cnt(a.m))||(b.r.vs||0)-(a.r.vs||0));
+  $('#rows').innerHTML=L.map(c=>{const fl=OD.ALLN.map((n,i)=>`<span class="fl${c.m&1<<i?' on':''}" title="${esc(n)}">${n.slice(0,1)}</span>`).join('');
+    return`<tr${c.best?'':' class="mu"'}><td class="l">${OD.coinIcon(c.base,18)} <a href="./view.html#${encodeURIComponent(c.base)}">${esc(c.base)}</a></td><td class="l">${c.best?esc(c.best.name)+(c.best.ok?'':' <small class="mu">(미검증)</small>'):'<span class="mu">–</span>'}</td><td>${c.best?`<b>${c.best.te.p.toFixed(0)}%</b> <small class="mu">${c.best.te.n}건</small>`:'–'}</td><td>${B?B.base.te.p.toFixed(0)+'%':'–'}</td><td class="l">${fl}</td><td class="hide-sm">${fp(c.p)}</td><td>${pc(c.c24)}</td><td class="hide-sm">${pc(c.r.doi)}</td><td class="hide-sm">${c.r.vs!=null?c.r.vs.toFixed(1)+'x':'–'}</td></tr>`}).join('')||'<tr><td colspan="9" class="l">결과가 없어요</td></tr>'}
+$('#go').onclick=run;run();setInterval(()=>{if(!document.hidden)run()},600e3);
+}
+</script>
+</body>
+</html>
