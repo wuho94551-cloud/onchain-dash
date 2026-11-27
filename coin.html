@@ -391,21 +391,28 @@ const bsLabel=a=>{const t=a?.metadata?.tags||[];const nm=t.find(x=>x.tagType==='
 async function loadSpread(){const box=$('#spread');const pf=C.platforms||{};const ch=BSCH.find(([k])=>pf[k]);
   if(!ch){box.innerHTML='<div class="empty">이더리움·Base·Arbitrum·Optimism·Polygon 토큰만 점검할 수 있어요. (솔라나 등은 아직 무료 공개 데이터가 없어요)</div>';return}
   const tok=String(pf[ch[0]]).toLowerCase(),API=`https://${ch[1]}.blockscout.com/api/v2`,now=Date.now()/1000;$('#sp-go').disabled=true;
-  const bj=async u=>{for(let n=0;n<4;n++){try{await new Promise(r=>setTimeout(r,250));return await j(u)}catch(e){if(n===3)throw e;await new Promise(r=>setTimeout(r,2000*(n+1)))}}};
+  const bj=async(u,ms=15000)=>{for(let n=0;n<3;n++){const ac=new AbortController(),tt=setTimeout(()=>ac.abort(),ms);try{const r=await fetch(u,{signal:ac.signal});clearTimeout(tt);if(r.status===429||r.status>=500)throw new Error('HTTP '+r.status);if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}catch(e){clearTimeout(tt);if(n===2)throw new Error(e.name==='AbortError'?'응답이 너무 느림':e.message);await new Promise(r=>setTimeout(r,1500*(n+1)))}}};
   try{if(!HOLD||HOLD.tok!==tok){box.innerHTML='<div class="empty">보유자 불러오는 중…</div>';const d=await bj(`${API}/tokens/${tok}/holders`);HOLD={tok,hs:(d.items||[]).slice(0,20)}}
     const hs=HOLD.hs;if(!hs.length)throw new Error('보유자 없음');const dec=+(hs[0].token?.decimals??18),sup=Number(hs[0].token?.total_supply||0)/10**dec;
     const top=new Set(hs.map(h=>h.address.hash.toLowerCase())),R=[];
-    for(let i=0;i<hs.length;i++){const h=hs[i],a=h.address.hash.toLowerCase(),lb=bsLabel(h.address);box.innerHTML=`<div class="empty">지갑 이동 받는 중… ${i+1}/${hs.length}</div>`;
-      let ops=[],err='';try{let q='';for(let pg=0;pg<2;pg++){const d=await bj(`${API}/addresses/${a}/token-transfers?type=ERC-20&token=${tok}${q}`);ops.push(...(d.items||[]));if(!d.next_page_params)break;
-          const last=d.items?.at(-1);if(last&&now-Date.parse(last.timestamp)/1000>30*86400)break;q='&'+new URLSearchParams(d.next_page_params).toString()}}catch(e){err=e.message}
-      if(err&&!ops.length){R.push({a,h,lb,err});continue}
+    /* 토큰 이동은 빠른 Etherscan 호환 API(tokentx)로 받고, 받는 주소 라벨은 많이 받은 주소만 따로 조회 */
+    const OPS=new Array(hs.length);let done=0,qi=0;
+    await Promise.all([0,1,2,3].map(async()=>{while(qi<hs.length){const i=qi++,a=hs[i].address.hash.toLowerCase();
+      try{const d=await bj(`https://${ch[1]}.blockscout.com/api?module=account&action=tokentx&address=${a}&contractaddress=${tok}&page=1&offset=200&sort=desc`);OPS[i]=Array.isArray(d.result)?d.result:[]}catch(e){OPS[i]={err:e.message}}
+      done++;box.innerHTML=`<div class="empty">지갑 이동 받는 중… ${done}/${hs.length}</div>`}}));
+    const recv=new Map();hs.forEach((h,i)=>{const a=h.address.hash.toLowerCase();if(!Array.isArray(OPS[i]))return;for(const o of OPS[i]){if(now-+o.timeStamp>7*86400)continue;const t=String(o.to).toLowerCase();if(String(o.from).toLowerCase()===a&&!top.has(t))recv.set(t,(recv.get(t)||0)+Number(o.value)/10**dec)}});
+    const LAB=new Map(hs.map(h=>[h.address.hash.toLowerCase(),bsLabel(h.address)]));const cand=[...recv.entries()].sort((x,y)=>y[1]-x[1]).slice(0,15).map(x=>x[0]);let li=0,ld=0;
+    await Promise.all([0,1,2,3,4].map(async()=>{while(li<cand.length){const t=cand[li++];try{LAB.set(t,bsLabel(await bj(`${API}/addresses/${t}`,12000)))}catch(e){}ld++;box.innerHTML=`<div class="empty">받는 주소 라벨 확인 중… ${ld}/${cand.length}</div>`}}));
+    const isEx=t=>LAB.get(t)?.ex||false;
+    for(let i=0;i<hs.length;i++){const h=hs[i],a=h.address.hash.toLowerCase(),lb=LAB.get(a);
+      if(!Array.isArray(OPS[i])){R.push({a,h,lb,err:OPS[i]?.err||'실패'});continue}const ops=OPS[i];
       const bal=Number(h.value)/10**dec,w={};
       for(const [k,days] of [['d7',7],['d30',30]]){let out=0,inn=0,cex=0,intl=0;const to=new Map();
-        for(const o of ops){const ts=Date.parse(o.timestamp)/1000;if(now-ts>days*86400)continue;const v=Number(o.total?.value||0)/10**dec,f=o.from.hash.toLowerCase(),t=o.to.hash.toLowerCase();
-          if(f===a){if(top.has(t)){intl+=v;continue}out+=v;to.set(t,(to.get(t)||0)+v);if(bsLabel(o.to).ex)cex+=v}else if(t===a){if(top.has(f)){intl+=v;continue}inn+=v}}
+        for(const o of ops){const ts=+o.timeStamp;if(now-ts>days*86400)continue;const v=Number(o.value)/10**dec,f=String(o.from).toLowerCase(),t=String(o.to).toLowerCase();
+          if(f===a){if(top.has(t)){intl+=v;continue}out+=v;to.set(t,(to.get(t)||0)+v);if(isEx(t))cex+=v}else if(t===a){if(top.has(f)){intl+=v;continue}inn+=v}}
         const amts=[...to.values()].sort((x,y)=>y-x),big=amts.filter(v=>v>=out*.05);
         w[k]={out,inn,net:inn-out,n:to.size,cex,split:big.length>=5||(big.length>=3&&big.at(-1)>=big[0]*.5),pct:(bal+out-inn)>0?out/(bal+out-inn)*100:0,intl}}
-      R.push({a,h,lb,bal,w,full:ops.length>=100,last:ops[0]?Date.parse(ops[0].timestamp)/1000:null})}
+      R.push({a,h,lb,bal,w,full:ops.length>=200,last:ops[0]?+ops[0].timeStamp:null})}
     const px=C.price||0,ok=R.filter(r=>!r.err&&!r.lb.ex),hot=ok.filter(r=>r.w.d7.pct>=5||(r.w.d7.split&&r.w.d7.pct>=1)||r.w.d7.cex>0);
     const sum=(f)=>ok.reduce((s,r)=>s+f(r),0),out7=sum(r=>r.w.d7.out),in7=sum(r=>r.w.d7.inn),out30=sum(r=>r.w.d30.out),in30=sum(r=>r.w.d30.inn),cex7=sum(r=>r.w.d7.cex);
     const lvl=cex7*px>1e6||hot.length>=3||(out7-in7)*px>5e6?'강함':hot.length?'약간':'뚜렷하지 않음';
@@ -415,8 +422,8 @@ async function loadSpread(){const box=$('#spread');const pf=C.platforms||{};cons
       R.map((r,i)=>{const lab=r.lb.nm?` <small>${esc(r.lb.nm)}</small>`:'';const ad=`<a class="addr" href="https://${ch[1]}.blockscout.com/address/${r.a}" target="_blank" rel="noopener">${r.a.slice(0,8)}…${r.a.slice(-6)}</a>${lab}`;
         if(r.err)return`<tr><td class="l">${i+1}</td><td class="l">${ad}</td><td colspan="7" class="l">불러오지 못함: ${esc(r.err)}</td></tr>`;const d=r.w.d7,m=r.w.d30;
         const tag=r.lb.ex?'거래소 지갑 (판정 제외)':d.cex>0?'<b>거래소로 보냄</b>':d.split&&d.pct>=1?'<b>쪼개서 내보냄</b>':d.pct>=5?'<b>많이 내보냄</b>':d.net>0&&d.inn>=r.bal*.05?'모으는 중':m.split&&m.pct>=1?'30일 안 쪼갠 흔적':'조용함';
-        return`<tr${r.lb.ex?' class="mu"':''}><td class="l">${i+1}</td><td class="l">${ad}</td><td>${num(r.bal)} <small>${sup?(r.bal/sup*100).toFixed(2)+'%':''}</small></td><td>${cell(d)}</td><td>${d.cex?num(d.cex):'–'}</td><td>${d.inn?num(d.inn):'–'}</td><td>${d.n||'–'}</td><td>${cell(m)}</td><td class="l">${tag}${r.full&&r.last&&now-r.last<7*86400?' <small title="최근 100건이 모두 7일 안이라 더 있을 수 있어요">100건+</small>':''}</td></tr>`}).join('')}</tbody></table></div>
-    <p class="src">출처: Blockscout(${esc(ch[1])}.blockscout.com) 보유자·토큰 이동·주소 라벨(Open Labels Initiative 등). 라벨은 알려진 주소만 붙어 있어서, 거래소 입금 주소처럼 라벨 없는 주소로 간 건 '거래소로'에 안 잡혀요. '쪼개서 내보냄'은 7일 안에 내보낸 양의 5% 이상을 받은 주소가 5개 이상이거나, 비슷한 크기로 3개 이상에 나눠 보낸 경우예요. 거래소 지갑 자체는 평소에도 이동이 많아 판정에서 뺐어요.</p>`;
+        return`<tr${r.lb.ex?' class="mu"':''}><td class="l">${i+1}</td><td class="l">${ad}</td><td>${num(r.bal)} <small>${sup?(r.bal/sup*100).toFixed(2)+'%':''}</small></td><td>${cell(d)}</td><td>${d.cex?num(d.cex):'–'}</td><td>${d.inn?num(d.inn):'–'}</td><td>${d.n||'–'}</td><td>${cell(m)}</td><td class="l">${tag}${r.full&&r.last&&now-r.last<7*86400?' <small title="최근 200건이 모두 7일 안이라 더 있을 수 있어요">200건+</small>':''}</td></tr>`}).join('')}</tbody></table></div>
+    <p class="src">출처: Blockscout(${esc(ch[1])}.blockscout.com) 보유자·토큰 이동·주소 라벨(Open Labels Initiative 등). 라벨은 알려진 주소만 붙어 있고, 7일 동안 많이 받은 주소 15곳만 확인해요. 거래소 입금 주소처럼 라벨 없는 주소로 간 건 '거래소로'에 안 잡혀요. '쪼개서 내보냄'은 7일 안에 내보낸 양의 5% 이상을 받은 주소가 5개 이상이거나, 비슷한 크기로 3개 이상에 나눠 보낸 경우예요. 거래소 지갑 자체는 평소에도 이동이 많아 판정에서 뺐어요.</p>`;
   }catch(er){box.innerHTML='<div class="empty">점검 실패: '+esc(er.message)+'</div>'}finally{$('#sp-go').disabled=false}}
 $('#sp-go').onclick=loadSpread;
 

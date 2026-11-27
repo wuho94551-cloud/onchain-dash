@@ -110,7 +110,8 @@ function sigCond(d, P) { const C = [
 /* 사이트와 같은 데이터: 바이낸스 선물 1시간 봉(시장가 매수 금액) + Bybit 미결제약정·롱숏 계정 비율. 바이낸스가 막히거나 없으면 Gate.io */
 const symScale = s => { const m = String(s).match(/^(1000000|10000|1000)(?=[A-Z])|(1000000|10000|1000)USDT$/); return m ? +(m[1] || m[2]) : 1; };
 const symBase = s => String(s).replace(/USDT$/, '').replace(/^(1000000|10000|1000)|(1000000|10000|1000)$/g, '');
-const binSym = s => { const k = symScale(s); return k > 1 ? k + symBase(s) + 'USDT' : String(s); };
+const BIN_ALIAS = { PUMPFUNUSDT: 'PUMPUSDT' };
+const binSym = s => { if (BIN_ALIAS[s]) return BIN_ALIAS[s]; const k = symScale(s); return k > 1 ? k + symBase(s) + 'USDT' : String(s); };
 let GM = null, SRCS = {};
 async function flow(sym, sc, b, oiList) { const H = 3600e3;
   try { const K = await j(`https://fapi.binance.com/fapi/v1/klines?symbol=${binSym(sym)}&interval=1h&limit=48`); if (!Array.isArray(K) || K.length < 5) throw new Error('바이낸스 없음');

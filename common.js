@@ -553,7 +553,8 @@ function allMask(r,P){if(r.c24==null)return 0;const g=sigCond(r,{...P,on:[1,1,1,
 /* 심볼 배율: 1000PEPEUSDT(앞) · SHIB1000USDT(뒤, 바이비트) → 1000. 바이낸스는 항상 앞에 붙임(1000SHIBUSDT) */
 const symScale=s=>{const m=String(s).match(/^(1000000|10000|1000)(?=[A-Z])|(1000000|10000|1000)USDT$/);return m?+(m[1]||m[2]):1};
 const symBase=s=>String(s).replace(/USDT$/,'').replace(/^(1000000|10000|1000)|(1000000|10000|1000)$/g,'');
-const binSym=s=>{const k=symScale(s);return k>1?k+symBase(s)+'USDT':String(s)};
+const BIN_ALIAS={PUMPFUNUSDT:'PUMPUSDT'};/* 이름이 다른 코인 */
+const binSym=s=>{if(BIN_ALIAS[s])return BIN_ALIAS[s];const k=symScale(s);return k>1?k+symBase(s)+'USDT':String(s)};
 /* 시간별 체결·미결제약정 묶음: 바이낸스 선물 1시간 봉(시장가 매수·매도) + 바이비트 미결제약정·롱숏 계정 비율.
    바이낸스 선물에 없는 코인만 Gate.io로 대체. 행 모양은 Gate contract_stats와 같게 맞춤(time=구간 시작 초, 크기는 코인 개수, 가격은 코인 1개 기준) */
 let BYQ2=0;const byPace=async()=>{const t=Math.max(Date.now(),BYQ2);BYQ2=t+160;const w=t-Date.now();if(w>0)await new Promise(r=>setTimeout(r,w))};
