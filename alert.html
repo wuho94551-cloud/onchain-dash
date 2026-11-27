@@ -78,6 +78,11 @@ ol.steps code,.note code{font-family:var(--mono);font-size:13px;border:1px solid
     <label>같은 알림 다시 보내기까지 (분)<input id="cool" type="number" step="5" min="5" value="60"></label>
     <label class="ck"><input type="checkbox" id="wal" checked> 지갑 페이지에 저장한 지갑 포함 (<span id="wn">0</span>개)</label>
     <label class="ck"><input type="checkbox" id="win"> 지갑이 받은 것도 알림 (끄면 보낸 것만)</label>
+    <label>급등 준비 신호 알림 · 대상 코인 수 (0이면 끔)<input id="sgn" type="number" step="10" min="0" max="30" value="30"></label>
+    <label>신호 기준 (충족 개수)<input id="sgk" type="number" step="1" min="1" max="5" value="3"></label>
+    <label>보유 기간 알림 (시간)<input id="sgh" type="number" step="12" min="6" value="72"></label>
+    <label class="ck"><input type="checkbox" id="sgi" checked> 4시간 CVD가 마이너스로 바뀌면 무효화 알림</label>
+    <p class="sub" style="grid-column:1/-1;margin:0">조건 기준은 <a href="./bt.html">신호 검증</a>에서 급등 준비에 적용한 기준을 그대로 써요. 신호가 뜨면 🚀, 충족 개수가 기준보다 2개 이상 줄거나 CVD가 꺾이면 ⚠️ 무효화, 보유 기간이 지나면 ⏰ 알림을 보내요. 1분에 6개씩 돌아가며 봐서, 30개면 한 바퀴에 5분 걸려요.</p>
   </div>
   <div class="ctl"><button type="button" class="ghost" id="fav">★ 관심 코인으로 채우기</button><button type="button" id="pvb">지금 조건으로 미리보기</button><span class="sub" id="pvs" style="margin:0"></span></div>
   <div class="pv" id="pv">미리보기를 누르면 지금 시점에 워커가 보낼 메시지를 여기 보여줘요. 지갑은 최근 24시간 이동을 보여줘요. 텔레그램으로 보내지는 않아요.</div>
@@ -112,8 +117,8 @@ ol.steps code,.note code{font-family:var(--mono);font-size:13px;border:1px solid
 
 const $=id=>document.getElementById(id),K='od-tg';
 const S=JSON.parse(localStorage.getItem(K)||'{}');
-for(const k of ['chat','coins','move','fund','kimp','cool'])if(S[k]!=null)$(k).value=S[k];
-if(S.wal!=null)$('wal').checked=S.wal;if(S.win!=null)$('win').checked=S.win;
+for(const k of ['chat','coins','move','fund','kimp','cool','sgn','sgk','sgh'])if(S[k]!=null)$(k).value=S[k];
+if(S.wal!=null)$('wal').checked=S.wal;if(S.sgi!=null)$('sgi').checked=S.sgi;if(S.win!=null)$('win').checked=S.win;
 if(!S.coins)$('coins').value=(OD.favs()||[]).join(', ');
 const wallets=()=>JSON.parse(localStorage.getItem('od-wallets')||'[]');
 function cfg(){
@@ -121,17 +126,18 @@ function cfg(){
   const c={chat:$('chat').value.trim(),coins:[...new Set($('coins').value.toUpperCase().split(/[\s,]+/).filter(Boolean))],move:n('move'),fund:n('fund'),kimp:n('kimp'),cool:Math.max(5,n('cool')||60)};
   if($('wal').checked)c.wallets=wallets().flatMap(w=>(w.chains?.length?w.chains:w.chain?[w.chain]:['eth','base','arbitrum','polygon']).map(ch=>({chain:ch,addr:w.addr,label:w.label||''})));
   if($('win').checked)c.walletIn=true;
+  const sn=Math.min(30,n('sgn'));if(sn)c.sig={n:sn,k:Math.min(5,Math.max(1,n('sgk')||3)),hold:Math.max(6,n('sgh')||72),inv:$('sgi').checked,P:OD.sigP()};
   return c}
 function upd(){
-  localStorage.setItem(K,JSON.stringify({chat:$('chat').value,coins:$('coins').value,move:$('move').value,fund:$('fund').value,kimp:$('kimp').value,cool:$('cool').value,wal:$('wal').checked,win:$('win').checked}));
+  localStorage.setItem(K,JSON.stringify({chat:$('chat').value,coins:$('coins').value,move:$('move').value,fund:$('fund').value,kimp:$('kimp').value,cool:$('cool').value,wal:$('wal').checked,win:$('win').checked,sgn:$('sgn').value,sgk:$('sgk').value,sgh:$('sgh').value,sgi:$('sgi').checked}));
   $('wn').textContent=wallets().length;$('cfg').value=JSON.stringify(cfg())}
 document.querySelectorAll('input').forEach(i=>i.addEventListener('input',upd));upd();
 $('fav').onclick=()=>{$('coins').value=(OD.favs()||[]).join(', ');upd()};
 $('cp').onclick=async()=>{try{await navigator.clipboard.writeText($('cfg').value);OD.toast('설정값을 복사했어요')}catch(e){$('cfg').select();OD.toast('복사가 막혀 있어요. 선택된 글자를 직접 복사해 주세요')}};
 $('pvb').onclick=async()=>{
   const b=$('pvb');b.disabled=true;$('pvs').textContent='확인 중…';
-  try{const m=await import('./worker/odesk-alert.js?v=3');const mem=new Map();
-    const r=await m.default.run({DRY:true,SINCE:Date.now()-864e5,CONFIG:cfg(),STATE:{get:async k=>mem.get(k),put:async(k,v)=>mem.set(k,v)}});
+  try{const m=await import('./worker/odesk-alert.js?v=4');const mem=new Map();
+    const r=await m.default.run({DRY:true,SLICE:'all',SINCE:Date.now()-864e5,CONFIG:cfg(),STATE:{get:async k=>mem.get(k),put:async(k,v)=>mem.set(k,v),delete:async k=>mem.delete(k)}});
     $('pv').textContent=r.out.length?r.out.join('\n'):'지금은 조건에 맞는 알림이 없어요.';
     $('pvs').textContent=`${new Date().toLocaleTimeString('ko-KR')} 기준 ${r.count}건`+(r.errs.length?` · 오류: ${r.errs.join(', ')}`:'');
   }catch(e){$('pvs').textContent='오류: '+e.message}

@@ -1,5 +1,5 @@
 /* 온체인 데스크 폰 알림 워커 (Cloudflare Workers, 무료 플랜)
-   - 1분마다(cron) 시세·펀딩비·김프·지갑을 확인해서 조건이 맞으면 텔레그램으로 보냄
+   - 1분마다(cron) 시세·펀딩비·김프·지갑·급등 준비 신호를 확인해서 조건이 맞으면 텔레그램으로 보냄
    - 필요한 설정 (Cloudflare 대시보드 → 워커 → Settings)
      · Secret   TG_TOKEN : 텔레그램 봇 토큰 (BotFather에서 받음)
      · Variable CONFIG   : 사이트의 '폰 알림' 설정 JSON (README 참고)
@@ -88,9 +88,57 @@ async function checkWallets(env, cfg, out, errs) {
   }
 }
 
+
+/* ---- 급등 준비 신호 + 무효화 (사이트와 같은 조건·같은 기준) ----
+   무료 플랜 요청 수 제한(50) 때문에 1분에 6개 코인씩 돌아가며 점검. 상위 30개면 5분에 한 바퀴. */
+const LEV = [[10, .25], [20, .25], [25, .2], [50, .2], [100, .1]], MMR = .005;
+function clusters(st, cs, price) { let up = 0, dn = 0;
+  for (let i = 1; i < st.length; i++) { const a = st[i], d = (a.open_interest_usd || 0) - (st[i - 1].open_interest_usd || 0); if (d <= 0) continue; const p = +a.mark_price; if (!p) continue;
+    const r = a.lsr_account || 1, ls = r / (1 + r); let mn = Infinity, mx = -Infinity; for (const c of cs) if (c.t >= a.time) { mn = Math.min(mn, +c.l); mx = Math.max(mx, +c.h); }
+    for (const [lev, w] of LEV) { const lp = p * (1 - 1 / lev + MMR), sp = p * (1 + 1 / lev - MMR);
+      if (!(mn <= lp) && lp >= price * .92 && lp < price) dn += d * ls * w;
+      if (!(mx >= sp) && sp <= price * 1.08 && sp > price) up += d * (1 - ls) * w; } }
+  return { up, dn }; }
+function sigCond(d, P) { const C = [
+  d.doi != null && d.c24 != null ? (Math.abs(d.c24) <= P.c24 && d.doi >= P.oi) : null,
+  d.fr != null ? d.fr < P.fr : null,
+  d.cvd != null ? (P.cvd === '24' ? d.cvd > 0 : d.cvd > 0 && d.cvd4 > 0) : null,
+  d.up != null ? (d.up > 0 && d.up >= d.dn * P.ratio) : null,
+  d.pos != null ? d.pos <= P.pos / 100 : null].map((v, i) => P.on[i] ? v : null);
+  return { C, hits: C.filter(x => x === true).length }; }
+async function checkSignals(env, cfg, out, errs) {
+  const S = cfg.sig; if (!S || !S.n) return;
+  const P = { on: [1, 1, 1, 1, 1], c24: 3, oi: 8, fr: 0, cvd: 'both', ratio: 1.3, pos: 40, ...(S.P || {}) }, K = S.k || 3, hold = S.hold || 72;
+  const t = await j('https://api.bybit.com/v5/market/tickers?category=linear');
+  const top = t.result.list.filter(x => x.symbol.endsWith('USDT')).sort((a, b) => b.turnover24h - a.turnover24h).slice(0, Math.min(30, S.n));
+  const per = 6, slices = Math.ceil(top.length / per), sl = env.SLICE != null ? env.SLICE : Math.floor(Date.now() / 60e3) % slices;
+  const part = env.SLICE === 'all' ? top : top.slice(sl * per, sl * per + per);
+  const gc = await j('https://api.gateio.ws/api/v4/futures/usdt/contracts'); const gm = {}; for (const x of gc) gm[x.name] = +x.quanto_multiplier || 1;
+  const NM = ['포지션 누적', '펀딩 음수', '체결 매수 우위', '숏 클러스터', '바닥권'];
+  await Promise.all(part.map(async x => { try {
+    const b = x.symbol.replace(/USDT$/, '').replace(/^(1000000|10000|1000)/, ''), sc = +(x.symbol.match(/^(1000000|10000|1000)/) || [0, 1])[1], g = b + '_USDT', p = +x.lastPrice;
+    const d = { c24: +x.price24hPcnt * 100, fr: +x.fundingRate * 100 };
+    const [oi, st, cs] = await Promise.allSettled([j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${x.symbol}&intervalTime=1h&limit=25`),
+      gm[g] ? j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=48`) : Promise.reject(), gm[g] ? j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`) : Promise.reject()]);
+    if (oi.status === 'fulfilled') { const l = oi.value.result.list; if (l.length > 1) d.doi = (+l[0].openInterest / +l.at(-1).openInterest - 1) * 100; }
+    if (st.status === 'fulfilled' && st.value.length > 4) { const s = st.value; let c = 0, c4 = 0; s.slice(-24).forEach((a, i, arr) => { const v = ((a.long_taker_size || 0) - (a.short_taker_size || 0)) * gm[g] * (+a.mark_price || 0); c += v; if (i >= arr.length - 4) c4 += v; }); d.cvd = c; d.cvd4 = c4;
+      if (cs.status === 'fulfilled' && cs.value.length) { const pg = p / sc, k = clusters(s, cs.value, pg); d.up = k.up; d.dn = k.dn; const H = Math.max(...cs.value.map(y => +y.h)), L = Math.min(...cs.value.map(y => +y.l)); d.pos = H > L ? (pg - L) / (H - L) : null; } }
+    const { C, hits } = sigCond(d, P), key = 'sg:' + b, prev = env.STATE ? await env.STATE.get(key) : null, now = Date.now();
+    const on = C.map((v, i) => v ? NM[i] : '').filter(Boolean).join(', ');
+    if (!prev) {
+      if (hits >= K) { out.push(`🚀 ${b} 급등 준비 ${hits}개 충족 (${on}) · ${fmt(p)} · 24h ${d.c24 >= 0 ? '+' : ''}${d.c24.toFixed(1)}% · OI ${d.doi != null ? (d.doi >= 0 ? '+' : '') + d.doi.toFixed(1) + '%' : '–'}`);
+        if (env.STATE) await env.STATE.put(key, JSON.stringify({ p, at: now }), { expirationTtl: (hold + 24) * 3600 }); }
+    } else { const v = JSON.parse(prev), r = (p / v.p - 1) * 100, hrs = (now - v.at) / 36e5, rs = `${r >= 0 ? '+' : ''}${r.toFixed(1)}%`;
+      let why = null;
+      if (hits < Math.max(1, K - 1)) why = `충족 ${hits}개로 줄어듦`; else if (S.inv !== false && d.cvd4 != null && d.cvd4 < 0) why = '4시간 CVD 마이너스 전환';
+      if (why) { out.push(`⚠️ ${b} 신호 무효화: ${why} · 신호 뒤 ${rs} (${hrs.toFixed(0)}시간)`); if (env.STATE) await env.STATE.delete(key); }
+      else if (hrs >= hold) { out.push(`⏰ ${b} 신호 ${hold}시간 경과 · 신호 뒤 ${rs} · 정리 여부 확인`); if (env.STATE) await env.STATE.delete(key); } }
+  } catch (e) { errs.push(x.symbol + ' ' + e.message); } }));
+}
+
 async function run(env) {
   const cfg = typeof env.CONFIG === 'object' ? env.CONFIG : JSON.parse(env.CONFIG || '{}'); const out = [], errs = [];
-  for (const f of [checkPrice, checkKimp, checkWallets]) { try { await f(env, cfg, out, errs); } catch (e) { errs.push(e.message); } }
+  for (const f of [checkPrice, checkKimp, checkWallets, checkSignals]) { try { await f(env, cfg, out, errs); } catch (e) { errs.push(e.message); } }
   if (out.length && !env.DRY) await tg(env, cfg, out.join('\n'));
   return { count: out.length, sent: out.length > 0 && !env.DRY, out, errs };
 }
