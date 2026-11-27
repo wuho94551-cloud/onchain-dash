@@ -207,7 +207,7 @@ function chart(box,series,fmtY,fmtX){
     const xs=all.map(p=>p[0]),ys=all.map(p=>p[1]);
     let x0=Math.min(...xs),x1=Math.max(...xs);const hasBar=series.some(x=>x.type==='bar');
     const step=hasBar&&series[0].pts.length>1?(series[0].pts[1][0]-series[0].pts[0][0]):864e5;if(hasBar){x0-=step/2;x1+=step/2}
-    let y0=Math.min(...ys,hasBar?0:Infinity),y1=Math.max(...ys,hasBar?0:-Infinity);const pad=(y1-y0)*.08||1;y0-=pad;y1+=pad;
+    let y0=Math.min(...ys,hasBar?0:Infinity),y1=Math.max(...ys,hasBar?0:-Infinity);const pad=(y1-y0)*.08||1;const pos=y0>=0;y0-=pad;y1+=pad;if(pos&&y0<0)y0=0;/* 전부 0 이상이면 축을 0 아래로 그리지 않음 */
     const X=x=>pl+(x-x0)/(x1-x0||1)*(W-pl-pr),Y=y=>pt+(1-(y-y0)/(y1-y0))*(H-pt-pb);
     let g='';
     if(!narrow){for(let i=0;i<=4;i++){const v=y0+(y1-y0)*i/4,y=Y(v);g+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-8}" y="${y+4}" text-anchor="end" font-size="12" fill="var(--mute)">${esc(fmtY(v))}</text>`}
