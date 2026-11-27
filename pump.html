@@ -101,6 +101,7 @@ async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').s
     await OD.loadTypes();
     const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')&&OD.kindOf(x.symbol)==='코인').sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,TOPN).map(x=>{const m=x.symbol.match(/^(1000000|10000|1000)/);return{sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),scale:m?+m[1]:1,p:+x.lastPrice,c24:+x.price24hPcnt*100,fr:+x.fundingRate*100}});
     const P=B?.P||OD.sigP();
+    for(let w=0;w<40&&!window.OD_MOOD?.tr;w++)await sleep(250);const RG=window.OD_MOOD?.tr==='up'?1<<10:window.OD_MOOD?.tr==='dn'?1<<11:0;
     await pool(top,4,async c=>{const g=c.base+'_USDT',has=gm[g]!=null;
       const [k,oi,st,cs]=await Promise.allSettled([j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${c.sym}&interval=60&limit=240`),j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${c.sym}&intervalTime=1h&limit=200`),
         has?j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=170`):Promise.reject(),has?j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`):Promise.reject()]);
@@ -110,7 +111,7 @@ async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').s
       const S=OD.btSeries(d,gm[g]||1);
       /* 세력 평단 추정: 최근 7일 미결제약정이 늘어난 시간마다, 시장가 매수 비중만큼 롱·나머지는 숏이 새로 열렸다고 보고 가격을 가중평균 */
       if(d.st.length>24){let L=0,Lw=0,Sx=0,Sw=0;for(let q=1;q<d.st.length;q++){const a=d.st[q],dd=a.oiu-d.st[q-1].oiu;if(dd<=0||!a.mp)continue;const tot=a.lt+a.stk,sh=tot?a.lt/tot:.5;L+=dd*sh*a.mp;Lw+=dd*sh;Sx+=dd*(1-sh)*a.mp;Sw+=dd*(1-sh)}
-        c.lavg=Lw?L/Lw*c.scale:null;c.savg=Sw?Sx/Sw*c.scale:null}if(!S)throw new Error('데이터 부족');const r=S.at(-1);r.c24=c.c24;r.fr=c.fr;c.r=r;c.m=OD.allMask(r,P);
+        c.lavg=Lw?L/Lw*c.scale:null;c.savg=Sw?Sx/Sw*c.scale:null}if(!S)throw new Error('데이터 부족');const r=S.at(-1);r.c24=c.c24;r.fr=c.fr;c.r=r;c.m=OD.allMask(r,P)|RG;
       /* 맞는 조합 중 뒤 기간 확률이 가장 높은 것 (통과 조합 우선) */
       const cand=(OK.length?OK:(B?B.combos.slice(0,5):[])).filter(x=>(c.m&x.m)===x.m).sort((a,b)=>(b.te.exp||0)-(a.te.exp||0));c.best=cand[0]||null},
       (n,m)=>{$('#bar').style.width=(2+n/m*96)+'%';$('#stat').textContent=`점검 중… ${n}/${m}`});
