@@ -72,7 +72,7 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   </div>
   <p class="sub" style="margin-top:14px">데이터: Bybit 선물(가격·미결제약정·펀딩비), Gate.io 선물(체결 CVD·롱숏 비율·청산 추정). 1분마다 새로 받아요. <a href="./watch.html" id="lw">호가 감시 →</a> <a href="./coin.html" id="lc">코인 분석 →</a></p>
 </section>
-<script src="./common.js?v=16"></script>
+<script src="./common.js?v=17"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -115,7 +115,7 @@ async function load(){const b=BASE;$('#stat').textContent='불러오는 중…';
   $('#kp').innerHTML=[['가격',fp(p),pc(d.c24)+' · 24시간'],['미결제약정',usd(+t.openInterestValue),'24시간 '+pc(d.doi,1)],['펀딩비',pc(d.fr,4),left!=null?`다음 정산 ${Math.floor(left/60)}시간 ${left%60}분 뒤`:''],
     ['CVD 24시간',d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–',d.cvd4!=null?`4시간 <span class="${d.cvd4>=0?'up':'dn'}">${usd(d.cvd4)}</span>`:'Gate 데이터 없음'],
     ['롱숏 계정 비율',lsr!=null?lsr.toFixed(2):'–','Gate · 1보다 크면 롱 계정이 많음'],['위·아래 청산 비',d.up!=null&&d.dn?(d.up/d.dn).toFixed(2)+'x':d.up?'위쪽만':'–','숏 청산(위) ÷ 롱 청산(아래)'],
-    ['48시간 위치',d.pos!=null?(d.pos*100).toFixed(0)+'%':'–','0% = 48시간 최저'],['급등 준비',`${sg.hits}/${sg.max}`,'충족 조건 수']].map(([a,b,c])=>`<div><small>${a}</small><b>${b}</b><i>${c}</i></div>`).join('');
+    ['48시간 위치',d.pos!=null?(d.pos*100).toFixed(0)+'%':'–','0% = 48시간 최저'],['급등 준비',`${sg.hits}/${sg.max}`,`<a href="./journal.html#new=${encodeURIComponent(b)}&p=${p}&h=${sg.hits}">매매 일지에 기록 →</a>`]].map(([a,b,c])=>`<div><small>${a}</small><b>${b}</b><i>${c}</i></div>`).join('');
   const NM=['① 포지션 누적','② 펀딩 음수','③ 체결 매수 우위','④ 상단 숏 클러스터','⑤ 바닥권'];
   $('#sig').innerHTML=NM.map((n,i)=>P.on[i]?`<span class="${sg.C[i]?'on':''}" title="${esc(OD.sigText(P)[i])}">${n}${sg.C[i]==null?' (데이터 없음)':''}</span>`:'').join('');
   // mini charts

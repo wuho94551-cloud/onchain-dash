@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<script>try{const t=localStorage.getItem("od-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>매매 일지 · 온체인 데스크</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{color-scheme:light dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5;overflow-x:clip}
+.band{padding:clamp(14px,2.4vw,32px) max(4vw,14px);max-width:1240px;margin:0 auto}
+h1,h2{margin:0;line-height:1.02}
+.sub{color:var(--mute);font-size:14px;margin:4px 0 0}
+button{font:inherit;font-size:15px;min-height:44px;padding:0 16px;border:0;cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button[disabled]{opacity:.5;cursor:wait}
+input,select{font:inherit;min-height:44px;padding:0 12px;color:var(--ink);border:1px solid var(--line);background:transparent}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:36px;padding:0 12px;font-size:14px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:14px 0 10px}
+.lab{font-size:13px;color:var(--mute);margin-right:4px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:middle}
+th{font-weight:500;color:var(--mute);font-size:13px;position:sticky;top:0;background:var(--bg)}
+td{font-family:var(--mono)}td.l,th.l{text-align:left}td.l{font-family:var(--sans)}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
+details{border:1px solid var(--line);padding:12px 16px;margin-top:18px}
+summary{cursor:pointer;font-weight:600;min-height:28px}
+details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
+.empty{padding:28px 10px;color:var(--mute);text-align:center}
+.prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.tabs{display:flex;gap:4px;margin:14px 0 0;border-bottom:1px solid var(--line)}
+.tabs button{background:transparent;color:var(--mute);border:0;border-bottom:2px solid transparent;border-radius:0;min-height:40px;padding:0 14px;font-weight:600}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ink)}
+.acc{border:1px solid var(--line);padding:12px 14px;margin-top:12px;font-size:14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.acc b{font-weight:700}.acc .st{color:var(--mute)}
+.acc input{font:inherit;min-height:38px;padding:0 10px;border:1px solid var(--line);background:transparent;color:var(--ink);width:220px}
+.fm{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.fm label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute)}
+.fm input,.fm select,.fm textarea{font:inherit;font-size:15px;color:var(--ink);background:transparent;border:1px solid var(--line);min-height:40px;padding:0 10px}
+.fm textarea{min-height:70px;padding:8px 10px;grid-column:1/-1}
+.fm .wide{grid-column:1/-1}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips label{flex-direction:row;align-items:center;gap:5px;border:1px solid var(--line);padding:4px 10px;font-size:13px;color:var(--ink);cursor:pointer}
+.chips input{min-height:0;width:auto}
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);margin:12px 0}
+.kp div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:9px 13px}
+.kp small{display:block;font-size:12px;color:var(--mute)}.kp b{font-family:var(--mono);font-weight:400;font-size:19px}.kp i{display:block;font-style:normal;font-size:12px;color:var(--mute)}
+.tbl{overflow:auto;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right;font-family:var(--mono)}
+th{font-size:12px;color:var(--mute);font-weight:600;font-family:var(--sans);position:sticky;top:0;background:var(--bg)}
+th.l,td.l{text-align:left;font-family:var(--sans)}
+td.n{white-space:normal;min-width:180px;max-width:360px;font-size:13px}
+tr.few td{color:var(--mute)}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
+.ins{border:1px solid var(--ink);padding:12px 16px;margin:12px 0;font-size:15px}
+.ins h3{margin:0 0 6px;font-size:16px}.ins ul{margin:0;padding-left:18px}.ins li{margin:3px 0}
+h2.s{margin:24px 0 6px;font-size:18px}
+.eq{width:100%;height:170px;border:1px solid var(--line);display:block}
+.memo{border-bottom:1px solid var(--line);padding:10px 0}.memo small{color:var(--mute);font-family:var(--mono);font-size:12px}.memo p{margin:4px 0 0;white-space:pre-wrap}
+.memo button{min-height:28px;padding:0 8px;font-size:12px}
+button.sm{min-height:30px;padding:0 10px;font-size:13px}
+@media(max-width:700px){.acc input{width:100%}}
+</style>
+<link rel="stylesheet" href="./theme.css?v=17">
+</head>
+<body>
+<nav class="top"><div class="band"></div></nav>
+<header class="band" style="padding-bottom:0">
+  <h1>매매 일지</h1>
+  <p style="margin:8px 0 0;font-size:15px">매매를 기록하고 메모를 남기면, 어떤 셋업·감정·실수에서 돈을 벌고 잃는지 숫자로 보여줘요.</p>
+  <div class="acc" id="acc"></div>
+  <div class="tabs" role="tablist"><button role="tab" data-t="add" aria-selected="true">기록하기</button><button role="tab" data-t="list">매매 목록</button><button role="tab" data-t="ana">내 분석</button><button role="tab" data-t="memo">메모</button></div>
+</header>
+<section class="band" style="padding-top:0">
+<div data-p="add">
+  <form class="fm" id="fm" autocomplete="off">
+    <label>코인<input name="sym" required placeholder="SOL" style="text-transform:uppercase"></label>
+    <label>방향<select name="side"><option value="L">롱</option><option value="S">숏</option></select></label>
+    <label>진입가<input name="entry" type="number" step="any" required></label>
+    <label>청산가 (비우면 진행 중)<input name="exit" type="number" step="any"></label>
+    <label>손절가<input name="stop" type="number" step="any"></label>
+    <label>포지션 크기 (USDT)<input name="size" type="number" step="any" placeholder="1000"></label>
+    <label>레버리지<input name="lev" type="number" step="1" placeholder="10"></label>
+    <label>진입 시각<input name="openAt" type="datetime-local" required></label>
+    <label>청산 시각<input name="closeAt" type="datetime-local"></label>
+    <label>셋업<input name="setup" list="setups" placeholder="급등 준비"></label>
+    <label>급등 준비 충족 수<input name="hits" type="number" min="0" max="5" step="1"></label>
+    <label>진입 때 감정<select name="emo"><option value="">–</option><option>침착</option><option>확신</option><option>조급</option><option>FOMO</option><option>복수심</option><option>불안</option></select></label>
+    <label>계획대로 했나 (1~5)<select name="plan"><option value="">–</option><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+    <label>수수료 (USDT, 비우면 0.055%×2)<input name="fee" type="number" step="any"></label>
+    <div class="wide"><span class="lab">실수 (해당하면 체크)</span><div class="chips" id="mis"></div></div>
+    <textarea name="note" placeholder="왜 들어갔고, 어떻게 나왔고, 다음엔 뭘 다르게 할지"></textarea>
+    <div class="wide" style="display:flex;gap:8px;flex-wrap:wrap"><button type="submit" id="save">저장</button><button type="button" class="ghost" id="clr">새로 쓰기</button><span class="sub" id="fmsg" style="align-self:center;margin:0"></span></div>
+  </form>
+  <datalist id="setups"></datalist>
+</div>
+<div data-p="list" hidden>
+  <div class="ctl" style="margin:12px 0"><input id="q" placeholder="코인·셋업·메모 검색" style="font:inherit;min-height:38px;padding:0 10px;border:1px solid var(--line);background:transparent;color:var(--ink)"><button type="button" class="ghost sm" id="csv">CSV 내려받기</button></div>
+  <div class="tbl" style="max-height:70vh"><table><thead><tr><th class="l">진입</th><th class="l">코인</th><th class="l">방향</th><th>진입가</th><th>청산가</th><th>손익</th><th>R</th><th class="l">셋업</th><th class="l">감정</th><th class="l">메모</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+</div>
+<div data-p="ana" hidden>
+  <div class="kp" id="kp"></div>
+  <div class="ins" id="ins"></div>
+  <h2 class="s">누적 손익</h2><svg class="eq" id="eq" preserveAspectRatio="none"></svg>
+  <h2 class="s">어디서 벌고 잃나</h2>
+  <div class="ctl"><span class="lab">나눠 보기</span><span class="seg" id="by"></span></div>
+  <div class="tbl"><table><thead><tr><th class="l">그룹</th><th>매매 수</th><th>승률</th><th>손익 합계</th><th>평균 손익</th><th>평균 R</th><th>손익비</th></tr></thead><tbody id="grp"></tbody></table></div>
+  <p class="sub">매매 수가 5개 미만인 줄은 흐리게 표시해요. R = 손익 ÷ 손절까지의 위험 금액(손절가를 적은 매매만).</p>
+</div>
+<div data-p="memo" hidden>
+  <div class="fm"><textarea id="mtx" placeholder="오늘 시장 메모, 깨달은 것, 다음 계획…"></textarea><label>코인 (선택)<input id="msym" style="text-transform:uppercase"></label><div style="align-self:end"><button type="button" id="madd">메모 저장</button></div></div>
+  <div id="mlist"></div>
+</div>
+</section>
+<script src="./common.js?v=17"></script>
+<script>
+{
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const MIS=['손절 안 지킴','늦은 진입(추격)','너무 일찍 익절','레버리지 과다','계획 없이 진입','물타기','뉴스·SNS 보고 진입'];
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+/* ---- 저장: 이 기기(localStorage) + GitHub Gist(암호화) ---- */
+let DB=(()=>{try{return JSON.parse(localStorage.getItem('od-journal')||'null')||{trades:[],memos:[]}}catch(e){return{trades:[],memos:[]}}})();
+const live=a=>a.filter(x=>!x.del);
+function saveLocal(){localStorage.setItem('od-journal',JSON.stringify(DB));schedulePush()}
+const enc=new TextEncoder(),dec=new TextDecoder(),b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+let KEY=null,SALT=null;
+async function derive(pass,salt){const base=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+async function seal(obj){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},KEY,enc.encode(JSON.stringify(obj)));return JSON.stringify({v:1,app:'OnchainDesk',salt:b64(SALT),iv:b64(iv),ct:b64(ct)})}
+async function open_(txt){const o=JSON.parse(txt);const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(o.iv)},KEY,unb64(o.ct));return JSON.parse(dec.decode(pt))}
+const TOK=()=>localStorage.getItem('od-gh-token')||'',GID=()=>localStorage.getItem('od-gist-id')||'',FN='onchaindesk-journal.json';
+async function gh(path,opt={}){const r=await fetch('https://api.github.com'+path,{...opt,headers:{Authorization:'Bearer '+TOK(),Accept:'application/vnd.github+json',...(opt.body?{'Content-Type':'application/json'}:{})}});if(!r.ok)throw new Error(r.status===401?'토큰이 맞지 않아요':r.status===404?'Gist를 찾을 수 없어요 (토큰에 gist 권한이 있는지 확인)':'GitHub HTTP '+r.status);return r.status===204?null:r.json()}
+async function findGist(){if(GID())return GID();for(let p=1;p<=5;p++){const l=await gh(`/gists?per_page=100&page=${p}`);const g=l.find(x=>x.files&&x.files[FN]);if(g){localStorage.setItem('od-gist-id',g.id);return g.id}if(l.length<100)break}return null}
+function merge(a,b){const m=new Map();for(const x of [...a,...b]){const o=m.get(x.id);if(!o||(x.u||0)>(o.u||0))m.set(x.id,x)}return[...m.values()]}
+let pushT=0,syncing=false;
+function schedulePush(){if(!KEY||!TOK())return;clearTimeout(pushT);pushT=setTimeout(()=>sync().catch(e=>acc('오류: '+e.message)),2500)}
+async function sync(){if(!KEY||!TOK()||syncing)return;syncing=true;acc('동기화 중…');
+  try{let id=await findGist();
+    if(id){const g=await gh('/gists/'+id);const f=g.files[FN];if(f){let txt=f.content;if(f.truncated)txt=await (await fetch(f.raw_url)).text();
+        let remote;try{remote=await open_(txt)}catch(e){throw new Error('암호가 달라요. 처음 잠글 때 쓴 암호를 넣어 주세요')}
+        DB={trades:merge(DB.trades,remote.trades||[]),memos:merge(DB.memos,remote.memos||[])};localStorage.setItem('od-journal',JSON.stringify(DB))}}
+    const body=JSON.stringify({files:{[FN]:{content:await seal(DB)}}});
+    if(id)await gh('/gists/'+id,{method:'PATCH',body});else{const g=await gh('/gists',{method:'POST',body:JSON.stringify({description:'OnchainDesk 매매 일지 (암호화됨)',public:false,files:{[FN]:{content:await seal(DB)}}})});localStorage.setItem('od-gist-id',g.id)}
+    acc(`동기화됨 · ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`);renderAll()}
+  finally{syncing=false}}
+async function unlock(pass){if(!TOK())throw new Error('GitHub 토큰을 먼저 넣어 주세요');
+  let salt=null;const id=await findGist();if(id){const g=await gh('/gists/'+id);const f=g.files[FN];if(f){let txt=f.content;if(f.truncated)txt=await (await fetch(f.raw_url)).text();salt=unb64(JSON.parse(txt).salt)}}
+  SALT=salt||crypto.getRandomValues(new Uint8Array(16));KEY=await derive(pass,SALT);await sync()}
+let ST='';function acc(msg){if(msg!=null)ST=msg;const on=!!KEY;
+  $('#acc').innerHTML=on?`<b>🔓 동기화 켜짐</b><span class="st">${esc(ST)}</span><button type="button" class="ghost sm" data-a="sync">지금 동기화</button><button type="button" class="ghost sm" data-a="lock">잠그기</button>`:
+   `<b>🔒 이 기기에만 저장 중</b><span class="st">${esc(ST||'PC·폰에서 같이 보려면 GitHub 토큰과 일지 암호로 잠금을 풀어 주세요.')}</span>`+
+   (TOK()?'':`<input type="password" id="tok" placeholder="GitHub 토큰 (gist 권한)" autocomplete="off">`)+`<input type="password" id="pw" placeholder="일지 암호" autocomplete="current-password"><button type="button" class="sm" data-a="unlock">잠금 풀기</button>`+
+   `<details style="width:100%;border:0;padding:0"><summary style="font-size:13px;font-weight:500">토큰 만드는 법 · 보안</summary><ol style="font-size:13px;margin:6px 0;padding-left:18px"><li><a href="https://github.com/settings/tokens/new?scopes=gist&description=OnchainDesk%20journal" target="_blank" rel="noopener">GitHub 토큰 만들기</a>를 열어요 (gist 권한만 체크돼 있어요).</li><li>만료 기간을 고르고 Generate token → 나온 토큰을 위 칸에 붙여넣어요. 토큰은 이 기기 브라우저에만 저장되고 ⇄ 동기화 코드에도 안 들어가요.</li><li>일지 암호는 처음 정한 걸 모든 기기에서 똑같이 써요. 기록은 이 암호로 암호화돼서 GitHub에도 알아볼 수 없는 글자로만 저장돼요. 암호를 잊으면 되살릴 수 없어요.</li></ol>${TOK()?'<button type="button" class="ghost sm" data-a="forget">이 기기에서 토큰 지우기</button>':''}</details>`}
+$('#acc').addEventListener('click',async e=>{const a=e.target.closest('[data-a]')?.dataset.a;if(!a)return;
+  try{if(a==='unlock'){const t=$('#tok')?.value.trim();if(t)localStorage.setItem('od-gh-token',t);const p=$('#pw').value;if(p.length<6)throw new Error('일지 암호는 6자 이상으로 해 주세요');acc('여는 중…');await unlock(p)}
+    if(a==='sync')await sync();if(a==='lock'){KEY=null;acc('')}if(a==='forget'){localStorage.removeItem('od-gh-token');localStorage.removeItem('od-gist-id');acc('토큰을 지웠어요')}}
+  catch(err){KEY=null;acc('오류: '+err.message)}});
+acc();
+/* ---- 계산 ---- */
+function pnl(t){if(t.exit==null||t.exit==='')return null;const sz=+t.size||0,dir=t.side==='S'?-1:1,r=(t.exit/t.entry-1)*dir;const fee=t.fee!==''&&t.fee!=null?+t.fee:sz*0.0011;return{pct:r*100,usd:sz?r*sz-fee:null}}
+function rmult(t){const p=pnl(t);if(!p||!t.stop||!t.size)return null;const risk=Math.abs(t.entry-t.stop)/t.entry*t.size;return risk?p.usd/risk:null}
+const money=v=>v==null||!isFinite(v)?'–':`<span class="${v>0?'up':v<0?'dn':''}">${v>0?'+':v<0?'−':''}$${Math.abs(v).toLocaleString('en-US',{maximumFractionDigits:2})}</span>`;
+const pc=v=>v==null||!isFinite(v)?'–':`<span class="${v>0?'up':v<0?'dn':''}">${v>0?'+':''}${v.toFixed(2)}%</span>`;
+function stats(L){const c=L.map(t=>({t,p:pnl(t),r:rmult(t)})).filter(x=>x.p);const n=c.length;if(!n)return{n:0};const val=x=>x.p.usd!=null?x.p.usd:x.p.pct;
+  const w=c.filter(x=>val(x)>0),l=c.filter(x=>val(x)<=0),gw=w.reduce((a,x)=>a+val(x),0),gl=-l.reduce((a,x)=>a+val(x),0),rs=c.filter(x=>x.r!=null);
+  const usd=c.every(x=>x.p.usd!=null);return{n,usd,win:w.length/n*100,sum:c.reduce((a,x)=>a+val(x),0),avg:c.reduce((a,x)=>a+val(x),0)/n,avgR:rs.length?rs.reduce((a,x)=>a+x.r,0)/rs.length:null,pf:gl?gw/gl:w.length?Infinity:null,aw:w.length?gw/w.length:0,al:l.length?gl/l.length:0}}
+/* ---- 기록 폼 ---- */
+$('#mis').innerHTML=MIS.map(m=>`<label><input type="checkbox" value="${esc(m)}"> ${esc(m)}</label>`).join('');
+const F=$('#fm'),loc=ts=>{const d=new Date(ts);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
+let EDIT=null;
+function fill(t){F.reset();EDIT=t?t.id:null;$('#save').textContent=t?'수정 저장':'저장';
+  if(!t){F.openAt.value=loc(Date.now());return}
+  for(const k of ['sym','side','entry','exit','stop','size','lev','setup','hits','emo','plan','fee','note'])if(F[k])F[k].value=t[k]??'';
+  F.openAt.value=t.openAt?loc(t.openAt):'';F.closeAt.value=t.closeAt?loc(t.closeAt):'';$$('#mis input').forEach(i=>i.checked=(t.mis||[]).includes(i.value))}
+F.addEventListener('submit',e=>{e.preventDefault();const g=k=>F[k].value.trim(),num=k=>g(k)===''?null:+g(k);
+  const t={id:EDIT||uid(),u:Date.now(),sym:g('sym').toUpperCase(),side:g('side'),entry:num('entry'),exit:num('exit'),stop:num('stop'),size:num('size'),lev:num('lev'),setup:g('setup'),hits:num('hits'),emo:g('emo'),plan:num('plan'),fee:g('fee')===''?null:+g('fee'),note:g('note'),
+    openAt:F.openAt.value?new Date(F.openAt.value).getTime():Date.now(),closeAt:F.closeAt.value?new Date(F.closeAt.value).getTime():(g('exit')?Date.now():null),mis:$$('#mis input:checked').map(i=>i.value)};
+  DB.trades=DB.trades.filter(x=>x.id!==t.id).concat(t);saveLocal();$('#fmsg').textContent=`${t.sym} ${EDIT?'수정':'저장'}했어요`+(KEY?'':' (이 기기에만)');fill(null);renderAll()});
+$('#clr').onclick=()=>{fill(null);$('#fmsg').textContent=''};
+/* 다른 페이지에서 넘어온 값: journal.html#new=SOL&p=73.1&h=3 */
+function fromHash(){const h=new URLSearchParams(location.hash.slice(1));if(!h.get('new'))return;fill(null);F.sym.value=h.get('new').toUpperCase();if(h.get('p'))F.entry.value=h.get('p');if(h.get('h'))F.hits.value=h.get('h');if(h.get('h'))F.setup.value='급등 준비';tab('add');history.replaceState(null,'',location.pathname)}
+/* ---- 탭 ---- */
+function tab(t){$$('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));$$('[data-p]').forEach(p=>p.hidden=p.dataset.p!==t);localStorage.setItem('jr-tab',t)}
+$('.tabs').onclick=e=>{const b=e.target.closest('button');if(b)tab(b.dataset.t)};
+/* ---- 목록 ---- */
+const dt=ts=>{const d=new Date(ts);return`${d.getFullYear()%100}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
+function renderList(){const q=$('#q').value.trim().toLowerCase();const L=live(DB.trades).filter(t=>!q||[t.sym,t.setup,t.note,t.emo,(t.mis||[]).join(' ')].join(' ').toLowerCase().includes(q)).sort((a,b)=>b.openAt-a.openAt);
+  $('#rows').innerHTML=L.map(t=>{const p=pnl(t),r=rmult(t);return`<tr><td class="l">${dt(t.openAt)}</td><td class="l">${OD.coinIcon(t.sym,16)} ${esc(t.sym)}</td><td class="l">${t.side==='S'?'<span class="dn">숏</span>':'<span class="up">롱</span>'}</td><td>${t.entry}</td><td>${t.exit??'<span class="mu">진행 중</span>'}</td><td>${p?(p.usd!=null?money(p.usd):pc(p.pct)):'–'}</td><td>${r!=null?r.toFixed(2):'–'}</td><td class="l">${esc(t.setup||'')}</td><td class="l">${esc(t.emo||'')}</td><td class="l n">${esc((t.mis||[]).length?'⚠ '+t.mis.join(', ')+' · ':'')}${esc(t.note||'')}</td><td><button type="button" class="ghost sm" data-e="${t.id}">수정</button> <button type="button" class="ghost sm" data-d="${t.id}">삭제</button></td></tr>`}).join('')||'<tr><td colspan="11" class="l mu">아직 기록이 없어요. 기록하기 탭에서 첫 매매를 남겨 보세요.</td></tr>'}
+$('#q').oninput=renderList;
+$('#rows').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.e){fill(DB.trades.find(x=>x.id===b.dataset.e));tab('add');window.scrollTo(0,0)}
+  if(b.dataset.d){if(!b.dataset.sure){b.dataset.sure=1;b.textContent='정말 삭제';return}const t=DB.trades.find(x=>x.id===b.dataset.d);Object.assign(t,{del:true,u:Date.now()});saveLocal();renderAll()}};
+$('#csv').onclick=()=>{const H=['openAt','closeAt','sym','side','entry','exit','stop','size','lev','setup','hits','emo','plan','fee','mis','note','pnl_usd','pnl_pct','R'];
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;const rows=live(DB.trades).sort((a,b)=>a.openAt-b.openAt).map(t=>{const p=pnl(t);return H.map(k=>k==='openAt'||k==='closeAt'?(t[k]?new Date(t[k]).toISOString():''):k==='mis'?(t.mis||[]).join('|'):k==='pnl_usd'?p?.usd?.toFixed(2):k==='pnl_pct'?p?.pct?.toFixed(3):k==='R'?rmult(t)?.toFixed(3):t[k]).map(q).join(',')});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+[H.join(','),...rows].join('\n')],{type:'text/csv'}));a.download='trading-journal.csv';a.click()};
+/* ---- 분석 ---- */
+let BY=localStorage.getItem('jr-by')||'setup';
+const hb=t=>{const h=t.closeAt&&t.openAt?(t.closeAt-t.openAt)/36e5:null;return h==null?'–':h<1?'1시간 미만':h<24?'1~24시간':h<72?'1~3일':'3일 이상'};
+const GROUPS={setup:['셋업',t=>[t.setup||'(없음)']],side:['방향',t=>[t.side==='S'?'숏':'롱']],emo:['감정',t=>[t.emo||'(안 적음)']],mis:['실수',t=>(t.mis||[]).length?t.mis:['실수 없음']],plan:['계획 준수',t=>[t.plan?t.plan+'점':'(안 적음)']],
+  hits:['급등 준비 충족',t=>[t.hits!=null?t.hits+'개':'(안 적음)']],hold:['보유 시간',t=>[hb(t)]],hour:['진입 시간대',t=>{const h=new Date(t.openAt).getHours();return[h<6?'새벽 0~6시':h<12?'오전 6~12시':h<18?'오후 12~18시':'밤 18~24시']}],
+  wd:['요일',t=>['일','월','화','수','목','금','토'][new Date(t.openAt).getDay()]+'요일'],sym:['코인',t=>[t.sym]],lev:['레버리지',t=>[t.lev==null?'(안 적음)':t.lev<=5?'5배 이하':t.lev<=20?'6~20배':'20배 초과']]};
+$('#by').innerHTML=Object.entries(GROUPS).map(([k,[l]])=>`<button type="button" data-v="${k}" aria-pressed="${k===BY}">${l}</button>`).join('');
+$('#by').onclick=e=>{const b=e.target.closest('button');if(!b)return;BY=b.dataset.v;localStorage.setItem('jr-by',BY);$$('#by button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===BY));renderAna()};
+function groupBy(L,key){const m=new Map();for(const t of L)for(const g of GROUPS[key][1](t)){if(!m.has(g))m.set(g,[]);m.get(g).push(t)}return[...m.entries()].map(([g,l])=>({g,s:stats(l)})).filter(x=>x.s.n)}
+function renderAna(){const L=live(DB.trades),C=L.filter(t=>pnl(t)),S=stats(C);const v=x=>S.usd?money(x):pc(x);
+  $('#kp').innerHTML=[['끝난 매매',S.n||0,`진행 중 ${L.length-C.length}개`],['승률',S.n?S.win.toFixed(0)+'%':'–',''],['손익 합계',S.n?v(S.sum):'–',S.usd?'수수료 뺀 금액':'포지션 크기를 적으면 금액으로 보여요'],['평균 손익',S.n?v(S.avg):'–',S.n?`평균 이익 ${S.usd?'$'+S.aw.toFixed(0):S.aw.toFixed(2)+'%'} · 평균 손실 ${S.usd?'$'+S.al.toFixed(0):S.al.toFixed(2)+'%'}`:''],['손익비 (PF)',S.pf==null?'–':S.pf===Infinity?'∞':S.pf.toFixed(2),'총이익 ÷ 총손실 · 1 넘으면 수익'],['평균 R',S.avgR!=null?S.avgR.toFixed(2):'–','손절가 적은 매매만']].map(([a,b,c])=>`<div><small>${a}</small><b>${b}</b><i>${c}</i></div>`).join('');
+  // 강점·약점 자동 정리 (5건 이상 그룹만)
+  const all=[];for(const k of ['setup','emo','mis','hits','hold','hour','side','lev','plan'])for(const x of groupBy(C,k))if(x.s.n>=5&&x.g[0]!=='(')all.push({...x,k:GROUPS[k][0]});
+  const best=all.filter(x=>x.s.avg>0).sort((a,b)=>b.s.avg-a.s.avg).slice(0,3),worst=all.filter(x=>x.s.avg<0).sort((a,b)=>a.s.avg-b.s.avg).slice(0,3);
+  const misCost=groupBy(C,'mis').filter(x=>x.g!=='실수 없음').map(x=>({g:x.g,sum:x.s.sum,n:x.s.n})).sort((a,b)=>a.sum-b.sum);
+  const li=x=>`<li><b>${esc(x.k)}: ${esc(x.g)}</b> · ${x.s.n}건, 승률 ${x.s.win.toFixed(0)}%, 평균 ${S.usd?money(x.s.avg):pc(x.s.avg)}</li>`;
+  $('#ins').innerHTML=C.length<10?`<h3>분석은 끝난 매매 10건부터 보여요</h3><p style="margin:0">지금 ${C.length}건이에요. 셋업·감정·실수를 같이 적어두면 어디서 벌고 잃는지 정확하게 나와요.</p>`:
+    `<h3>키울 것</h3><ul>${best.map(li).join('')||'<li class="mu">5건 이상 쌓인 그룹 중 평균 수익이 플러스인 곳이 아직 없어요</li>'}</ul><h3 style="margin-top:10px">고칠 것</h3><ul>${worst.map(li).join('')||'<li class="mu">5건 이상 쌓인 그룹 중 평균 손실인 곳이 없어요</li>'}${misCost.filter(x=>x.sum<0).slice(0,2).map(x=>`<li><b>실수 '${esc(x.g)}'</b>로 ${x.n}건에서 ${S.usd?money(x.sum):pc(x.sum)}</li>`).join('')}</ul>`;
+  // 누적 손익
+  const E=C.slice().sort((a,b)=>(a.closeAt||a.openAt)-(b.closeAt||b.openAt));const svg=$('#eq');let acc=0;const pts=E.map(t=>{const p=pnl(t);return acc+=S.usd?p.usd:p.pct});
+  if(pts.length>1){const W=600,Hh=170,mn=Math.min(0,...pts),mx=Math.max(0,...pts),y=v=>Hh-8-(v-mn)/((mx-mn)||1)*(Hh-16),x=i=>i/(pts.length-1)*W;svg.setAttribute('viewBox',`0 0 ${W} ${Hh}`);
+    svg.innerHTML=`<line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/><polyline fill="none" stroke="var(--ink)" stroke-width="2" vector-effect="non-scaling-stroke" points="${pts.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}"/>`}
+  else svg.innerHTML='';
+  const G=groupBy(C,BY).sort((a,b)=>b.s.n-a.s.n);
+  $('#grp').innerHTML=G.map(({g,s})=>`<tr class="${s.n<5?'few':''}"><td class="l">${esc(g)}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td>${S.usd?money(s.sum):pc(s.sum)}</td><td>${S.usd?money(s.avg):pc(s.avg)}</td><td>${s.avgR!=null?s.avgR.toFixed(2):'–'}</td><td>${s.pf==null?'–':s.pf===Infinity?'∞':s.pf.toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="7" class="l mu">끝난 매매가 없어요</td></tr>'}
+/* ---- 메모 ---- */
+function renderMemo(){$('#mlist').innerHTML=live(DB.memos).sort((a,b)=>b.at-a.at).map(m=>`<div class="memo"><small>${dt(m.at)}${m.sym?' · '+esc(m.sym):''}</small> <button type="button" class="ghost" data-md="${m.id}">삭제</button><p>${esc(m.text)}</p></div>`).join('')||'<p class="mu">메모가 없어요.</p>'}
+$('#madd').onclick=()=>{const t=$('#mtx').value.trim();if(!t)return;DB.memos.push({id:uid(),u:Date.now(),at:Date.now(),text:t,sym:$('#msym').value.trim().toUpperCase()});$('#mtx').value='';$('#msym').value='';saveLocal();renderMemo()};
+$('#mlist').onclick=e=>{const b=e.target.closest('[data-md]');if(!b)return;if(!b.dataset.sure){b.dataset.sure=1;b.textContent='정말 삭제';return}Object.assign(DB.memos.find(x=>x.id===b.dataset.md),{del:true,u:Date.now()});saveLocal();renderMemo()};
+/* 셋업 자동완성 */
+function renderAll(){$('#setups').innerHTML=[...new Set(['급등 준비','돌파','눌림목','역추세','청산 사냥','뉴스',...live(DB.trades).map(t=>t.setup).filter(Boolean)])].map(s=>`<option value="${esc(s)}">`).join('');renderList();renderAna();renderMemo()}
+fill(null);renderAll();tab(localStorage.getItem('jr-tab')||'add');fromHash();window.addEventListener('hashchange',fromHash);
+}
+</script>
+</body>
+</html>

@@ -111,7 +111,7 @@ function coinIcon(sym,px=20){sym=String(sym||'').toUpperCase().replace(/^1000+/,
   return `<img class="od-ic" style="${s}" src="${esc(first)}" alt="" loading="lazy" data-alt="${ICN[sym]?esc(alt):''}" data-b="${esc(t)}" onerror="if(this.dataset.alt){this.src=this.dataset.alt;this.dataset.alt=''}else{const b=document.createElement('span');b.className='od-ic od-icb';b.style.cssText=this.style.cssText+';font-size:${Math.round(px*.38)}px';b.textContent=this.dataset.b;this.replaceWith(b)}">`}
 /* ---- 설정 옮기기: 관심 코인·저장 지갑·알림 조건 등을 코드 한 줄로 내보내고 다른 기기에서 붙여넣기 ----
    API 키(업비트·Dune 등)와 캐시·알림 기록은 넣지 않아요 */
-const SKIP=/^(cg:|k-|uk-|od-alerts?$|od-alerts-seen$|kimp-names$|od-icons$)/;
+const SKIP=/^(cg:|k-|uk-|od-alerts?$|od-alerts-seen$|kimp-names$|od-icons$|od-gh-token$|od-gist-id$|od-fx$)/;
 function syncKeys(){const o={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!k||SKIP.test(k))continue;if(!/^(od-|odc-|scvd-|liq-|kimp-|lm-|sc-|su-|ul-|w-|coin$|tf$)/.test(k))continue;o[k]=localStorage.getItem(k)}return o}
 const b64e=s=>btoa(String.fromCharCode(...new TextEncoder().encode(s))),b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s),c=>c.charCodeAt(0)));
 function openSync(){shellStyle();document.querySelector('.od-sync')?.remove();const o=syncKeys(),code='OD1:'+b64e(JSON.stringify(o));
@@ -132,7 +132,8 @@ function openSync(){shellStyle();document.querySelector('.od-sync')?.remove();co
 const NAV=[['시장',[['./','급등 준비'],['./scan.html','스캐너'],['./kimp.html','김프'],['./bt.html','신호 검증']]],
   ['코인',[['./fav.html','★ 관심'],['./view.html','한눈에'],['./coin.html','코인 분석'],['./watch.html','호가 감시'],['./cvd.html','CVD']]],
   ['청산',[['./liq.html','실시간 청산'],['./liqmap.html','청산 압력']]],
-  ['온체인',[['./unlock.html','언락'],['./wallet.html','지갑']]]];
+  ['온체인',[['./unlock.html','언락'],['./wallet.html','지갑']]],
+  ['기록',[['./journal.html','매매 일지']]]];
 function buildNav(){const nav=document.querySelector('nav.top');if(!nav||nav.dataset.built)return;nav.dataset.built=1;
   const f=(location.pathname.split('/').pop()||'index.html').toLowerCase(),here=f==='index.html'?'./':'./'+f;
   const gi=NAV.findIndex(g=>g[1].some(p=>p[0]===here));
