@@ -81,7 +81,7 @@ ol.steps code,.note code{font-family:var(--mono);font-size:13px;border:1px solid
     <label>급등 준비 신호 알림 · 대상 코인 수 (0이면 끔)<input id="sgn" type="number" step="10" min="0" max="30" value="30"></label>
     <label>신호 기준 (충족 개수)<input id="sgk" type="number" step="1" min="1" max="5" value="3"></label>
     <label>보유 기간 알림 (시간)<input id="sgh" type="number" step="12" min="6" value="72"></label>
-    <label class="ck"><input type="checkbox" id="sgi" checked> 4시간 CVD가 마이너스로 바뀌면 무효화 알림</label>
+    <label class="ck"><input type="checkbox" id="sgi" checked> 4시간 CVD가 플러스였다가 마이너스로 바뀌면 무효화 알림</label>
     <p class="sub" style="grid-column:1/-1;margin:0">조건 기준은 <a href="./bt.html">신호 검증</a>에서 급등 준비에 적용한 기준을 그대로 써요. 신호가 뜨면 🚀, 충족 개수가 기준보다 2개 이상 줄거나 CVD가 꺾이면 ⚠️ 무효화, 보유 기간이 지나면 ⏰ 알림을 보내요. 1분에 6개씩 돌아가며 봐서, 30개면 한 바퀴에 5분 걸려요.</p>
   </div>
   <div class="ctl"><button type="button" class="ghost" id="fav">★ 관심 코인으로 채우기</button><button type="button" id="pvb">지금 조건으로 미리보기</button><span class="sub" id="pvs" style="margin:0"></span></div>
