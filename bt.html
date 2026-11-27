@@ -151,7 +151,7 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
     <li>데이터: Bybit(가격·미결제약정·펀딩비), Gate.io(체결 CVD·롱숏 비율·미결제약정 달러값·캔들).</li>
   </ul></details>
 </section>
-<script src="./common.js?v=17"></script>
+<script src="./common.js?v=18"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -270,6 +270,9 @@ function render(){if(!RES)return;const h=HZ,start=RES.from+2*24*H;
   const edge=kA.n&&base.n?kA.win-base.win:null;
   $('#warn').innerHTML=kA.n<30?`<b>표본이 적어요.</b> ${KMIN}개+ 신호가 ${kA.n}개뿐이라 결과를 믿기 어려워요. 기간을 늘리거나(180일) 대상을 넓혀(상위 50) 보세요.`:
     `<b>요약:</b> ${KMIN}개+ 신호는 ${hz} 뒤 승률 ${kA.win.toFixed(0)}%로, 아무 때나 산 기준선(${base.win.toFixed(0)}%)보다 <b>${edge>=0?edge.toFixed(0)+'%p 높았어요':(-edge).toFixed(0)+'%p 낮았어요'}</b>. 평균 수익은 ${kA.avg>0?'+':''}${kA.avg.toFixed(2)}% (기준선 ${base.avg>0?'+':''}${base.avg.toFixed(2)}%). ${costTxt()} 생존 편향은 반영 안 됐어요.`;
+  /* 매매 일지 비교용 요약 저장 */
+  try{const by={};for(const k of [2,3,4,5]){const a=agg(evs(k).filter(e=>e.o).map(e=>e.o));if(a.n)by[k]={n:a.n,win:a.win,avg:a.avg,med:a.med}}
+    localStorage.setItem('bt-sum',JSON.stringify({at:Date.now(),days:DAYS,top:TOPN,hz:h,kmin:KMIN,fee:FEE,fund:FUND,dly:DLY,base:{n:base.n,win:base.win,avg:base.avg},by}))}catch(e){}
   // 충족 개수별
   $('#t-hits').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+[2,3,4,5].filter(k=>k<=MAXH()).map(k=>row(`${k}개 이상 충족`,agg(evs(k).filter(e=>e.o).map(e=>e.o)),base)).join('');
   // 조건별

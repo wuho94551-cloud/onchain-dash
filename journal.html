@@ -110,6 +110,9 @@ button.sm{min-height:30px;padding:0 10px;font-size:13px}
   <div class="kp" id="kp"></div>
   <div class="ins" id="ins"></div>
   <h2 class="s">누적 손익</h2><svg class="eq" id="eq" preserveAspectRatio="none"></svg>
+  <h2 class="s">신호대로 했을 때 vs 내 실제 결과</h2>
+  <p class="d sub" id="cmpd"></p>
+  <div class="tbl"><table><thead><tr><th class="l">급등 준비 충족</th><th>신호 검증 승률</th><th>신호 검증 평균</th><th>내 매매 수</th><th>내 승률</th><th>내 평균</th><th>내 평균 보유</th></tr></thead><tbody id="cmp"></tbody></table></div>
   <h2 class="s">어디서 벌고 잃나</h2>
   <div class="ctl"><span class="lab">나눠 보기</span><span class="seg" id="by"></span></div>
   <div class="tbl"><table><thead><tr><th class="l">그룹</th><th>매매 수</th><th>승률</th><th>손익 합계</th><th>평균 손익</th><th>평균 R</th><th>손익비</th></tr></thead><tbody id="grp"></tbody></table></div>
@@ -120,7 +123,7 @@ button.sm{min-height:30px;padding:0 10px;font-size:13px}
   <div id="mlist"></div>
 </div>
 </section>
-<script src="./common.js?v=17"></script>
+<script src="./common.js?v=18"></script>
 <script>
 {
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -130,7 +133,9 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 /* ---- 저장: 이 기기(localStorage) + GitHub Gist(암호화) ---- */
 let DB=(()=>{try{return JSON.parse(localStorage.getItem('od-journal')||'null')||{trades:[],memos:[]}}catch(e){return{trades:[],memos:[]}}})();
 const live=a=>a.filter(x=>!x.del);
-function saveLocal(){localStorage.setItem('od-journal',JSON.stringify(DB));schedulePush()}
+function saveLocal(){localStorage.setItem('od-journal',JSON.stringify(DB));schedulePush();pushSummary()}
+/* 주간 리포트용 요약(끝난 매매의 코인·손익·셋업·실수만)을 폰 알림 워커로 */
+let sumT=0;function pushSummary(){if(!OD.workerCfg())return;clearTimeout(sumT);sumT=setTimeout(()=>{const T=live(DB.trades).filter(t=>t.closeAt&&t.closeAt>Date.now()-35*864e5&&pnl(t)).map(t=>{const p=pnl(t);return{y:t.sym,p:+p.pct.toFixed(3),u:p.usd!=null?+p.usd.toFixed(2):null,s:t.setup||'',m:t.mis||[],c:t.closeAt}});OD.workerPut('/journal',T).catch(()=>{})},3000)}
 const enc=new TextEncoder(),dec=new TextDecoder(),b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 let KEY=null,SALT=null;
 async function derive(pass,salt){const base=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
@@ -223,6 +228,16 @@ function renderAna(){const L=live(DB.trades),C=L.filter(t=>pnl(t)),S=stats(C);co
   if(pts.length>1){const W=600,Hh=170,mn=Math.min(0,...pts),mx=Math.max(0,...pts),y=v=>Hh-8-(v-mn)/((mx-mn)||1)*(Hh-16),x=i=>i/(pts.length-1)*W;svg.setAttribute('viewBox',`0 0 ${W} ${Hh}`);
     svg.innerHTML=`<line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/><polyline fill="none" stroke="var(--ink)" stroke-width="2" vector-effect="non-scaling-stroke" points="${pts.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}"/>`}
   else svg.innerHTML='';
+  /* 신호 검증 요약과 비교 (수익률 % 기준, 수수료 뺀 값) */
+  const B=(()=>{try{return JSON.parse(localStorage.getItem('bt-sum')||'null')}catch(e){return null}})();
+  const pp=t=>{const p=pnl(t);if(!p)return null;const fee=t.size?((t.fee!=null?+t.fee:t.size*0.0011)/t.size*100):0.11;return p.pct-fee};
+  const mine=k=>{const l=C.filter(t=>t.hits!=null&&t.hits>=+k);const r=l.map(pp).filter(v=>v!=null);const hold=l.filter(t=>t.closeAt).map(t=>(t.closeAt-t.openAt)/36e5);
+    return{n:r.length,win:r.length?r.filter(v=>v>0).length/r.length*100:null,avg:r.length?r.reduce((a,b)=>a+b,0)/r.length:null,hold:hold.length?hold.reduce((a,b)=>a+b,0)/hold.length:null}};
+  $('#cmpd').innerHTML=B?`신호 검증: 최근 ${B.days}일 · 상위 ${B.top}개 · ${({24:'1일',72:'3일',168:'7일'})[B.hz]} 보유 기준 (${new Date(B.at).toLocaleDateString('ko-KR')} 계산). 내 결과는 일지에 '급등 준비 충족 수'를 적은 매매만, 수수료 뺀 수익률(%)로 비교해요.`:
+    '<a href="./bt.html">신호 검증</a>을 한 번 돌리면 여기에 비교가 나와요.';
+  const f1=v=>v==null?'–':v.toFixed(0)+'%';
+  $('#cmp').innerHTML=[2,3,4,5].map(k=>{const b=B?.by?.[k],m=mine(k);return`<tr class="${m.n<5?'few':''}"><td class="l">${k}개 이상</td><td>${b?f1(b.win):'–'}</td><td>${b?pc(b.avg):'–'}</td><td>${m.n}</td><td>${f1(m.win)}</td><td>${pc(m.avg)}</td><td>${m.hold!=null?(m.hold/24).toFixed(1)+'일':'–'}</td></tr>`}).join('')+
+    (B?`<tr class="base"><td class="l">아무 때나 매수 (기준선)</td><td>${f1(B.base.win)}</td><td>${pc(B.base.avg)}</td><td colspan="4"></td></tr>`:'');
   const G=groupBy(C,BY).sort((a,b)=>b.s.n-a.s.n);
   $('#grp').innerHTML=G.map(({g,s})=>`<tr class="${s.n<5?'few':''}"><td class="l">${esc(g)}</td><td>${s.n}</td><td>${s.win.toFixed(0)}%</td><td>${S.usd?money(s.sum):pc(s.sum)}</td><td>${S.usd?money(s.avg):pc(s.avg)}</td><td>${s.avgR!=null?s.avgR.toFixed(2):'–'}</td><td>${s.pf==null?'–':s.pf===Infinity?'∞':s.pf.toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="7" class="l mu">끝난 매매가 없어요</td></tr>'}
 /* ---- 메모 ---- */

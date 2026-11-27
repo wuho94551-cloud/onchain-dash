@@ -111,7 +111,7 @@ function coinIcon(sym,px=20){sym=String(sym||'').toUpperCase().replace(/^1000+/,
   return `<img class="od-ic" style="${s}" src="${esc(first)}" alt="" loading="lazy" data-alt="${ICN[sym]?esc(alt):''}" data-b="${esc(t)}" onerror="if(this.dataset.alt){this.src=this.dataset.alt;this.dataset.alt=''}else{const b=document.createElement('span');b.className='od-ic od-icb';b.style.cssText=this.style.cssText+';font-size:${Math.round(px*.38)}px';b.textContent=this.dataset.b;this.replaceWith(b)}">`}
 /* ---- 설정 옮기기: 관심 코인·저장 지갑·알림 조건 등을 코드 한 줄로 내보내고 다른 기기에서 붙여넣기 ----
    API 키(업비트·Dune 등)와 캐시·알림 기록은 넣지 않아요 */
-const SKIP=/^(cg:|k-|uk-|od-alerts?$|od-alerts-seen$|kimp-names$|od-icons$|od-gh-token$|od-gist-id$|od-fx$)/;
+const SKIP=/^(cg:|k-|uk-|od-alerts?$|od-alerts-seen$|kimp-names$|od-icons$|od-gh-token$|od-gist-id$|od-fx$|od-worker$)/;
 function syncKeys(){const o={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!k||SKIP.test(k))continue;if(!/^(od-|odc-|scvd-|liq-|kimp-|lm-|sc-|su-|ul-|w-|coin$|tf$)/.test(k))continue;o[k]=localStorage.getItem(k)}return o}
 const b64e=s=>btoa(String.fromCharCode(...new TextEncoder().encode(s))),b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s),c=>c.charCodeAt(0)));
 function openSync(){shellStyle();document.querySelector('.od-sync')?.remove();const o=syncKeys(),code='OD1:'+b64e(JSON.stringify(o));
@@ -408,7 +408,11 @@ async function mountChart(host,base,opt={}){
   }
   await load().catch(e=>{$('info').textContent='차트를 불러오지 못했어요: '+e.message});
   const timer=setInterval(()=>{if(!document.hidden)load().catch(()=>{})},60e3);
-  return{destroy(){window.removeEventListener('odc-col',onCol);window.removeEventListener('od-theme',onTheme);clearInterval(timer);ro.disconnect();chart.remove()},reload:load};
+  /* 알림선 표시 + 차트 클릭 가격 전달 */
+  let alines=[];
+  const setAlerts=list=>{for(const l of alines)cs.removePriceLine(l);alines=(list||[]).map(a=>cs.createPriceLine({price:a.price,color:alpha(ink,.8),lineWidth:1,lineStyle:1,axisLabelVisible:true,title:'🔔 '+(a.dir==='above'?'↑':'↓')}))};
+  if(opt.onClick)chart.subscribeClick(pr=>{if(!pr.point)return;const v=cs.coordinateToPrice(pr.point.y);if(v!=null&&isFinite(v))opt.onClick(v)});
+  return{setAlerts,destroy(){window.removeEventListener('odc-col',onCol);window.removeEventListener('od-theme',onTheme);clearInterval(timer);ro.disconnect();chart.remove()},reload:load};
 }
 
 async function openChart(base,meta={}){
@@ -442,5 +446,14 @@ function sigText(P){const sg=v=>(v>=0?'+':'')+v;return[
   P.cvd==='24'?'24시간 CVD가 플러스':'24시간 CVD와 최근 4시간 CVD가 모두 플러스',
   `현재가 위 +8% 안의 숏 청산 추정 물량이 아래 롱 청산보다 ${P.ratio}배 이상`,
   `48시간 고저 범위의 아래쪽 ${P.pos}% 안에 가격이 있음`]}
-window.OD={sigP,sigSave,sigCond,sigText,SIG_DEF,coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
+/* ---- 가격 알림선: 이 기기 저장 + (설정했으면) 알림 워커로 올림 ---- */
+function workerCfg(){try{const w=JSON.parse(localStorage.getItem('od-worker')||'null');return w&&w.url&&w.key?w:null}catch(e){return null}}
+async function workerPut(path,body){const w=workerCfg();if(!w)return{skipped:true};const r=await fetch(w.url.replace(/\/$/,'')+path,{method:'POST',headers:{'content-type':'application/json','x-key':w.key},body:JSON.stringify(body)});const o=await r.json().catch(()=>({}));if(!r.ok)throw new Error(o.error||('HTTP '+r.status));return o}
+function getLines(){try{return JSON.parse(localStorage.getItem('od-lines')||'[]')}catch(e){return[]}}
+async function setLines(L){localStorage.setItem('od-lines',JSON.stringify(L));window.dispatchEvent(new Event('od-lines'));try{return await workerPut('/lines',L)}catch(e){toast('폰 알림 워커에 못 올렸어요',e.message);return{error:e.message}}}
+async function checkLinesHere(){const L=getLines();if(!L.length)return;try{const t=await j('https://api.bybit.com/v5/market/tickers?category=linear');const px={};for(const x of t.result.list){if(!x.symbol.endsWith('USDT'))continue;const b=x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,'');if(px[b]==null)px[b]=+x.lastPrice}
+  const keep=[];for(const l of L){const p=px[l.sym];if(p!=null&&(l.dir==='above'?p>=l.price:p<=l.price))notify(`${l.sym} ${l.dir==='above'?'상향 돌파':'하향 이탈'} ${l.price}`,`지금 ${p}${l.note?' · '+l.note:''}`,{side:l.dir==='above'?'B':'S',href:'./view.html#'+l.sym});else keep.push(l)}
+  if(keep.length!==L.length)setLines(keep)}catch(e){}}
+setInterval(()=>{if(!document.hidden)checkLinesHere()},60e3);setTimeout(checkLinesHere,5000);
+window.OD={getLines,setLines,workerCfg,workerPut,sigP,sigSave,sigCond,sigText,SIG_DEF,coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
 })();

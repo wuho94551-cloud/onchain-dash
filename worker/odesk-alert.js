@@ -3,7 +3,8 @@
    - 필요한 설정 (Cloudflare 대시보드 → 워커 → Settings)
      · Secret   TG_TOKEN : 텔레그램 봇 토큰 (BotFather에서 받음)
      · Variable CONFIG   : 사이트의 '폰 알림' 설정 JSON (README 참고)
-     · KV 바인딩 STATE   : 아무 KV 네임스페이스 (같은 알림 반복 방지용)
+     · KV 바인딩 STATE   : 아무 KV 네임스페이스 (같은 알림 반복 방지·알림선·일지 요약 저장)
+     · Secret   SITE_KEY : 아무 긴 문자열. 사이트가 알림선·일지 요약을 올릴 때 쓰는 비밀번호
      · Trigger  Cron     : * * * * *
    - 브라우저로 https://<워커주소>/test 를 열면 테스트 메시지를 보냄 */
 const UA = typeof document === 'undefined' ? { 'user-agent': 'odesk-alert/1.0' } : {}; // 브라우저 미리보기에선 헤더 생략
@@ -136,20 +137,62 @@ async function checkSignals(env, cfg, out, errs) {
   } catch (e) { errs.push(x.symbol + ' ' + e.message); } }));
 }
 
+
+/* ---- 가격 알림선: 사이트에서 /lines 로 올린 가격에 닿으면 한 번 알리고 지움 ---- */
+async function checkLines(env, cfg, out) {
+  if (!env.STATE) return; const L = JSON.parse(await env.STATE.get('lines') || '[]'); if (!L.length) return;
+  const t = await j('https://api.bybit.com/v5/market/tickers?category=linear'); const px = {};
+  for (const x of t.result.list) { const b = x.symbol.replace(/USDT$/, '').replace(/^(1000000|10000|1000)/, ''); const sc = +(x.symbol.match(/^(1000000|10000|1000)/) || [0, 1])[1]; if (x.symbol.endsWith('USDT') && px[b] == null) px[b] = { p: +x.lastPrice, sc }; }
+  const keep = [];
+  for (const l of L) { const q = px[l.sym]; if (!q) { keep.push(l); continue; } const p = q.p;
+    const hit = l.dir === 'above' ? q.p >= l.price : q.p <= l.price;
+    if (hit) out.push(`🎯 ${l.sym} ${l.dir === 'above' ? '상향 돌파' : '하향 이탈'} ${fmt(l.price)} · 지금 ${fmt(p)}${l.note ? ' · ' + l.note : ''}`); else keep.push(l); }
+  if (keep.length !== L.length && !env.DRY) await env.STATE.put('lines', JSON.stringify(keep));
+}
+/* ---- 주간 리포트: 매주 월요일 오전 9시(한국)에 지난 7일 매매 요약 ---- */
+async function checkWeekly(env, cfg, out) {
+  if (!env.STATE || cfg.weekly === false) return; const now = new Date(Date.now() + 9 * 36e5);
+  if (!env.FORCE_WEEKLY && !(now.getUTCDay() === 1 && now.getUTCHours() === 9 && now.getUTCMinutes() < 5)) return;
+  const wk = now.toISOString().slice(0, 10); if (!env.FORCE_WEEKLY && !(await once(env, 'wk:' + wk, 60 * 24))) return;
+  const T = JSON.parse(await env.STATE.get('journal') || '[]').filter(t => t.c >= Date.now() - 7 * 864e5);
+  if (!T.length) { out.push('📒 주간 리포트: 지난 7일 동안 끝난 매매가 없어요.'); return; }
+  const usd = T.every(t => t.u != null), v = t => usd ? t.u : t.p, sum = T.reduce((a, t) => a + v(t), 0), w = T.filter(t => v(t) > 0).length;
+  const f = x => usd ? (x >= 0 ? '+$' : '−$') + Math.abs(x).toFixed(0) : (x >= 0 ? '+' : '') + x.toFixed(2) + '%';
+  const by = k => { const m = {}; for (const t of T) for (const g of [].concat(t[k] || [])) { m[g] = m[g] || { n: 0, s: 0 }; m[g].n++; m[g].s += v(t); } return Object.entries(m); };
+  const setups = by('s').sort((a, b) => b[1].s - a[1].s), mis = by('m').sort((a, b) => b[1].n - a[1].n);
+  const lines = [`📒 주간 리포트 (지난 7일)`, `매매 ${T.length}건 · 승률 ${(w / T.length * 100).toFixed(0)}% · 손익 ${f(sum)}`];
+  if (setups.length) lines.push(`가장 잘 된 셋업: ${setups[0][0] || '(없음)'} ${f(setups[0][1].s)}` + (setups.length > 1 ? ` · 가장 안 된 셋업: ${setups.at(-1)[0] || '(없음)'} ${f(setups.at(-1)[1].s)}` : ''));
+  if (mis.length) lines.push(`가장 많이 한 실수: ${mis[0][0]} ${mis[0][1].n}번 (${f(mis[0][1].s)})`);
+  const best = T.slice().sort((a, b) => v(b) - v(a))[0], worst = T.slice().sort((a, b) => v(a) - v(b))[0];
+  lines.push(`최고 ${best.y} ${f(v(best))} · 최악 ${worst.y} ${f(v(worst))}`); out.push(lines.join('\n'));
+}
+
 async function run(env) {
   const cfg = typeof env.CONFIG === 'object' ? env.CONFIG : JSON.parse(env.CONFIG || '{}'); const out = [], errs = [];
-  for (const f of [checkPrice, checkKimp, checkWallets, checkSignals]) { try { await f(env, cfg, out, errs); } catch (e) { errs.push(e.message); } }
+  for (const f of [checkPrice, checkKimp, checkWallets, checkSignals, checkLines, checkWeekly]) { try { await f(env, cfg, out, errs); } catch (e) { errs.push(e.message); } }
   if (out.length && !env.DRY) await tg(env, cfg, out.join('\n'));
   return { count: out.length, sent: out.length > 0 && !env.DRY, out, errs };
 }
 
-const txt = (s, status = 200) => new Response(s, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type,x-key' };
+const txt = (s, status = 200) => new Response(s, { status, headers: { 'content-type': 'text/plain; charset=utf-8', ...CORS } });
+const jsn = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...CORS } });
 export default {
   run, // 사이트의 '폰 알림' 페이지가 미리보기에 씀
   async scheduled(ev, env, ctx) { ctx.waitUntil(run(env)); },
   async fetch(req, env) {
     const u = new URL(req.url); const cfg = JSON.parse(env.CONFIG || '{}');
     try {
+      if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+      /* 사이트에서 쓰는 저장 API: 비밀값 SITE_KEY 가 맞아야 함 */
+      if (u.pathname === '/lines' || u.pathname === '/journal') {
+        if (!env.SITE_KEY || req.headers.get('x-key') !== env.SITE_KEY) return jsn({ error: 'SITE_KEY가 맞지 않아요' }, 401);
+        if (!env.STATE) return jsn({ error: 'KV(STATE)가 연결되지 않았어요' }, 500);
+        const k = u.pathname.slice(1);
+        if (req.method === 'POST') { const b = await req.json(); if (!Array.isArray(b)) return jsn({ error: '배열이어야 해요' }, 400); await env.STATE.put(k, JSON.stringify(b.slice(0, 500))); return jsn({ ok: true, n: b.length }); }
+        return jsn(JSON.parse(await env.STATE.get(k) || '[]'));
+      }
+      if (u.pathname === '/weekly') { const out = []; await checkWeekly({ ...env, FORCE_WEEKLY: true }, cfg, out); if (out.length) await tg(env, cfg, out.join('\n')); return txt(out.join('\n') || '보낼 내용이 없어요'); }
       if (u.pathname === '/test') { await tg(env, cfg, '✅ 온체인 데스크 알림 연결됐어요.'); return txt('텔레그램으로 테스트 메시지를 보냈어요.'); }
       if (u.pathname === '/run') return new Response(JSON.stringify(await run(env), null, 1), { headers: { 'content-type': 'application/json; charset=utf-8' } });
       return txt('온체인 데스크 알림 워커. /test = 테스트 메시지, /run = 지금 한 번 확인');

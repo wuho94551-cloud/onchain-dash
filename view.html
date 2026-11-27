@@ -35,6 +35,10 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 .empty{padding:28px 10px;color:var(--mute);text-align:center}
 .prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.aln{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:10px;border:1px solid var(--line);padding:8px 12px;font-size:14px}
+.aln input{font:inherit;font-family:var(--mono);font-size:14px;min-height:34px;padding:0 8px;border:1px solid var(--line);background:transparent;color:var(--ink);width:120px}
+.aln button.sm{min-height:34px;padding:0 12px;font-size:13px}
+.aln .chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);padding:2px 8px;font-family:var(--mono);font-size:13px}.aln .chip button{min-height:0;padding:0 4px;background:transparent;color:var(--mute);border:0}
 .calc{margin-top:16px;border:1px solid var(--line);padding:10px 14px}.calc summary{font-weight:700}
 .cf{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
 .cf label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute)}
@@ -69,6 +73,9 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 </header>
 <section class="band" style="padding-top:14px">
   <div id="chart"></div>
+  <div class="aln"><b>🔔 가격 알림선</b><span class="sub" style="margin:0">차트를 누르면 그 가격이 들어가요</span>
+    <input id="al-p" type="number" step="any" placeholder="가격"><input id="al-n" placeholder="메모 (선택)"><button type="button" class="sm" id="al-add">추가</button>
+    <span id="al-list"></span><span class="sub" id="al-st" style="margin:0"></span></div>
   <details class="calc" id="calc"><summary>포지션 계산기</summary>
     <div class="cf">
       <label>계좌 잔고 (USDT)<input id="k-bal" type="number" step="any"></label>
@@ -92,7 +99,7 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   </div>
   <p class="sub" style="margin-top:14px">데이터: Bybit 선물(가격·미결제약정·펀딩비), Gate.io 선물(체결 CVD·롱숏 비율·청산 추정). 1분마다 새로 받아요. <a href="./watch.html" id="lw">호가 감시 →</a> <a href="./coin.html" id="lc">코인 분석 →</a></p>
 </section>
-<script src="./common.js?v=17"></script>
+<script src="./common.js?v=18"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -168,10 +175,17 @@ function calc(){const v=id=>{const x=$(id).value;return x===''?null:+x};const ba
   const q=new URLSearchParams({new:BASE,side});if(en)q.set('p',en);if(sl)q.set('stop',sl);if(size)q.set('size',size.toFixed(2));q.set('lev',lev);if(LASTH>0)q.set('h',LASTH);$('#k-jr').href='./journal.html#'+q.toString()}
 let LASTH=null;
 $('#calc').addEventListener('input',calc);$('#k-now').onclick=()=>{if(LASTP){$('#k-en').value=LASTP;calc()}};
+/* ---- 가격 알림선 ---- */
+function drawLines(){const L=OD.getLines().filter(l=>l.sym===BASE);$('#al-list').innerHTML=L.map(l=>`<span class="chip">${l.dir==='above'?'↑':'↓'} ${fp(l.price)}${l.note?' · '+esc(l.note):''}<button type="button" data-rm="${l.id}" aria-label="삭제">✕</button></span>`).join('');
+  if(CH&&CH.setAlerts)CH.setAlerts(L);$('#al-st').textContent=OD.workerCfg()?'폰으로도 알려요':'지금은 이 사이트가 열려 있을 때만 알려요. 폰 알림 페이지에서 워커를 연결하면 폰으로도 와요.'}
+$('#al-add').onclick=async()=>{const p=+$('#al-p').value;if(!p||!LASTP)return;const L=OD.getLines();L.push({id:Date.now().toString(36),sym:BASE,price:p,dir:p>=LASTP?'above':'below',note:$('#al-n').value.trim().slice(0,60),at:Date.now()});$('#al-p').value='';$('#al-n').value='';
+  const r=await OD.setLines(L);drawLines();if(!r.error)OD.toast(`${BASE} ${fp(p)} 알림선 추가`,p>=LASTP?'이 가격 위로 올라가면 알려요':'이 가격 아래로 내려가면 알려요')};
+$('#al-list').onclick=e=>{const b=e.target.closest('[data-rm]');if(!b)return;OD.setLines(OD.getLines().filter(l=>l.id!==b.dataset.rm)).then(drawLines);drawLines()};
+window.addEventListener('od-lines',drawLines);
 async function open(b){BASE=b.toUpperCase();localStorage.setItem('vw-last',BASE);if(location.hash.slice(1)!==BASE)history.replaceState(null,'','#'+encodeURIComponent(BASE));
   $('#sym').innerHTML=OD.coinIcon(BASE,34)+esc(BASE);document.title=BASE+' 한눈에 · 온체인 데스크';$('#lw').href='./watch.html#'+encodeURIComponent(BASE);$('#lc').href='./coin.html#'+encodeURIComponent(BASE);
   $('#k-en').value='';$('#k-sl').value='';$('#k-tp').value='';
-  if(CH)CH.destroy();CH=null;$('#chart').innerHTML='';OD.mountChart($('#chart'),BASE,{links:false}).then(c=>{CH=c;load().catch(e=>$('#stat').textContent='불러오기 실패: '+e.message)}).catch(e=>$('#stat').textContent='차트 실패: '+e.message)}
+  if(CH)CH.destroy();CH=null;$('#chart').innerHTML='';OD.mountChart($('#chart'),BASE,{links:false,onClick:v=>{$('#al-p').value=+v.toPrecision(6)}}).then(c=>{CH=c;drawLines();load().catch(e=>$('#stat').textContent='불러오기 실패: '+e.message)}).catch(e=>$('#stat').textContent='차트 실패: '+e.message)}
 OD.picker($('#pick'),s=>open(s),{searchLabel:'보기'});
 window.addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1)).toUpperCase();if(h&&h!==BASE)open(h)});
 setInterval(()=>{if(!document.hidden&&window.LightweightCharts)load().catch(()=>{})},60e3);
