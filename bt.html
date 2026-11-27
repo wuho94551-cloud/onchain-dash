@@ -136,11 +136,11 @@ td.l small{color:var(--mute);margin-left:6px;font-size:12px}
   <p class="d">신호 뒤 조건이 깨지면 바로 판다고 했을 때와, 보유 기간 끝까지 들고 갔을 때를 비교해요. 청산은 그 시간 봉의 종가 기준이에요. 조건은 시간마다 자주 바뀌어서, 무효화 규칙을 쓰면 대부분 하루 안에 청산돼요. 짧게 들고 나온 결과와 비교하는 셈이라는 점을 같이 봐 주세요.</p>
   <div class="tbl"><table><thead><tr><th class="l">청산 규칙</th><th>신호 수</th><th>승률</th><th>평균 수익</th><th>중앙값</th><th title="보유 기간 끝까지 가기 전에 청산된 비율">중간 청산</th><th>평균 보유</th></tr></thead><tbody id="t-inv"></tbody></table></div>
 
-  <h2 class="s">세력 흔적 조합 찾기</h2>
-  <p class="d">조건 10개(①~⑤ + 세력 흔적 ⑥~⑩) 중 1~3개 조합마다, 그 조합이 맞았을 때 <b>7일 안에 +20% 이상 오른 비율</b>을 계산해요. 과거에 끼워 맞추는 걸 막으려고, <b>앞 60% 기간으로 조합을 고르고 뒤 40% 기간으로 다시 확인</b>해요. 뒤 기간에서도 +20% 비율이 기준선의 1.5배 이상, 15건 이상이고, <b>7일 평균 수익이 기준선보다 높고 −10%를 먼저 맞는 비율이 기준선보다 낮아야</b> '검증 통과'예요. 위아래로 크게 흔들리기만 하는 조합은 거르려고요.</p>
+  <h2 class="s">세력 흔적 조합 찾기 (롱·숏 양방향)</h2>
+  <p class="d">조건 10개(①~⑤ + 세력 흔적 ⑥~⑩) 중 1~3개 조합마다, 그 조합이 맞은 순간 <b>롱과 숏 중 어느 쪽으로, 익절·손절을 몇 %에 두면 가장 남았는지</b> 계산해요(7일 안에 익절·손절 못 하면 7일 뒤 종가로 정리, 수수료 0.11% 뺌, 같은 시간 봉 안에서 둘 다 닿으면 손절로 봐요). <b>앞 60% 기간으로 방향·익절·손절을 고르고, 뒤 40% 기간에 그대로 적용</b>해서 확인해요. 뒤 기간 기대값이 플러스이고, 같은 규칙으로 아무 때나 들어간 것보다 0.5%p 이상 높고, 15건 이상이면 '검증 통과'예요.</p>
   <details class="pbox"><summary>⑥~⑩ 세력 흔적 조건 설명</summary><ul id="pdesc" style="font-size:14px;margin:6px 0"></ul></details>
   <div class="ctl"><button type="button" id="combo">조합 찾기</button><span class="sub" id="cst" style="margin:0"></span></div>
-  <div class="tbl"><table><thead><tr><th class="l">조합</th><th>앞 기간 건수</th><th>앞 기간 +20%</th><th>뒤 기간 건수</th><th>뒤 기간 +20%</th><th>뒤 기간 기준선</th><th title="뒤 기간 +20% ÷ 기준선">배수</th><th title="7일 안에 -10%를 먼저 맞은 비율 (뒤 기간)">-10% 먼저</th><th>7일 평균 (뒤)</th><th class="l">판정</th></tr></thead><tbody id="t-combo"><tr><td colspan="10" class="l mu">검증 시작 후 '조합 찾기'를 누르세요.</td></tr></tbody></table></div>
+  <div class="tbl"><table><thead><tr><th class="l">조합</th><th class="l">방향</th><th>익절 / 손절</th><th>앞 기간 건수</th><th title="한 번 매매당 평균 손익 (수수료 뺀 %)">앞 기대값</th><th>뒤 기간 건수</th><th>뒤 승률</th><th>뒤 기대값</th><th title="같은 방향·익절·손절로 아무 때나 들어갔을 때">아무 때나</th><th title="뒤 기간: 7일 안 +10%와 −10% 중 먼저 닿은 쪽">위 먼저 / 아래 먼저</th><th title="뒤 기간: 7일 안 위든 아래든 20% 이상 움직인 비율">±20% 움직임</th><th>평균 보유</th><th class="l">판정</th></tr></thead><tbody id="t-combo"><tr><td colspan="13" class="l mu">검증 시작 후 '조합 찾기'를 누르세요.</td></tr></tbody></table></div>
 
   <h2 class="s">최근 신호</h2>
   <p class="d">'신호 기준' 이상으로 뜬 최근 신호 40개예요. 보유 기간이 아직 안 끝난 건 '진행 중'이에요.</p>
@@ -222,27 +222,34 @@ function applyP(){if(!RES)return;for(const c of RES.top)for(const r of c.S){if(r
 
 let RES=null;
 $('#pdesc').innerHTML=OD.PUMP.map(x=>`<li><b>${x[0]}</b>: ${x[1]}</li>`).join('');
-/* 7일 결과: +20% 도달, -10% 먼저, 7일 수익 */
-function pumpOut(S,i){const H7=168;if(i+H7>=S.length)return null;const e=S[i].price;let up=false,first=null;
-  for(let q=i+1;q<=i+H7;q++){const hi=S[q].hi/e-1,lo=S[q].lo/e-1;if(hi>=.2)up=true;if(first==null){if(lo<=-.1)first='dn';else if(hi>=.2)first='up'}}
-  return{up,dn:first==='dn',ret:(S[i+H7].price/e-1)*100}}
+/* 7일 경로: 각 % 수준에 처음 닿은 시간(시간 단위). 999 = 7일 안에 못 닿음 */
+const LV=[3,5,8,10,15,20,30],TPS=[5,8,10,15,20,30],SLS=[3,5,8,10,15];
+function pathOut(S,i){const H7=168;if(i+H7>=S.length)return null;const e=S[i].price,tU=new Int16Array(LV.length).fill(999),tD=new Int16Array(LV.length).fill(999);
+  for(let q=i+1;q<=i+H7;q++){const hi=(S[q].hi/e-1)*100,lo=(1-S[q].lo/e)*100;for(let k=0;k<LV.length;k++){if(tU[k]===999&&hi>=LV[k])tU[k]=q-i;if(tD[k]===999&&lo>=LV[k])tD[k]=q-i}}
+  return{tU,tD,ret:(S[i+H7].price/e-1)*100}}
+const li=v=>LV.indexOf(v);
+/* 규칙 하나 적용: dir L/S, 익절 tp%, 손절 sl% */
+function trade(o,dir,tp,sl){const up=o.tU[li(dir==='L'?tp:sl)],dn=o.tD[li(dir==='L'?sl:tp)];
+  if(dir==='L'){if(up===999&&dn===999)return{p:o.ret-.11,h:168};if(dn<=up)return{p:-sl-.11,h:dn};return{p:tp-.11,h:up}}
+  if(up===999&&dn===999)return{p:-o.ret-.11,h:168};if(up<=dn)return{p:-sl-.11,h:up};return{p:tp-.11,h:dn}}
+const RULES=[];for(const d of ['L','S'])for(const tp of TPS)for(const sl of SLS)if(tp>=sl)RULES.push([d,tp,sl]);
+function evalRule(list,r){const n=list.length;if(!n)return{n:0};let s=0,w=0,h=0;for(const o of list){const t=trade(o,...r);s+=t.p;if(t.p>0)w++;h+=t.h}return{n,exp:s/n,win:w/n*100,hold:h/n}}
+function moveStats(list){const n=list.length;if(!n)return{};const i10=li(10),i20=li(20);let u=0,d=0,b=0;for(const o of list){if(o.tU[i10]<o.tD[i10])u++;else if(o.tD[i10]<o.tU[i10])d++;if(o.tU[i20]<999||o.tD[i20]<999)b++}return{upF:u/n*100,dnF:d/n*100,big:b/n*100}}
 function findCombos(){if(!RES)return;const t0=performance.now();const start=RES.from+2*24*H+7*24*H,end=RES.to,split=start+(end-start)*.6;
-  /* 코인마다 매시 마스크·결과 */
-  const D=RES.top.map(c=>{const S=c.S;const rows=[];for(let i=192;i<S.length;i++){if(S[i].T<start)continue;const o=pumpOut(S,i);if(!o)continue;rows.push({i,T:S[i].T,m:OD.allMask(S[i],P),o,tr:S[i].T+7*24*H<split,te:S[i].T>=split})}return rows});
-  const st=(list)=>{const n=list.length;if(!n)return{n:0};return{n,p:list.filter(x=>x.up).length/n*100,dn:list.filter(x=>x.dn).length/n*100,avg:list.reduce((a,x)=>a+x.ret,0)/n}};
+  const D=RES.top.map(c=>{const S=c.S;const rows=[];for(let i=192;i<S.length;i++){if(S[i].T<start)continue;const o=pathOut(S,i);if(!o)continue;rows.push({i,m:OD.allMask(S[i],P),o,tr:S[i].T+7*24*H<split,te:S[i].T>=split})}return rows});
   const pick=(m,f)=>{const out=[];for(const rows of D){let last=-1e9;for(const r of rows){if(!f(r))continue;if((r.m&m)===m&&r.i-last>=24){last=r.i;out.push(r.o)}}}return out};
-  const base=f=>{const out=[];for(const rows of D)for(const r of rows)if(f(r)&&r.i%24===0)out.push(r.o);return out};
-  const bTr=st(base(r=>r.tr)),bTe=st(base(r=>r.te));
+  const baseL=f=>{const out=[];for(const rows of D)for(const r of rows)if(f(r)&&r.i%24===0)out.push(r.o);return out};
+  const BT=baseL(r=>r.tr),BE=baseL(r=>r.te);const bMove=moveStats(BE);
   const masks=[];for(let a=0;a<10;a++){masks.push(1<<a);for(let b=a+1;b<10;b++){masks.push(1<<a|1<<b);for(let c=b+1;c<10;c++)masks.push(1<<a|1<<b|1<<c)}}
-  const R=masks.map(m=>({m,tr:st(pick(m,r=>r.tr))})).filter(x=>x.tr.n>=25).sort((a,b)=>b.tr.p-a.tr.p).slice(0,15).map(x=>({...x,te:st(pick(x.m,r=>r.te))}));
-  const nm=m=>OD.ALLN.filter((_,i)=>m&1<<i).join(' + ');
-  const f0=v=>v==null?'–':v.toFixed(0)+'%';
-  $('#t-combo').innerHTML=`<tr class="base"><td class="l">기준선 <small>아무 때나</small></td><td>${bTr.n}</td><td>${f0(bTr.p)}</td><td>${bTe.n}</td><td>${f0(bTe.p)}</td><td></td><td></td><td>${f0(bTe.dn)}</td><td>${pct(bTe.avg,1)}</td><td></td></tr>`+
-    R.map(x=>{const lift=x.te.n&&bTe.p?x.te.p/bTe.p:null,ok=x.te.n>=15&&lift>=1.5&&x.te.avg>bTe.avg&&x.te.dn<=bTe.dn,vol=x.te.n>=15&&lift>=1.5&&!ok;x.ok=ok;x.lift=lift;
-      return`<tr class="${x.te.n<15?'few':''}"><td class="l">${nm(x.m)}</td><td>${x.tr.n}</td><td>${f0(x.tr.p)}</td><td>${x.te.n}</td><td>${f0(x.te.p)}</td><td>${f0(bTe.p)}</td><td>${lift!=null?lift.toFixed(1)+'x':'–'}</td><td>${f0(x.te.dn)}</td><td>${x.te.n?pct(x.te.avg,1):'–'}</td><td class="l">${ok?'<b>검증 통과</b>':vol?'흔들림만 큼 (-10%도 잦음)':x.te.n<15?'표본 부족':'뒤 기간에서 약해짐'}</td></tr>`}).join('');
-  const passed=R.filter(x=>x.ok);
-  $('#cst').textContent=`${RES.top.length}개 코인 · 조합 ${masks.length}개 확인 · 앞 기간 상위 15개 표시 · 검증 통과 ${passed.length}개 · ${((performance.now()-t0)/1000).toFixed(1)}초`;
-  localStorage.setItem('bt-pump',JSON.stringify({at:Date.now(),days:DAYS,top:TOPN,P,base:{tr:bTr,te:bTe},combos:R.map(x=>({m:x.m,name:nm(x.m),tr:x.tr,te:x.te,lift:x.lift,ok:x.ok}))}))}
+  const R=[];for(const m of masks){const tr=pick(m,r=>r.tr);if(tr.length<25)continue;let best=null;for(const r of RULES){const e=evalRule(tr,r);if(!best||e.exp>best.e.exp)best={r,e}}R.push({m,rule:best.r,tr:best.e,trList:tr})}
+  R.sort((a,b)=>b.tr.exp-a.tr.exp);const top=R.slice(0,15);
+  for(const x of top){const te=pick(x.m,r=>r.te);x.te=evalRule(te,x.rule);x.mv=moveStats(te);x.bte=evalRule(BE,x.rule);x.ok=x.te.n>=15&&x.te.exp>0&&x.te.exp>x.bte.exp+.5;delete x.trList}
+  const nm=m=>OD.ALLN.filter((_,i)=>m&1<<i).join(' + ');const f0=v=>v==null?'–':v.toFixed(0)+'%';const ex=v=>v==null||!isFinite(v)?'–':pct(v,2);
+  $('#t-combo').innerHTML=`<tr class="base"><td class="l">기준선 <small>아무 때나</small></td><td></td><td></td><td>${BT.length}</td><td></td><td>${BE.length}</td><td></td><td></td><td></td><td>${f0(bMove.upF)} / ${f0(bMove.dnF)}</td><td>${f0(bMove.big)}</td><td></td><td></td></tr>`+
+    top.map(x=>`<tr class="${x.te.n<15?'few':''}"><td class="l">${nm(x.m)}</td><td class="l">${x.rule[0]==='L'?'<span class="up">롱</span>':'<span class="dn">숏</span>'}</td><td>+${x.rule[1]}% / −${x.rule[2]}%</td><td>${x.tr.n}</td><td>${ex(x.tr.exp)}</td><td>${x.te.n}</td><td>${x.te.n?f0(x.te.win):'–'}</td><td>${x.te.n?ex(x.te.exp):'–'}</td><td>${ex(x.bte.exp)}</td><td>${x.te.n?f0(x.mv.upF)+' / '+f0(x.mv.dnF):'–'}</td><td>${x.te.n?f0(x.mv.big):'–'}</td><td>${x.te.n?(x.te.hold/24).toFixed(1)+'일':'–'}</td><td class="l">${x.ok?'<b>검증 통과</b>':x.te.n<15?'표본 부족':'뒤 기간에서 약해짐'}</td></tr>`).join('');
+  const passed=top.filter(x=>x.ok);
+  $('#cst').textContent=`${RES.top.length}개 코인 · 조합 ${masks.length}개 × 규칙 ${RULES.length}개 확인 · 앞 기간 기대값 상위 15개 · 검증 통과 ${passed.length}개 · ${((performance.now()-t0)/1000).toFixed(1)}초`;
+  localStorage.setItem('bt-pump',JSON.stringify({v:2,at:Date.now(),days:DAYS,top:TOPN,P,base:{move:bMove,n:BE.length},combos:top.map(x=>({m:x.m,name:nm(x.m),dir:x.rule[0],tp:x.rule[1],sl:x.rule[2],tr:x.tr,te:x.te,mv:x.mv,bte:x.bte,ok:x.ok}))}))}
 
 async function run(){const b=$('#go');b.disabled=true;$('#pg').style.width='2%';
   try{$('#stat').textContent='대상 코인 고르는 중…';

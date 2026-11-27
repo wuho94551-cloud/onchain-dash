@@ -68,9 +68,9 @@ th.l,td.l{text-align:left;font-family:var(--sans)}
   <p class="sub" id="stat">불러오는 중…</p>
 </header>
 <section class="band" style="padding-top:0">
-  <div class="tbl"><table><thead><tr><th class="l">코인</th><th class="l">맞는 조합</th><th title="그 조합이 맞았을 때 뒤 기간에 7일 안 +20% 이상 오른 비율">7일 +20% 확률</th><th>기준선</th><th class="l">흔적 (①~⑩)</th><th class="hide-sm">가격</th><th>24시간</th><th class="hide-sm">OI 24h</th><th class="hide-sm" title="24시간 거래대금 ÷ 지난 7일 하루 평균">거래대금 배수</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <div class="tbl"><table><thead><tr><th class="l">코인</th><th class="l">맞는 조합</th><th class="l">방향</th><th>현재가</th><th>익절가</th><th>손절가</th><th title="뒤 기간(안 보고 남겨둔 기간) 승률">승률</th><th title="한 번 매매당 평균 손익, 수수료 뺀 %">기대값</th><th title="7일 안 +10%와 −10% 중 먼저 닿은 비율">위 / 아래 먼저</th><th title="최근 7일 새로 열린 롱 포지션의 평균 진입가 추정">롱 평단</th><th title="최근 7일 새로 열린 숏 포지션의 평균 진입가 추정">숏 평단</th><th class="l">흔적 (①~⑩)</th><th class="hide-sm">24시간</th><th class="hide-sm" title="24시간 거래대금 ÷ 지난 7일 하루 평균">거래대금 배수</th></tr></thead><tbody id="rows"></tbody></table></div>
   <details style="margin-top:14px;border:1px solid var(--line);padding:12px 16px"><summary>조건 설명과 한계</summary><ul id="desc" style="font-size:14px"></ul>
-    <p class="sub">'세력'을 직접 볼 수는 없어요. 여기 나오는 건 작업이 있을 때 자주 같이 보이는 흔적일 뿐이고, 같은 흔적이 급락 전에도 나와요. 확률은 신호 검증에서 계산한 과거 값이라 앞으로도 같다는 보장이 없어요. 7일 안 +20%는 '한 번이라도 닿았는지'라서, 그 전에 −10%를 먼저 맞은 경우도 포함돼요(신호 검증 표의 '-10% 먼저' 참고).</p></details>
+    <p class="sub">'세력'을 직접 볼 수는 없어요. 여기 나오는 건 작업이 있을 때 자주 같이 보이는 흔적일 뿐이고, 같은 흔적이 급락 전에도 나와요. 승률·기대값은 신호 검증에서 계산한 과거 값이라 앞으로도 같다는 보장이 없어요. 익절·손절은 신호가 뜬 시점 가격 기준이에요. 7일 안에 둘 다 안 닿으면 7일 뒤 종가로 정리한 결과예요. 롱·숏 평단은 Gate 선물에서 최근 7일 미결제약정이 늘어난 시간마다 시장가 매수 비중만큼 롱, 나머지는 숏이 새로 열렸다고 보고 가격을 가중평균한 추정치예요. 실제 세력의 평단을 아는 방법은 없어요. 현재가가 롱 평단보다 아래면 롱이 손실 중(아래로 털릴 연료), 숏 평단보다 위면 숏이 손실 중(위로 털릴 연료)이라는 뜻으로 보세요.</p></details>
 </section>
 <script src="./common.js?v=20"></script>
 <script>
@@ -90,10 +90,10 @@ $('#desc').innerHTML=OD.ALLN.map((n,i)=>`<li><b>${n}</b>: ${i<5?OD.sigText(OD.si
 let B=(()=>{try{return JSON.parse(localStorage.getItem('bt-pump')||'null')}catch(e){return null}})();
 (async()=>{})();
 let OK=[];
-async function init(){if(!B){try{B=await (await fetch('./pump-default.json?v=1')).json()}catch(e){}}OK=B?B.combos.filter(x=>x.ok):[];
+async function init(){if(!B||B.v!==2){B=null;try{B=await (await fetch('./pump-default.json?v=2')).json();if(B.v!==2)B=null}catch(e){}}OK=B?B.combos.filter(x=>x.ok):[];
 $('#src').className='box'+(B&&OK.length?'':' warn');
 $('#src').innerHTML=!B?'<b>아직 확률 데이터가 없어요.</b> <a href="./bt.html">신호 검증</a>에서 검증 시작 → \'조합 찾기\'를 한 번 누르면, 그 결과로 확률을 붙여요. 지금은 흔적만 보여줘요.':
-  `<b>확률 출처</b>: ${new Date(B.at).toLocaleDateString('ko-KR')} 신호 검증${B.snapshot?' 기본값(이 기기에서 조합 찾기를 돌리면 그 결과로 바뀌어요)':''} (최근 ${B.days}일 · 상위 ${B.top}개). 뒤 기간 기준선(아무 때나)은 7일 안 +20%가 <b>${B.base.te.p.toFixed(0)}%</b>였어요. `+(OK.length?`검증 통과 조합 ${OK.length}개: ${OK.map(x=>esc(x.name)).join(' / ')}`:'<b>뒤 기간까지 통과한 조합이 없어요.</b> 그래서 아래 확률은 참고용(앞 기간 상위 조합)이에요.');
+  `<b>확률 출처</b>: ${new Date(B.at).toLocaleDateString('ko-KR')} 신호 검증${B.snapshot?' 기본값(이 기기에서 조합 찾기를 돌리면 그 결과로 바뀌어요)':''} (최근 ${B.days}일 · 상위 ${B.top}개). 승률·기대값은 조합을 고를 때 안 쓴 뒤 기간 결과예요. `+(OK.length?`검증 통과 조합 ${OK.length}개: ${OK.map(x=>`${esc(x.name)} → ${x.dir==='L'?'롱':'숏'} +${x.tp}%/−${x.sl}%`).join(' · ')}`:'<b>뒤 기간까지 통과한 조합이 없어요.</b> 아래 값은 참고용이에요.');
 }
 let DATA=[],busy=false;
 async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').style.width='2%';$('#stat').textContent='종목 불러오는 중…';
@@ -103,21 +103,29 @@ async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').s
     const P=B?.P||OD.sigP();
     await pool(top,4,async c=>{const g=c.base+'_USDT',has=gm[g]!=null;
       const [k,oi,st,cs]=await Promise.allSettled([j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${c.sym}&interval=60&limit=240`),j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${c.sym}&intervalTime=1h&limit=200`),
-        has?j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=60`):Promise.reject(),has?j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`):Promise.reject()]);
+        has?j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=170`):Promise.reject(),has?j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`):Promise.reject()]);
       if(k.status!=='fulfilled')throw new Error('캔들 없음');
       const d={k:k.value.result.list.map(a=>[+a[0],+a[1],+a[2],+a[3],+a[4],+a[6]]).sort((a,b)=>a[0]-b[0]),oi:oi.status==='fulfilled'?oi.value.result.list.map(a=>[+a.timestamp,+a.openInterest]).sort((a,b)=>a[0]-b[0]):[],fr:[[0,c.fr]],scale:c.scale,
         st:st.status==='fulfilled'?st.value.map(a=>({time:a.time,oiu:+a.open_interest_usd||0,lsr:+a.lsr_account||1,mp:+a.mark_price||0,lt:+a.long_taker_size||0,stk:+a.short_taker_size||0})):[],cs:cs.status==='fulfilled'?cs.value.map(x=>({t:+x.t,h:+x.h,l:+x.l})):[]};
-      const S=OD.btSeries(d,gm[g]||1);if(!S)throw new Error('데이터 부족');const r=S.at(-1);r.c24=c.c24;r.fr=c.fr;c.r=r;c.m=OD.allMask(r,P);
+      const S=OD.btSeries(d,gm[g]||1);
+      /* 세력 평단 추정: 최근 7일 미결제약정이 늘어난 시간마다, 시장가 매수 비중만큼 롱·나머지는 숏이 새로 열렸다고 보고 가격을 가중평균 */
+      if(d.st.length>24){let L=0,Lw=0,Sx=0,Sw=0;for(let q=1;q<d.st.length;q++){const a=d.st[q],dd=a.oiu-d.st[q-1].oiu;if(dd<=0||!a.mp)continue;const tot=a.lt+a.stk,sh=tot?a.lt/tot:.5;L+=dd*sh*a.mp;Lw+=dd*sh;Sx+=dd*(1-sh)*a.mp;Sw+=dd*(1-sh)}
+        c.lavg=Lw?L/Lw*c.scale:null;c.savg=Sw?Sx/Sw*c.scale:null}if(!S)throw new Error('데이터 부족');const r=S.at(-1);r.c24=c.c24;r.fr=c.fr;c.r=r;c.m=OD.allMask(r,P);
       /* 맞는 조합 중 뒤 기간 확률이 가장 높은 것 (통과 조합 우선) */
-      const cand=(OK.length?OK:(B?B.combos.slice(0,5):[])).filter(x=>(c.m&x.m)===x.m).sort((a,b)=>(b.te.p||0)-(a.te.p||0));c.best=cand[0]||null},
+      const cand=(OK.length?OK:(B?B.combos.slice(0,5):[])).filter(x=>(c.m&x.m)===x.m).sort((a,b)=>(b.te.exp||0)-(a.te.exp||0));c.best=cand[0]||null},
       (n,m)=>{$('#bar').style.width=(2+n/m*96)+'%';$('#stat').textContent=`점검 중… ${n}/${m}`});
     DATA=top.filter(c=>c.r);render();$('#bar').style.width='100%';
     const tm=new Date();$('#stat').textContent=`${String(tm.getHours()).padStart(2,'0')}:${String(tm.getMinutes()).padStart(2,'0')} 점검 · ${DATA.length}개 코인 · 10분마다 자동 점검`;
   }catch(e){$('#stat').textContent='점검 실패: '+e.message}finally{busy=false;$('#go').disabled=false}}
 function render(){const cnt=m=>{let n=0;for(let i=5;i<10;i++)if(m&1<<i)n++;return n};
-  const L=DATA.slice().sort((a,b)=>((b.best?.te.p||0)-(a.best?.te.p||0))||(cnt(b.m)-cnt(a.m))||(b.r.vs||0)-(a.r.vs||0));
-  $('#rows').innerHTML=L.map(c=>{const fl=OD.ALLN.map((n,i)=>`<span class="fl${c.m&1<<i?' on':''}" title="${esc(n)}">${n.slice(0,1)}</span>`).join('');
-    return`<tr${c.best?'':' class="mu"'}><td class="l">${OD.coinIcon(c.base,18)} <a href="./view.html#${encodeURIComponent(c.base)}">${esc(c.base)}</a></td><td class="l">${c.best?esc(c.best.name)+(c.best.ok?'':' <small class="mu">(미검증)</small>'):'<span class="mu">–</span>'}</td><td>${c.best?`<b>${c.best.te.p.toFixed(0)}%</b> <small class="mu">${c.best.te.n}건</small>`:'–'}</td><td>${B?B.base.te.p.toFixed(0)+'%':'–'}</td><td class="l">${fl}</td><td class="hide-sm">${fp(c.p)}</td><td>${pc(c.c24)}</td><td class="hide-sm">${pc(c.r.doi)}</td><td class="hide-sm">${c.r.vs!=null?c.r.vs.toFixed(1)+'x':'–'}</td></tr>`}).join('')||'<tr><td colspan="9" class="l">결과가 없어요</td></tr>'}
+  const L=DATA.slice().sort((a,b)=>((b.best?.te.exp??-99)-(a.best?.te.exp??-99))||(cnt(b.m)-cnt(a.m))||(b.r.vs||0)-(a.r.vs||0));
+  const rel=(v,p)=>v?`${fp(v)} <small class="${v>p?'dn':'up'}">${v>p?'':'+'}${((p/v-1)*100).toFixed(1)}%</small>`:'–';
+  $('#rows').innerHTML=L.map(c=>{const fl=OD.ALLN.map((n,i)=>`<span class="fl${c.m&1<<i?' on':''}" title="${esc(n)}">${n.slice(0,1)}</span>`).join('');const b=c.best,Lg=b&&b.dir==='L';
+    const tp=b?c.p*(1+(Lg?b.tp:-b.tp)/100):null,sl=b?c.p*(1+(Lg?-b.sl:b.sl)/100):null;
+    return`<tr${b?'':' class="mu"'}><td class="l">${OD.coinIcon(c.base,18)} <a href="./view.html#${encodeURIComponent(c.base)}">${esc(c.base)}</a></td><td class="l">${b?esc(b.name)+(b.ok?'':' <small class="mu">(미검증)</small>'):'<span class="mu">–</span>'}</td>
+      <td class="l">${b?(Lg?'<b class="up">롱</b>':'<b class="dn">숏</b>'):'–'}</td><td>${fp(c.p)}</td><td>${b?fp(tp)+` <small class="mu">${Lg?'+':'−'}${b.tp}%</small>`:'–'}</td><td>${b?fp(sl)+` <small class="mu">${Lg?'−':'+'}${b.sl}%</small>`:'–'}</td>
+      <td>${b?b.te.win.toFixed(0)+'% <small class="mu">'+b.te.n+'건</small>':'–'}</td><td>${b?pc(b.te.exp,2):'–'}</td><td>${b&&b.mv?b.mv.upF.toFixed(0)+'% / '+b.mv.dnF.toFixed(0)+'%':'–'}</td>
+      <td title="현재가가 평단보다 몇 % 위/아래인지">${rel(c.lavg,c.p)}</td><td>${rel(c.savg,c.p)}</td><td class="l">${fl}</td><td class="hide-sm">${pc(c.c24)}</td><td class="hide-sm">${c.r.vs!=null?c.r.vs.toFixed(1)+'x':'–'}</td></tr>`}).join('')||'<tr><td colspan="14" class="l">결과가 없어요</td></tr>'}
 $('#go').onclick=run;init().then(run);setInterval(()=>{if(!document.hidden)run()},600e3);
 }
 </script>
