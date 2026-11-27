@@ -138,7 +138,7 @@ function buildNav(){const nav=document.querySelector('nav.top');if(!nav||nav.dat
   const f=(location.pathname.split('/').pop()||'index.html').toLowerCase(),here=f==='index.html'?'./':'./'+f;
   const gi=NAV.findIndex(g=>g[1].some(p=>p[0]===here));
   nav.innerHTML=`<div class="band"><a class="brand" href="./" aria-label="홈으로"><em>Onchain</em>Desk</a>`+
-    NAV.map((g,i)=>`<a class="g" href="${g[1][0][0]}"${i===gi?' aria-current="true"':''}>${g[0]}</a>`).join('')+
+    NAV.map((g,i)=>`<span class="od-dd"><a class="g" href="${g[1][0][0]}"${i===gi?' aria-current="true"':''} aria-haspopup="true">${g[0]}</a><span class="od-dm">${g[1].map(p=>`<a href="${p[0]}"${p[0]===here?' data-on="1"':''}>${p[1]}</a>`).join('')}</span></span>`).join('')+
     `<a class="g od-ph" href="./alert.html"${here==='./alert.html'?' aria-current="page"':''} title="사이트를 꺼도 텔레그램으로 알림">📱 폰 알림</a><span class="od-tools" id="od-tools"></span></div>`+
     (gi>=0?`<div class="od-sub">${NAV[gi][1].map(p=>`<a href="${p[0]}"${p[0]===here?' aria-current="page"':''}>${p[1]}</a>`).join('')}</div>`:'')+
     `<div class="od-mood" id="od-mood" aria-live="polite"></div>`;
@@ -475,6 +475,7 @@ function btSeries(c,mult){const H=3600e3;const K=c.k;if(K.length<60)return null;
     while(fp+1<c.fr.length&&c.fr[fp+1][0]<=T)fp++;r.fr=c.fr[fp]&&c.fr[fp][0]<=T?c.fr[fp][1]:null;
     if(c.st&&c.st.length){while(sp<c.st.length&&c.st[sp].time*1000+H<=T)sp++;/* Gate 행은 그 시각부터 1시간 구간: 끝난 구간만 */
       if(sp>=24){let s24=0,s4=0;for(let q=sp-24;q<sp;q++){const a=c.st[q],v=(a.lt-a.stk)*mult*a.mp;s24+=v;if(q>=sp-4)s4+=v}r.cvd=s24;r.cvd4=s4}
+      if(sp>=168){let s7=0,vol=0;for(let q=sp-168;q<sp;q++){const a=c.st[q];s7+=(a.lt-a.stk)*mult*a.mp;vol+=(a.lt+a.stk)*mult*a.mp}r.cvd7=s7;r.cvdr7=vol?s7/vol:null}
       while(cp<c.cs.length&&c.cs[cp].t*1000<T)cp++;
       if(cp>=48&&sp>=48){const cs=c.cs.slice(cp-48,cp),st=c.st.slice(sp-48,sp);const pg=price/(c.scale||1),k=clusters(st,cs,pg);r.up=k.up;r.dn=k.dn;
         let Hh=-Infinity,Ll=Infinity;for(const x of cs){if(x.h>Hh)Hh=x.h;if(x.l<Ll)Ll=x.l}r.pos=Hh>Ll?(pg-Ll)/(Hh-Ll):null}}
@@ -496,10 +497,38 @@ const PUMP=[['⑥ 거래대금 급증','24시간 거래대금이 지난 7일 하
   ['⑦ 변동성 압축','24시간 고저폭이 지난 7일 평균의 60% 이하',r=>r.sq!=null?r.sq<=.6:null],
   ['⑧ 레버리지 쏠림','미결제약정(달러)이 24시간 거래대금의 1.5배 이상',r=>r.oit!=null?r.oit>=1.5:null],
   ['⑨ 조용한 매집','7일 가격 ±8% 안, 미결제약정 7일 +25% 이상',r=>r.doi7!=null&&r.c7!=null?(Math.abs(r.c7)<=8&&r.doi7>=25):null],
-  ['⑩ 펀딩 극단 음수','펀딩비 −0.02% 이하',r=>r.fr!=null?r.fr<=-0.02:null]];
+  ['⑩ 펀딩 극단 음수','펀딩비 −0.02% 이하',r=>r.fr!=null?r.fr<=-0.02:null],
+  ['⑪ CVD 매집','7일 가격은 +2% 이하인데, 7일 CVD가 그 기간 체결량의 +3% 이상 매수 우위 (조용히 사 모으는 다이버전스)',r=>r.cvdr7!=null&&r.c7!=null?(r.c7<=2&&r.cvdr7>=.03):null]];
 const ALLN=['① 포지션 누적','② 펀딩 음수','③ 체결 매수 우위','④ 상단 숏 클러스터','⑤ 바닥권',...PUMP.map(x=>x[0])];
 /* 10개 조건을 비트로: 참이면 1. 데이터 없으면 0 */
 function allMask(r,P){if(r.c24==null)return 0;const g=sigCond(r,{...P,on:[1,1,1,1,1]});let m=0;g.C.forEach((v,i)=>{if(v===true)m|=1<<i});PUMP.forEach((x,i)=>{if(x[2](r)===true)m|=1<<(5+i)});return m}
 
-window.OD={btSeries,allMask,ALLN,PUMP,getLines,setLines,workerCfg,workerPut,sigP,sigSave,sigCond,sigText,SIG_DEF,coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
+/* 평단 나눠 보기: 바이낸스 선물 공개 통계 + 체결 샘플. 모두 추정치 */
+async function bget(u){for(let n=0;n<3;n++){try{const r=await fetch(u);if(r.ok)return r.json();if(r.status===400)return null}catch(e){}await new Promise(r=>setTimeout(r,1500*(n+1)))}return null}
+async function costBasis(sym,scale=1){const F='https://fapi.binance.com/futures/data/',q=`?symbol=${sym}&period=1h&limit=168`;
+  const [oi,tp,ga,tk]=await Promise.all(['openInterestHist','topLongShortPositionRatio','globalLongShortAccountRatio','takerlongshortRatio'].map(e=>bget(F+e+q)));
+  if(!Array.isArray(oi)||oi.length<24)return null;
+  const px=new Map(oi.map(a=>[+a.timestamp,{q:+a.sumOpenInterest,p:+a.sumOpenInterestValue/+a.sumOpenInterest}]));
+  /* 비율(롱 쪽 비중)이 '보유 물량'일 때: 롱·숏 각각의 물량 변화를 따라가며, 늘어난 만큼은 그 시간 가격으로 평단에 더하고 줄어든 만큼은 평단 그대로 덜어냄 */
+  const stock=R=>{if(!Array.isArray(R)||R.length<24)return null;const A={pos:0,c:0},B={pos:0,c:0};let pv=null;
+    for(const a of R.slice().sort((x,y)=>x.timestamp-y.timestamp)){const o=px.get(+a.timestamp);if(!o||!o.p)continue;const l=o.q*+a.longAccount,s=o.q*+a.shortAccount;
+      if(pv)for(const [st,now,was] of [[A,l,pv.l],[B,s,pv.s]]){const d=now-was;if(d>0){st.c=(st.c*st.pos+d*o.p)/(st.pos+d);st.pos+=d}else st.pos=Math.max(0,st.pos+d)}
+      pv={l,s,r:+a.longAccount}}
+    return pv?{L:A.pos>0?A.c/scale:null,S:B.pos>0?B.c/scale:null,Lsh:pv.l?A.pos/pv.l:0,Ssh:pv.s?B.pos/pv.s:0,lr:pv.r}:null};
+  /* 시장가 체결 비율은 '흐름'이라, 미결제약정이 늘어난 시간에만 매수 비중만큼 롱·나머지 숏으로 나눔 */
+  const flow=R=>{if(!Array.isArray(R)||R.length<24)return null;const m=new Map(R.map(a=>[+a.timestamp,+a.buyVol/((+a.buyVol)+(+a.sellVol)||1)]));let L=0,Lw=0,S=0,Sw=0,pq=null;
+    for(const [t,o] of [...px.entries()].sort((x,y)=>x[0]-y[0])){if(pq!=null){const d=o.q-pq,sh=m.get(t);if(d>0&&sh!=null){L+=d*sh*o.p;Lw+=d*sh;S+=d*(1-sh)*o.p;Sw+=d*(1-sh)}}pq=o.q}
+    return{L:Lw?L/Lw/scale:null,S:Sw?S/Sw/scale:null,lr:Lw+Sw?Lw/(Lw+Sw):null}};
+  const last=oi.at(-1);return{big:stock(tp),acct:stock(ga),all:flow(tk),oiUsd:+last.sumOpenInterestValue,from:+oi[0].timestamp,to:+last.timestamp}}
+/* 체결 크기별 평단: 7일을 win개 구간으로 나눠 구간 시작부터 체결 1000건씩 샘플 → 큰 체결(≥big$)·작은 체결(<small$)의 시장가 매수/매도 평균가 */
+async function sizeBasis(sym,spot,scale=1,win=28,big=5e4,small=1e3,prog){const H=3600e3,now=Date.now(),out={};let done=0;
+  for(const [k,base,sc] of [['fut',`https://fapi.binance.com/fapi/v1/aggTrades?symbol=${sym}`,scale],['spot',spot?`https://api.binance.com/api/v3/aggTrades?symbol=${spot}`:null,1]]){
+    if(!base){out[k]=null;done+=win;continue}const acc={bB:[0,0,0],bS:[0,0,0],sB:[0,0,0],sS:[0,0,0],tot:0,n:0,ok:0};
+    const ts=Array.from({length:win},(_,i)=>now-(i+1)*(168/win)*H);let i=0,dead=false;
+    await Promise.all([0,1,2].map(async()=>{while(i<ts.length&&!dead){const t=Math.floor(ts[i++]);const d=await bget(`${base}&startTime=${t}&endTime=${t+H-1}&limit=1000`);done++;prog&&prog(done,win*2);
+      if(d===null&&acc.ok===0&&i>=3){dead=true;break}if(!Array.isArray(d))continue;acc.ok++;
+      for(const x of d){const p=+x.p/sc,v=+x.p*+x.q;if(!p||!v)continue;acc.tot+=v;acc.n++;const buy=!x.m,b=v>=big?(buy?acc.bB:acc.bS):v<small?(buy?acc.sB:acc.sS):null;if(b){b[0]+=v;b[1]+=v/p;b[2]++}}}}));
+    const f=a=>a[2]?{p:a[0]/a[1],v:a[0],n:a[2]}:null;out[k]=acc.ok?{bB:f(acc.bB),bS:f(acc.bS),sB:f(acc.sB),sS:f(acc.sS),tot:acc.tot,n:acc.n,ok:acc.ok,win}:null}
+  return out}
+window.OD={costBasis,sizeBasis,btSeries,allMask,ALLN,PUMP,getLines,setLines,workerCfg,workerPut,sigP,sigSave,sigCond,sigText,SIG_DEF,coinIcon,setIcon,picker,toast,notify,favs,isFav,toggleFav,coinLinks,setTheme,loadTypes,kindOf,KINDS,openChart,mountChart,volumeProfile};
 })();

@@ -50,9 +50,18 @@ th.l,td.l{text-align:left;font-family:var(--sans)}
 .box{border:1px solid var(--line);padding:10px 14px;font-size:14px;margin:12px 0}
 .box.warn{border-color:var(--ink)}
 .up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mute)}
-@media(max-width:700px){.hide-sm{display:none}}
+button.cn{min-height:0;padding:0;background:none;color:var(--ink);font-weight:700;text-decoration:underline;text-underline-offset:3px;font-size:14px}
+dialog#pv{width:min(980px,96vw);max-height:92vh;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:0}
+dialog#pv::backdrop{background:rgb(0 0 0/.45)}
+.pvh{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:2}
+.pvh h2{font-size:22px}.pvh .x{margin-left:auto;min-height:36px;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.pvb{padding:12px 16px 16px}.pvc{height:340px;margin-bottom:12px}
+.pvk{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:12px}
+.pvk div{background:var(--bg);padding:8px 10px}.pvk small{display:block;color:var(--mute);font-size:12px}.pvk b{font-family:var(--mono);font-size:16px}
+.pvt td,.pvt th{padding:5px 8px}
+@media(max-width:700px){.hide-sm{display:none}.pvc{height:260px}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=18">
+<link rel="stylesheet" href="./theme.css?v=19">
 </head>
 <body>
 <nav class="top"><div class="band"></div></nav>
@@ -68,11 +77,12 @@ th.l,td.l{text-align:left;font-family:var(--sans)}
   <p class="sub" id="stat">불러오는 중…</p>
 </header>
 <section class="band" style="padding-top:0">
-  <div class="tbl"><table><thead><tr><th class="l">코인</th><th class="l">큰 움직임 조합</th><th title="뒤 기간: 7일 안 위든 아래든 20% 이상 움직인 비율">7일 ±20% 확률</th><th class="l">방향 규칙</th><th class="l">방향</th><th>현재가</th><th>익절가</th><th>손절가</th><th title="뒤 기간(안 보고 남겨둔 기간) 승률">승률</th><th title="한 번 매매당 평균 손익, 수수료 뺀 %">기대값</th><th title="7일 안 +10%와 −10% 중 먼저 닿은 비율">위 / 아래 먼저</th><th title="최근 7일 새로 열린 롱 포지션의 평균 진입가 추정">롱 평단</th><th title="최근 7일 새로 열린 숏 포지션의 평균 진입가 추정">숏 평단</th><th class="l">흔적 (①~⑩)</th><th class="hide-sm">24시간</th><th class="hide-sm" title="24시간 거래대금 ÷ 지난 7일 하루 평균">거래대금 배수</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <div class="tbl"><table><thead><tr><th class="l">코인</th><th class="l">큰 움직임 조합</th><th title="뒤 기간: 7일 안 위든 아래든 20% 이상 움직인 비율">7일 ±20% 확률</th><th class="l" title="검증 통과한 돌파 전략: 신호 가격에서 ±E% 먼저 깨지는 쪽으로 진입">돌파 진입</th><th class="l">방향 규칙</th><th class="l">방향</th><th>현재가</th><th>익절가</th><th>손절가</th><th title="뒤 기간(안 보고 남겨둔 기간) 승률">승률</th><th title="한 번 매매당 평균 손익, 수수료 뺀 %">기대값</th><th title="7일 안 +10%와 −10% 중 먼저 닿은 비율">위 / 아래 먼저</th><th title="바이낸스 상위 트레이더가 최근 7일 새로 연 롱 물량의 평균가 추정. 작은 글씨는 현재가가 평단보다 몇 % 위(+)/아래(−)인지">큰손 롱 평단</th><th title="바이낸스 상위 트레이더가 최근 7일 새로 연 숏 물량의 평균가 추정">큰손 숏 평단</th><th class="l">흔적 (①~⑪)</th><th class="hide-sm">24시간</th><th class="hide-sm" title="24시간 거래대금 ÷ 지난 7일 하루 평균">거래대금 배수</th></tr></thead><tbody id="rows"></tbody></table></div>
   <details style="margin-top:14px;border:1px solid var(--line);padding:12px 16px"><summary>조건 설명과 한계</summary><ul id="desc" style="font-size:14px"></ul>
     <p class="sub">'세력'을 직접 볼 수는 없어요. 여기 나오는 건 작업이 있을 때 자주 같이 보이는 흔적일 뿐이고, 같은 흔적이 급락 전에도 나와요. 승률·기대값은 신호 검증에서 계산한 과거 값이라 앞으로도 같다는 보장이 없어요. 익절·손절은 신호가 뜬 시점 가격 기준이에요. 7일 안에 둘 다 안 닿으면 7일 뒤 종가로 정리한 결과예요. 롱·숏 평단은 Gate 선물에서 최근 7일 미결제약정이 늘어난 시간마다 시장가 매수 비중만큼 롱, 나머지는 숏이 새로 열렸다고 보고 가격을 가중평균한 추정치예요. 실제 세력의 평단을 아는 방법은 없어요. 현재가가 롱 평단보다 아래면 롱이 손실 중(아래로 털릴 연료), 숏 평단보다 위면 숏이 손실 중(위로 털릴 연료)이라는 뜻으로 보세요.</p></details>
+  <dialog id="pv" aria-labelledby="pv-t"><div class="pvh"><span id="pv-i"></span><h2 id="pv-t"></h2><span id="pv-p" style="font-family:var(--mono)"></span><button type="button" class="x" id="pv-x">닫기</button></div><div class="pvb" id="pv-b"></div></dialog>
 </section>
-<script src="./common.js?v=20"></script>
+<script src="./common.js?v=21"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -89,11 +99,11 @@ $('#topn').onclick=e=>{const b=e.target.closest('button');if(!b)return;TOPN=+b.d
 $('#desc').innerHTML=OD.ALLN.map((n,i)=>`<li><b>${n}</b>: ${i<5?OD.sigText(OD.sigP())[i]:OD.PUMP[i-5][1]}</li>`).join('');
 let B=(()=>{try{return JSON.parse(localStorage.getItem('bt-pump')||'null')}catch(e){return null}})();
 (async()=>{})();
-let OK=[],VOK=[];
-async function init(){if(!B||B.v!==2){B=null;try{B=await (await fetch('./pump-default.json?v=2')).json();if(B.v!==2)B=null}catch(e){}}OK=B?B.combos.filter(x=>x.ok):[];VOK=B&&B.vol?B.vol.filter(x=>x.ok):[];
+let OK=[],VOK=[],BOK=[];
+async function init(){if(!B||B.v!==3){B=null;try{B=await (await fetch('./pump-default.json?v=3')).json();if(B.v!==3)B=null}catch(e){}}OK=B?B.combos.filter(x=>x.ok):[];VOK=B&&B.vol?B.vol.filter(x=>x.ok):[];BOK=B&&B.brk?B.brk.filter(x=>x.ok):[];
 $('#src').className='box'+(B&&OK.length?'':' warn');
 $('#src').innerHTML=!B?'<b>아직 확률 데이터가 없어요.</b> <a href="./bt.html">신호 검증</a>에서 검증 시작 → \'조합 찾기\'를 한 번 누르면, 그 결과로 확률을 붙여요. 지금은 흔적만 보여줘요.':
-  `<b>확률 출처</b>: ${new Date(B.at).toLocaleDateString('ko-KR')} 신호 검증${B.snapshot?' 기본값(이 기기에서 조합 찾기를 돌리면 그 결과로 바뀌어요)':''} (최근 ${B.days}일 · 상위 ${B.top}개). 승률·기대값은 조합을 고를 때 안 쓴 뒤 기간 결과예요. `+`큰 움직임(±20%) 검증 통과 조합 ${VOK.length}개. `+(OK.length?`방향 규칙 검증 통과 ${OK.length}개: ${OK.map(x=>`${esc(x.name)} → ${x.dir==='L'?'롱':'숏'} +${x.tp}%/−${x.sl}%`).join(' · ')}`:'<b>롱·숏 방향까지 맞히는 규칙은 뒤 기간 검증을 통과한 게 없어요.</b> 그래서 방향·익절가·손절가는 비워 둬요.');
+  `<b>확률 출처</b>: ${new Date(B.at).toLocaleDateString('ko-KR')} 신호 검증${B.snapshot?' 기본값(이 기기에서 조합 찾기를 돌리면 그 결과로 바뀌어요)':''} (최근 ${B.days}일 · 상위 ${B.top}개). 승률·기대값은 조합을 고를 때 안 쓴 뒤 기간 결과예요. `+`큰 움직임(±20%) 검증 통과 조합 ${VOK.length}개. 돌파 전략 검증 통과 ${BOK.length}개. `+(OK.length?`방향 규칙 검증 통과 ${OK.length}개: ${OK.map(x=>`${esc(x.name)} → ${x.dir==='L'?'롱':'숏'} +${x.tp}%/−${x.sl}%`).join(' · ')}`:'<b>롱·숏 방향까지 맞히는 규칙은 뒤 기간 검증을 통과한 게 없어요.</b> 그래서 방향·익절가·손절가는 비워 둬요.');
 }
 let DATA=[],busy=false;
 async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').style.width='2%';$('#stat').textContent='종목 불러오는 중…';
@@ -101,32 +111,56 @@ async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').s
     await OD.loadTypes();
     const top=t.result.list.filter(x=>x.symbol.endsWith('USDT')&&OD.kindOf(x.symbol)==='코인').sort((a,b)=>b.turnover24h-a.turnover24h).slice(0,TOPN).map(x=>{const m=x.symbol.match(/^(1000000|10000|1000)/);return{sym:x.symbol,base:x.symbol.replace(/USDT$/,'').replace(/^(1000000|10000|1000)/,''),scale:m?+m[1]:1,p:+x.lastPrice,c24:+x.price24hPcnt*100,fr:+x.fundingRate*100}});
     const P=B?.P||OD.sigP();
-    for(let w=0;w<40&&!window.OD_MOOD?.tr;w++)await sleep(250);const RG=window.OD_MOOD?.tr==='up'?1<<10:window.OD_MOOD?.tr==='dn'?1<<11:0;
+    for(let w=0;w<40&&!window.OD_MOOD?.tr;w++)await sleep(250);const RBb=B?.rb||OD.ALLN.length,RG=window.OD_MOOD?.tr==='up'?1<<RBb:window.OD_MOOD?.tr==='dn'?1<<(RBb+1):0;
     await pool(top,4,async c=>{const g=c.base+'_USDT',has=gm[g]!=null;
       const [k,oi,st,cs]=await Promise.allSettled([j(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${c.sym}&interval=60&limit=240`),j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${c.sym}&intervalTime=1h&limit=200`),
         has?j(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${g}&interval=1h&limit=170`):Promise.reject(),has?j(`https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract=${g}&interval=1h&limit=48`):Promise.reject()]);
       if(k.status!=='fulfilled')throw new Error('캔들 없음');
       const d={k:k.value.result.list.map(a=>[+a[0],+a[1],+a[2],+a[3],+a[4],+a[6]]).sort((a,b)=>a[0]-b[0]),oi:oi.status==='fulfilled'?oi.value.result.list.map(a=>[+a.timestamp,+a.openInterest]).sort((a,b)=>a[0]-b[0]):[],fr:[[0,c.fr]],scale:c.scale,
         st:st.status==='fulfilled'?st.value.map(a=>({time:a.time,oiu:+a.open_interest_usd||0,lsr:+a.lsr_account||1,mp:+a.mark_price||0,lt:+a.long_taker_size||0,stk:+a.short_taker_size||0})):[],cs:cs.status==='fulfilled'?cs.value.map(x=>({t:+x.t,h:+x.h,l:+x.l})):[]};
-      const S=OD.btSeries(d,gm[g]||1);
-      /* 세력 평단 추정: 최근 7일 미결제약정이 늘어난 시간마다, 시장가 매수 비중만큼 롱·나머지는 숏이 새로 열렸다고 보고 가격을 가중평균 */
+      const S=OD.btSeries(d,gm[g]||1);c.cb=await OD.costBasis(c.sym,c.scale).catch(()=>null);
+      /* 선물 전체 신규 평단(게이트): 최근 7일 미결제약정이 늘어난 시간마다, 시장가 매수 비중만큼 롱·나머지는 숏이 새로 열렸다고 보고 가격을 가중평균 */
       if(d.st.length>24){let L=0,Lw=0,Sx=0,Sw=0;for(let q=1;q<d.st.length;q++){const a=d.st[q],dd=a.oiu-d.st[q-1].oiu;if(dd<=0||!a.mp)continue;const tot=a.lt+a.stk,sh=tot?a.lt/tot:.5;L+=dd*sh*a.mp;Lw+=dd*sh;Sx+=dd*(1-sh)*a.mp;Sw+=dd*(1-sh)}
         c.lavg=Lw?L/Lw*c.scale:null;c.savg=Sw?Sx/Sw*c.scale:null}if(!S)throw new Error('데이터 부족');const r=S.at(-1);r.c24=c.c24;r.fr=c.fr;c.r=r;c.m=OD.allMask(r,P)|RG;
       /* 맞는 조합 중 뒤 기간 확률이 가장 높은 것 (통과 조합 우선) */
-      const cand=OK.filter(x=>(c.m&x.m)===x.m).sort((a,b)=>(b.te.exp||0)-(a.te.exp||0));c.best=cand[0]||null;c.vb=VOK.filter(x=>(c.m&x.m)===x.m).sort((a,b)=>b.te.big-a.te.big)[0]||null},
+      const cand=OK.filter(x=>(c.m&x.m)===x.m).sort((a,b)=>(b.te.exp||0)-(a.te.exp||0));c.best=cand[0]||null;c.vb=VOK.filter(x=>(c.m&x.m)===x.m).sort((a,b)=>b.te.big-a.te.big)[0]||null;c.bk=BOK.filter(x=>(c.m&x.m)===x.m).sort((a,b)=>b.te.exp-a.te.exp)[0]||null},
       (n,m)=>{$('#bar').style.width=(2+n/m*96)+'%';$('#stat').textContent=`점검 중… ${n}/${m}`});
     DATA=top.filter(c=>c.r);render();$('#bar').style.width='100%';
     const tm=new Date();$('#stat').textContent=`${String(tm.getHours()).padStart(2,'0')}:${String(tm.getMinutes()).padStart(2,'0')} 점검 · ${DATA.length}개 코인 · 10분마다 자동 점검`;
   }catch(e){$('#stat').textContent='점검 실패: '+e.message}finally{busy=false;$('#go').disabled=false}}
 function render(){const cnt=m=>{let n=0;for(let i=5;i<10;i++)if(m&1<<i)n++;return n};
-  const L=DATA.slice().sort((a,b)=>((b.vb?.te.big??-1)-(a.vb?.te.big??-1))||((b.best?.te.exp??-99)-(a.best?.te.exp??-99))||(cnt(b.m)-cnt(a.m))||(b.r.vs||0)-(a.r.vs||0));
-  const rel=(v,p)=>v?`${fp(v)} <small class="${v>p?'dn':'up'}">${v>p?'':'+'}${((p/v-1)*100).toFixed(1)}%</small>`:'–';
+  const L=DATA.slice().sort((a,b)=>((b.vb?.te.big??-1)-(a.vb?.te.big??-1))||((b.bk?.te.exp??-99)-(a.bk?.te.exp??-99))||((b.best?.te.exp??-99)-(a.best?.te.exp??-99))||(cnt(b.m)-cnt(a.m))||(b.r.vs||0)-(a.r.vs||0));
+  const rel=(v,p)=>v&&isFinite(v)?`${fp(v)} <small class="${v>p?'dn':'up'}">${v>p?'':'+'}${((p/v-1)*100).toFixed(1)}%</small>`:'–';
   $('#rows').innerHTML=L.map(c=>{const fl=OD.ALLN.map((n,i)=>`<span class="fl${c.m&1<<i?' on':''}" title="${esc(n)}">${n.slice(0,1)}</span>`).join('');const b=c.best,Lg=b&&b.dir==='L';
     const tp=b?c.p*(1+(Lg?b.tp:-b.tp)/100):null,sl=b?c.p*(1+(Lg?-b.sl:b.sl)/100):null;
-    const v=c.vb;return`<tr${b||v?'':' class="mu"'}><td class="l">${OD.coinIcon(c.base,18)} <a href="./view.html#${encodeURIComponent(c.base)}">${esc(c.base)}</a></td><td class="l">${v?esc(v.name):'<span class="mu">–</span>'}</td><td>${v?`<b>${v.te.big.toFixed(0)}%</b> <small class="mu">기준 ${B.base.move.big.toFixed(0)}% · ${v.te.n}건</small>`:'–'}</td><td class="l">${b?esc(b.name)+(b.ok?'':' <small class="mu">(미검증)</small>'):'<span class="mu">검증된 방향 규칙 없음</span>'}</td>
+    const v=c.vb,k=c.bk;return`<tr data-b="${esc(c.base)}"${b||v||k?'':' class="mu"'}><td class="l">${OD.coinIcon(c.base,18)} <button type="button" class="cn" data-pv="${esc(c.base)}">${esc(c.base)}</button></td><td class="l">${v?esc(v.name):'<span class="mu">–</span>'}</td><td>${v?`<b>${v.te.big.toFixed(0)}%</b> <small class="mu">기준 ${B.base.move.big.toFixed(0)}% · ${v.te.n}건</small>`:'–'}</td><td class="l">${k?`↑${fp(c.p*(1+k.E/100))} 롱 / ↓${fp(c.p*(1-k.E/100))} 숏 <small class="mu">+${k.tp}%/−${k.sl}% · 뒤 ${pc(k.te.exp,2)}</small>`:'<span class="mu">–</span>'}</td><td class="l">${b?esc(b.name)+(b.ok?'':' <small class="mu">(미검증)</small>'):'<span class="mu">검증된 방향 규칙 없음</span>'}</td>
       <td class="l">${b?(Lg?'<b class="up">롱</b>':'<b class="dn">숏</b>'):'–'}</td><td>${fp(c.p)}</td><td>${b?fp(tp)+` <small class="mu">${Lg?'+':'−'}${b.tp}%</small>`:'–'}</td><td>${b?fp(sl)+` <small class="mu">${Lg?'−':'+'}${b.sl}%</small>`:'–'}</td>
       <td>${b?b.te.win.toFixed(0)+'% <small class="mu">'+b.te.n+'건</small>':'–'}</td><td>${b?pc(b.te.exp,2):'–'}</td><td>${b&&b.mv?b.mv.upF.toFixed(0)+'% / '+b.mv.dnF.toFixed(0)+'%':'–'}</td>
-      <td title="현재가가 평단보다 몇 % 위/아래인지">${rel(c.lavg,c.p)}</td><td>${rel(c.savg,c.p)}</td><td class="l">${fl}</td><td class="hide-sm">${pc(c.c24)}</td><td class="hide-sm">${c.r.vs!=null?c.r.vs.toFixed(1)+'x':'–'}</td></tr>`}).join('')||'<tr><td colspan="16" class="l">결과가 없어요</td></tr>'}
+      <td>${rel(c.cb?.big?.L*c.scale,c.p)}</td><td>${rel(c.cb?.big?.S*c.scale,c.p)}</td><td class="l">${fl}</td><td class="hide-sm">${pc(c.c24)}</td><td class="hide-sm">${c.r.vs!=null?c.r.vs.toFixed(1)+'x':'–'}</td></tr>`}).join('')||'<tr><td colspan="17" class="l">결과가 없어요</td></tr>'}
+let PVC=null;
+function preview(base){const c=DATA.find(x=>x.base===base);if(!c)return;const r=c.r,dlg=$('#pv');
+  $('#pv-i').innerHTML=OD.coinIcon(c.base,28);$('#pv-t').textContent=c.base;$('#pv-p').innerHTML=`${fp(c.p)} ${pc(c.c24)}`;
+  const rel=v=>v&&isFinite(v)?`${fp(v)} <small class="${c.p>=v?'up':'dn'}">${c.p>=v?'+':''}${((c.p/v-1)*100).toFixed(1)}%</small>`:'–';
+  const usd=v=>v==null?'–':(v<0?'−':'+')+'$'+(Math.abs(v)>=1e6?(Math.abs(v)/1e6).toFixed(1)+'M':(Math.abs(v)/1e3).toFixed(0)+'K');
+  const K=[['거래대금 배수',r.vs!=null?r.vs.toFixed(1)+'x':'–','24시간 ÷ 7일 하루 평균'],['미결제약정 24시간',pc(r.doi),'늘면 새 포지션 유입'],['펀딩비',c.fr!=null?c.fr.toFixed(4)+'%':'–','양수면 롱이 지불'],
+    ['CVD 24시간',usd(r.cvd),'시장가 매수 − 매도'],['CVD 7일 / 체결량',r.cvdr7!=null?(r.cvdr7*100).toFixed(1)+'%':'–','+3% 이상이면 매수 우위'],['7일 가격',pc(r.c7),'⑪은 +2% 이하일 때'],
+    ['48시간 위치',r.pos!=null?(r.pos*100).toFixed(0)+'%':'–','0% = 48시간 최저'],['7일 ±20% 확률',c.vb?c.vb.te.big.toFixed(0)+'%':'–',c.vb?esc(c.vb.name):'맞는 검증 조합 없음']];
+  const on=OD.ALLN.map((n,i)=>c.m&1<<i?n:null).filter(Boolean);
+  const cb=c.cb,sc=c.scale;
+  $('#pv-b').innerHTML=`<div class="pvc" id="pv-c"></div>
+    <div class="pvk">${K.map(([a,b,t])=>`<div><small>${a}</small><b>${b}</b><small>${t}</small></div>`).join('')}</div>
+    <p style="margin:0 0 8px"><b>지금 켜진 흔적</b>: ${on.length?on.map(esc).join(' · '):'없음'}</p>
+    ${c.bk?`<p style="margin:0 0 8px"><b>돌파 진입(검증 통과)</b>: 48시간 안에 ${fp(c.p*(1+c.bk.E/100))} 위로 깨지면 롱, ${fp(c.p*(1-c.bk.E/100))} 아래로 깨지면 숏 · 진입가 기준 익절 +${c.bk.tp}% / 손절 −${c.bk.sl}% · 뒤 기간 ${c.bk.te.t}건 승률 ${c.bk.te.win.toFixed(0)}% 기대값 ${pc(c.bk.te.exp,2)}</p>`:''}
+    <div class="tbl"><table class="pvt"><thead><tr><th class="l">평단 (최근 7일 추정)</th><th>롱</th><th>숏</th><th class="l">참고</th></tr></thead><tbody>
+      <tr><td class="l">큰손 선물 (바이낸스 상위 트레이더)</td><td>${rel(cb?.big?.L*sc)}</td><td>${rel(cb?.big?.S*sc)}</td><td class="l"><small class="mu">${cb?.big?`롱 비중 ${(cb.big.lr*100).toFixed(0)}%`:'바이낸스 선물 없음'}</small></td></tr>
+      <tr><td class="l">다수 계정 선물 (계정 수 기준)</td><td>${rel(cb?.acct?.L*sc)}</td><td>${rel(cb?.acct?.S*sc)}</td><td class="l"><small class="mu">${cb?.acct?`롱 계정 ${(cb.acct.lr*100).toFixed(0)}%`:''}</small></td></tr>
+      <tr><td class="l">선물 전체 신규 (게이트 체결 비율)</td><td>${rel(c.lavg)}</td><td>${rel(c.savg)}</td><td class="l"><small class="mu">초록 = 지금 수익, 빨강 = 손실</small></td></tr>
+    </tbody></table></div>
+    <p class="sub">현물·선물 체결 크기별 평단과 큰 체결 순매수는 <a href="./view.html#${encodeURIComponent(c.base)}">한눈에</a>, 상위 지갑 분산 흔적은 <a href="./coin.html#${encodeURIComponent(c.base)}">코인 분석</a>에서 볼 수 있어요.</p>`;
+  if(PVC){PVC.destroy();PVC=null}dlg.showModal();OD.mountChart($('#pv-c'),c.base,{links:false}).then(x=>{if(dlg.open)PVC=x;else x.destroy()}).catch(e=>{$('#pv-c').textContent='차트 실패: '+e.message})}
+$('#rows').addEventListener('click',e=>{const b=e.target.closest('[data-pv]');if(b)preview(b.dataset.pv)});
+$('#pv-x').onclick=()=>$('#pv').close();$('#pv').addEventListener('close',()=>{if(PVC){PVC.destroy();PVC=null}});
+$('#pv').addEventListener('click',e=>{if(e.target.id==='pv')$('#pv').close()});
 $('#go').onclick=run;init().then(run);setInterval(()=>{if(!document.hidden)run()},600e3);
 }
 </script>

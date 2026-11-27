@@ -93,7 +93,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:600px){table{font-size:13px}.fig{min-height:240px}.kpi .v{font-size:22px}.keyrow label{width:100%}}
 @media(prefers-reduced-motion:no-preference){.panel{animation:in .35s ease both}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=18">
+<link rel="stylesheet" href="./theme.css?v=19">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -165,6 +165,9 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
     <div class="phead"><h2>주요 보유자 상위 20</h2></div>
     <div id="holders"><div class="empty">코인을 먼저 조회하세요.</div></div>
     <p class="src">Ethplorer (이더리움 메인넷 토큰). 주소를 누르면 Arkham에서 누구 지갑인지 확인할 수 있어요.</p>
+    <div class="phead" style="margin-top:18px"><h2>상위 지갑 분산 흔적</h2><button type="button" id="sp-go" class="ghost">점검하기</button></div>
+    <p class="src" style="margin-top:0">상위 20개 지갑의 최근 토큰 이동 100건씩을 받아, 최근 7일·30일에 얼마나 내보냈고 몇 개 주소로 쪼갰는지 봐요. 상위 지갑끼리 옮긴 건 내부 이동으로 빼요. 무료 키는 1초에 1번이라 20초쯤 걸려요.</p>
+    <div id="spread"></div>
   </div>
 </section>
 
@@ -180,7 +183,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   </details>
 </section>
 
-<script src="./common.js?v=20"></script>
+<script src="./common.js?v=21"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -271,7 +274,7 @@ async function loadCoin(q){
   const chainNames=Object.keys(C.platforms).filter(k=>k&&C.platforms[k]).slice(0,4).join(', ');
   $('#cinfo').innerHTML=[C.mcap&&`<span>시총 <b>${usd(C.mcap)}</b></span>`,C.fdv&&`<span>FDV <b>${usd(C.fdv)}</b></span>`,C.circ&&C.max&&`<span>유통 <b>${(C.circ/C.max*100).toFixed(1)}%</b></span>`,chainNames&&`<span>체인 <b>${esc(chainNames)}</b></span>`].filter(Boolean).join('');
   if(CH)CH.destroy();CH=null;$('#f-chart').innerHTML='';OD.mountChart($('#f-chart'),C.sym,{links:false}).then(c=>CH=c).catch(e=>{$('#f-chart').innerHTML=`<div class="empty">차트를 불러오지 못했어요: ${esc(e.message)}</div>`});
-  await Promise.allSettled([loadCVD(),loadUnlock(),loadHolders(),showFlowCache()]);
+  $('#spread').innerHTML='';HOLD=null;await Promise.allSettled([loadCVD(),loadUnlock(),loadHolders(),showFlowCache()]);
   $('#stamp').textContent='마지막 갱신 '+new Date().toLocaleString('ko-KR');
 }
 
@@ -374,6 +377,35 @@ async function loadHolders(){
       return `<tr><td class="l">${i+1}</td><td class="l"><a class="addr" href="https://intel.arkm.com/explorer/address/${a}" target="_blank" rel="noopener">${a.slice(0,8)}…${a.slice(-6)}</a> <a class="sub" href="https://etherscan.io/address/${a}" target="_blank" rel="noopener">etherscan</a></td><td>${num(amt)}</td><td>${C.price?usd(amt*C.price):''}</td><td>${Number(h.share).toFixed(2)}%</td><td class="l"><div class="meter" style="width:${(h.share/mx*100).toFixed(1)}%"></div></td></tr>`}).join('')}</tbody></table></div>`;
   }catch(er){empty('#holders','보유자를 불러오지 못했어요: '+esc(er.message)+(key==='freekey'?' · 무료 공용 키라 제한에 걸렸을 수 있어요. 아래에서 Ethplorer 키를 넣어보세요.':''))}
 }
+
+/* 상위 지갑 분산 흔적: 보유 상위 지갑이 최근 토큰을 여러 주소로 쪼개 내보냈는지 */
+let HOLD=null;
+async function loadSpread(){const box=$('#spread');if(!C.eth||C.eth==='native'){box.innerHTML='<div class="empty">이더리움 메인넷 토큰만 점검할 수 있어요.</div>';return}
+  const key=store.get('k-ethp')||'freekey',tok=C.eth.toLowerCase(),dec=C.decimals,now=Date.now()/1000;$('#sp-go').disabled=true;
+  try{if(!HOLD||HOLD.tok!==tok){box.innerHTML='<div class="empty">보유자 불러오는 중…</div>';const d=await j(`https://api.ethplorer.io/getTopTokenHolders/${encodeURIComponent(tok)}?apiKey=${encodeURIComponent(key)}&limit=20`);HOLD={tok,hs:d.holders||[]}}
+    const hs=HOLD.hs,top=new Set(hs.map(h=>String(h.address).toLowerCase())),R=[];
+    for(let i=0;i<hs.length;i++){const a=String(hs[i].address).toLowerCase();box.innerHTML=`<div class="empty">지갑 이동 받는 중… ${i+1}/${hs.length}</div>`;
+      await new Promise(r=>setTimeout(r,key==='freekey'?1100:250));let ops=[];
+      try{const d=await j(`https://api.ethplorer.io/getAddressHistory/${a}?apiKey=${encodeURIComponent(key)}&token=${tok}&type=transfer&limit=100`);ops=d.operations||[]}catch(e){R.push({a,h:hs[i],err:e.message});continue}
+      const bal=Number(hs[i].rawBalance||hs[i].balance)/10**dec,w={};
+      for(const [k,days] of [['d7',7],['d30',30]]){let out=0,inn=0,intl=0;const to=new Map();
+        for(const o of ops){if(now-o.timestamp>days*86400)continue;const v=Number(o.value)/10**dec,f=String(o.from).toLowerCase(),t=String(o.to).toLowerCase();
+          if(f===a){if(top.has(t)){intl+=v;continue}out+=v;to.set(t,(to.get(t)||0)+v)}else if(t===a){if(top.has(f)){intl+=v;continue}inn+=v}}
+        const amts=[...to.values()].sort((x,y)=>y-x),big=amts.filter(v=>v>=out*.05);
+        w[k]={out,inn,net:inn-out,n:to.size,split:big.length>=5||(big.length>=3&&big.at(-1)>=big[0]*.5),pct:(bal+out-inn)>0?out/(bal+out-inn)*100:0,intl}}
+      R.push({a,h:hs[i],bal,w,full:ops.length>=100,last:ops[0]?.timestamp})}
+    const px=C.price||0,ok=R.filter(r=>!r.err),hot=ok.filter(r=>r.w.d7.pct>=5||(r.w.d7.split&&r.w.d7.pct>=1));
+    const out7=ok.reduce((s,r)=>s+r.w.d7.out,0),in7=ok.reduce((s,r)=>s+r.w.d7.inn,0),out30=ok.reduce((s,r)=>s+r.w.d30.out,0),in30=ok.reduce((s,r)=>s+r.w.d30.inn,0);
+    const lvl=hot.length>=3||(out7-in7)*px>5e6?'강함':hot.length?'약간':'뚜렷하지 않음';
+    const cell=x=>`${x.out?num(x.out):'–'}${x.out?` <small>${x.pct.toFixed(1)}%</small>`:''}`;
+    box.innerHTML=`<p style="margin:6px 0 10px;font-size:15px"><b>매도 압력 흔적: ${lvl}</b> · 최근 7일 상위 지갑 순유출 <b>${num(out7-in7)} ${esc(C.sym)}</b>${px?' ('+usd((out7-in7)*px)+')':''} · 30일 ${num(out30-in30)} · 많이 내보내거나 쪼갠 지갑 ${hot.length}/${ok.length}개</p>
+    <div class="scroll"><table><thead><tr><th class="l">#</th><th class="l">주소</th><th>지금 보유</th><th title="외부로 내보낸 양 · 7일 전 보유량 대비 %">7일 내보냄</th><th>7일 받은 양</th><th title="외부로 보낸 주소 수">받는 주소</th><th>30일 내보냄</th><th class="l">판정</th></tr></thead><tbody>${
+      R.map((r,i)=>{if(r.err)return`<tr><td class="l">${i+1}</td><td class="l">${r.a.slice(0,8)}…</td><td colspan="6" class="l">불러오지 못함: ${esc(r.err)}</td></tr>`;const d=r.w.d7,m=r.w.d30;
+        const tag=d.split&&d.pct>=1?'<b>쪼개서 내보냄</b>':d.pct>=5?'<b>많이 내보냄</b>':d.net>0&&d.inn>=r.bal*.05?'모으는 중':m.split&&m.pct>=1?'30일 안 쪼갠 흔적':'조용함';
+        return`<tr><td class="l">${i+1}</td><td class="l"><a class="addr" href="https://intel.arkm.com/explorer/address/${r.a}" target="_blank" rel="noopener">${r.a.slice(0,8)}…${r.a.slice(-6)}</a> <a class="sub" href="https://etherscan.io/token/${tok}?a=${r.a}" target="_blank" rel="noopener">이동 내역</a></td><td>${num(r.bal)} <small>${Number(r.h.share).toFixed(2)}%</small></td><td>${cell(d)}</td><td>${d.inn?num(d.inn):'–'}</td><td>${d.n||'–'}</td><td>${cell(m)}</td><td class="l">${tag}${r.full&&r.last&&now-r.last<7*86400?' <small title="최근 100건이 모두 7일 안이라 더 있을 수 있어요">100건+</small>':''}</td></tr>`}).join('')}</tbody></table></div>
+    <p class="src">거래소 지갑·브릿지·스테이킹 컨트랙트가 상위에 있으면 평소에도 이동이 많아요. 주소를 눌러 Arkham에서 누구 지갑인지 꼭 확인하세요. '쪼개서 내보냄'은 7일 안에 내보낸 양의 5% 이상을 받은 주소가 5개 이상이거나, 비슷한 크기로 3개 이상에 나눠 보낸 경우예요. 거래소 입금 주소로 쪼개 보내는 건 매도 직전에 자주 보이는 패턴이지만, 지갑 정리일 수도 있어요.</p>`;
+  }catch(er){box.innerHTML='<div class="empty">점검 실패: '+esc(er.message)+(key==='freekey'?' · 무료 공용 키 제한일 수 있어요. 아래에서 Ethplorer 키를 넣어보세요.':'')+'</div>'}finally{$('#sp-go').disabled=false}}
+$('#sp-go').onclick=loadSpread;
 
 /* exchange flows via Dune */
 const DUNE_CHAIN={'ethereum':'ethereum','arbitrum-one':'arbitrum','base':'base','binance-smart-chain':'bnb','polygon-pos':'polygon','optimistic-ethereum':'optimism','avalanche':'avalanche_c'};
