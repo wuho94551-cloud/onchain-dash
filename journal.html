@@ -186,7 +186,7 @@ F.addEventListener('submit',e=>{e.preventDefault();const g=k=>F[k].value.trim(),
   DB.trades=DB.trades.filter(x=>x.id!==t.id).concat(t);saveLocal();$('#fmsg').textContent=`${t.sym} ${EDIT?'수정':'저장'}했어요`+(KEY?'':' (이 기기에만)');fill(null);renderAll()});
 $('#clr').onclick=()=>{fill(null);$('#fmsg').textContent=''};
 /* 다른 페이지에서 넘어온 값: journal.html#new=SOL&p=73.1&h=3 */
-function fromHash(){const h=new URLSearchParams(location.hash.slice(1));if(!h.get('new'))return;fill(null);F.sym.value=h.get('new').toUpperCase();if(h.get('p'))F.entry.value=h.get('p');if(h.get('h'))F.hits.value=h.get('h');if(h.get('h'))F.setup.value='급등 준비';tab('add');history.replaceState(null,'',location.pathname)}
+function fromHash(){const h=new URLSearchParams(location.hash.slice(1));if(!h.get('new'))return;fill(null);F.sym.value=h.get('new').toUpperCase();if(h.get('p'))F.entry.value=h.get('p');if(h.get('h'))F.hits.value=h.get('h');if(h.get('h'))F.setup.value='급등 준비';for(const k of ['stop','size','lev','side'])if(h.get(k))F[k].value=h.get(k);tab('add');history.replaceState(null,'',location.pathname)}
 /* ---- 탭 ---- */
 function tab(t){$$('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));$$('[data-p]').forEach(p=>p.hidden=p.dataset.p!==t);localStorage.setItem('jr-tab',t)}
 $('.tabs').onclick=e=>{const b=e.target.closest('button');if(b)tab(b.dataset.t)};

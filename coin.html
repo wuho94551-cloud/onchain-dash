@@ -143,7 +143,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
     </div>
     <div class="fig" id="f-cvd"></div>
     <div class="kpis" id="cvdk"></div>
-    <p class="src">Gate.io USDT 무기한 선물의 시장가 매수 체결량 − 시장가 매도 체결량 누적. 미결제약정·펀딩·청산도 같은 데이터에서 계산.</p>
+    <p class="src">Gate.io USDT 무기한 선물의 시장가 매수 체결량 − 시장가 매도 체결량 누적. 청산 합계와 상위 트레이더 비율도 Gate 기준이에요. 미결제약정·펀딩비는 다른 페이지와 같은 Bybit 기준이에요.</p>
   </div>
 </section>
 
@@ -287,13 +287,14 @@ async function loadCVD(){
     for(const r of st){cum+=((r.long_taker_size||0)-(r.short_taker_size||0))*mult;pts.push([r.time*1000,cum]);liqL+=r.long_liq_usd||0;liqS+=r.short_liq_usd||0}
     chart(box,[{pts,color:'var(--acc)',name:'CVD',area:true}],(v,f)=>num(v)+(f?' '+C.sym:''),dfmt);
     const a=st[0],z=st.at(-1),mp=Number(z.mark_price)||C.price||0;
-    const oiChg=a.open_interest_usd?(z.open_interest_usd/a.open_interest_usd-1)*100:0;
-    const fr=Number(z.last_funding_rate||0)*100;
+    /* 미결제약정·펀딩비는 다른 페이지와 같은 Bybit 기준 */
+    let by=null;for(const s of [C.sym+'USDT','1000'+C.sym+'USDT','10000'+C.sym+'USDT']){try{const r=await j(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${s}`);if(r.result?.list?.length){by={s,t:r.result.list[0]};break}}catch(e){}}
+    let oiV=null,oiChg=null,fr=null;if(by){oiV=+by.t.openInterestValue;fr=+by.t.fundingRate*100;try{const l=(await j(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${by.s}&intervalTime=1h&limit=25`)).result.list;if(l.length>1)oiChg=(+l[0].openInterest/+l.at(-1).openInterest-1)*100}catch(e){}}
     $('#cvdk').innerHTML=[
       ['구간 순체결',sgn(cum,v=>num(v))+` <span class="sub">${esc(C.sym)}</span>`],
       ['순체결 (USD 환산)',sgn(cum*mp,usd)],
-      ['미결제약정',usd(z.open_interest_usd||0)+` <span class="sub">${oiChg>=0?'+':''}${oiChg.toFixed(1)}%</span>`],
-      ['펀딩비',sgn(fr,v=>v.toFixed(4)+'%')],
+      ['미결제약정 (Bybit)',oiV!=null?usd(oiV)+(oiChg!=null?` <span class="sub">24시간 ${oiChg>=0?'+':''}${oiChg.toFixed(1)}%</span>`:''):'–'],
+      ['펀딩비 (Bybit)',fr!=null?sgn(fr,v=>v.toFixed(4)+'%'):'–'],
       ['롱 청산 합계',usd(liqL)],['숏 청산 합계',usd(liqS)],
       ['상위 트레이더 롱/숏',Number(z.top_lsr_size||0).toFixed(2)]
     ].map(([l,v])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
@@ -325,21 +326,31 @@ async function loadUnlock(){
     const e=await findUnlock();
     if(!e){empty('#unlock',`DefiLlama에 ${esc(C.name)} 언락 데이터가 없어요. 언락이 없거나 아직 등록되지 않은 토큰입니다.`);return}
     const now=Date.now()/1000;
-    const series=e.documentedData?.data||[];
-    const totals=new Map();for(const s of series)for(const p of s.data)totals.set(p.timestamp,(totals.get(p.timestamp)||0)+(p.unlocked||0));
-    const tl=[...totals.entries()].sort((a,b)=>a[0]-b[0]);
+    const CATK={insiders:'팀·자문',privateSale:'투자자',publicSale:'공개 판매',airdrop:'에어드랍',farming:'파밍 보상',noncirculating:'재단·보유',liquidity:'유동성',staking:'스테이킹 보상',ecosystem:'생태계',community:'커뮤니티',treasury:'트레저리',burned:'소각'};
+    const SELL=new Set(['insiders','privateSale','publicSale']);/* 시장에 팔릴 가능성이 큰 물량 */
+    const cats=e.documentedData?.categories||e.categories||{},catOf=l=>Object.keys(cats).find(c=>(cats[c]||[]).includes(l))||'';
+    const series=(e.documentedData?.data||[]).map(x=>({...x,cat:catOf(x.label)})).filter(x=>x.cat!=='burned');/* 소각은 빼고 계산 (음수로 그려지던 문제) */
+    const sum=f=>{const m=new Map();for(const x of series)if(f(x))for(const p of x.data)m.set(p.timestamp,(m.get(p.timestamp)||0)+Math.max(0,p.unlocked||0));return[...m.entries()].sort((a,b)=>a[0]-b[0])};
+    const tl=sum(()=>true),tlS=sum(x=>SELL.has(x.cat));
     if(!tl.length)throw new Error('일정 데이터 없음');
-    const at=t=>{let v=0;for(const [ts,u] of tl){if(ts<=t)v=u;else break}return v};
-    const cur=at(now),in30=at(now+30*86400)-cur,in90=at(now+90*86400)-cur;
+    const atOf=L=>t=>{let v=0;for(const [ts,u] of L){if(ts<=t)v=u;else break}return v};const at=atOf(tl),atS=atOf(tlS);
+    const cur=at(now),in30=at(now+30*86400)-cur,in90=at(now+90*86400)-cur,s30=atS(now+30*86400)-atS(now),s90=atS(now+90*86400)-atS(now);
     const maxS=e.supplyMetrics?.maxSupply||C.max||tl.at(-1)[1]||0;
-    const evs=(e.metadata?.events||[]).filter(v=>v.timestamp>now).sort((a,b)=>a.timestamp-b.timestamp).slice(0,8);
-    const txt=v=>esc(v.description||'').replace(/\{tokens\[(\d+)\]\}/g,(_,i)=>esc(num(v.noOfTokens?.[i]||0)+' '+C.sym)).replace('{timestamp}',esc(ddate(v.timestamp*1000)));
+    /* 이벤트: 같은 종류의 선형 변경은 가장 가까운 것 하나만, 설명은 한국어로 */
+    const seen=new Set(),evs=(e.metadata?.events||[]).filter(v=>v.timestamp>now).sort((a,b)=>a.timestamp-b.timestamp).filter(v=>{if(v.unlockType!=='linear')return true;const k=v.category+'|lin';if(seen.has(k))return false;seen.add(k);return true}).slice(0,8);
+    const per=d=>/per week/.test(d)?'주':/per day/.test(d)?'일':/per month/.test(d)?'월':/per year/.test(d)?'년':'';
+    const txt=v=>{const c=CATK[v.category]||v.category||'',n=v.noOfTokens||[],d=v.description||'',u=per(d),T=i=>num(n[i]||0)+' '+C.sym;
+      if(v.unlockType==='cliff')return`${esc(c)} <b>${esc(T(0))}</b> 한 번에 언락${C.price&&n[0]?' · '+usd(n[0]*C.price):''}`;
+      if(n.length>=2)return`${esc(c)} 선형 언락 속도 ${n[1]>n[0]?'증가':'감소'}: ${esc(T(0))} → ${esc(T(1))}${u?' / '+u:''}`;
+      if(n.length===1)return`${esc(c)} 선형 언락 ${esc(T(0))}${u?' / '+u:''} 시작`;
+      return esc(d.replace(/\{tokens\[(\d+)\]\}/g,(_,i)=>num(n[i]||0)+' '+C.sym).replace('{timestamp}',ddate(v.timestamp*1000)))};
     const pv=n=>C.price?` · ${usd(n*C.price)}`:'';
     const pc=n=>C.circ?(n/C.circ*100).toFixed(2)+'% of 유통':'';
     $('#unlock').innerHTML=`<div class="kpis" style="margin-top:0">
       <div class="kpi"><div class="l">현재 언락 비율</div><div class="v">${maxS?(cur/maxS*100).toFixed(1)+'%':'–'}</div></div>
-      <div class="kpi"><div class="l">30일 내 언락</div><div class="v">${num(in30)}</div><div class="sub">${pc(in30)}${pv(in30)}</div></div>
-      <div class="kpi"><div class="l">90일 내 언락</div><div class="v">${num(in90)}</div><div class="sub">${pc(in90)}${pv(in90)}</div></div></div>
+      <div class="kpi"><div class="l">30일 내 언락</div><div class="v">${num(in30)}</div><div class="sub">${pc(in30)}${pv(in30)}</div><div class="sub">팀·투자자 몫 ${num(s30)}${pv(s30)}</div></div>
+      <div class="kpi"><div class="l">90일 내 언락</div><div class="v">${num(in90)}</div><div class="sub">${pc(in90)}${pv(in90)}</div><div class="sub">팀·투자자 몫 ${num(s90)}${pv(s90)}</div></div></div>
+      <p class="src" style="margin-top:6px">'팀·투자자 몫'이 시장에 팔릴 가능성이 큰 물량이에요. 나머지는 스테이킹 보상·생태계 몫이라 바로 매도로 이어지는 경우가 적어요. 소각은 빼고 계산해요.</p>
       <div class="fig sm" id="f-unlock" style="margin-top:12px"></div>
       <h3 style="font-size:16px;margin:14px 0 4px">다가오는 이벤트</h3>
       ${evs.length?`<ul class="ev">${evs.map(v=>`<li><time>${esc(ddate(v.timestamp*1000))}</time><span>${txt(v)}</span></li>`).join('')}</ul>`:'<p class="err">예정된 이벤트 없음</p>'}`;
@@ -351,7 +362,7 @@ async function loadUnlock(){
 
 /* top holders via Ethplorer */
 async function loadHolders(){
-  if(!C.eth||C.eth==='native'){empty('#holders',`${esc(C.name)}은(는) 이더리움 메인넷 토큰이 아니라 지금은 보유자 조회가 안 돼요. 솔라나 등은 Helius 키를 연결하면 추가할 수 있어요.`);return}
+  if(!C.eth||C.eth==='native'){empty('#holders',`이 코인(${esc(C.sym)})은 이더리움 메인넷 토큰이 아니라 지금은 보유자 조회가 안 돼요. 솔라나 등은 Helius 키를 연결하면 추가할 수 있어요.`);return}
   empty('#holders','불러오는 중…');
   const key=store.get('k-ethp')||'freekey';
   try{
@@ -408,7 +419,7 @@ function renderFlow(rows,ts){
 }
 async function showFlowCache(){
   const t=flowTarget();
-  if(!t){empty('#flow',`${esc(C.name)}은(는) Dune에서 추적할 수 있는 EVM 토큰 주소가 없어요. (BTC·솔라나 계열은 추후 추가)`);$('#flowbtn').hidden=true;return}
+  if(!t){empty('#flow',`이 코인(${esc(C.sym)})은 Dune에서 추적할 수 있는 EVM 토큰 주소가 없어요. (BTC·솔라나 계열은 추후 추가)`);$('#flowbtn').hidden=true;return}
   $('#flowbtn').hidden=false;
   try{const c=JSON.parse(store.get(flowKey(t))||'null');if(c){renderFlow(c.rows,c.ts);return}}catch(e){}
   empty('#flow',store.get('k-dune')?`<b>Dune으로 계산</b>을 누르면 최근 30일 ${esc(t.chain)} 체인의 거래소 유입·유출을 계산해요. 30초~2분 걸리고 무료 크레딧을 조금 씁니다.`:`<div style="text-align:left;max-width:520px;margin:0 auto;line-height:1.6"><b>Dune 키가 있어야 거래소 유입·유출을 계산할 수 있어요.</b> 무료예요.<ol style="margin:6px 0;padding-left:20px"><li><a href="https://dune.com/auth/register" target="_blank" rel="noopener">dune.com</a>에 가입</li><li>오른쪽 위 프로필 → Settings → API → Create new API key</li><li>복사한 키를 아래에 붙여넣고 저장</li></ol><div style="display:flex;gap:6px;flex-wrap:wrap"><input id="k-dune-in" placeholder="Dune API 키" autocomplete="off" spellcheck="false" style="flex:1 1 220px;min-height:40px"><button type="button" id="k-dune-save" style="min-height:40px">저장</button></div><p class="sub" style="margin-top:6px">키는 이 기기 브라우저에만 저장돼요. 그동안은 <a href="./cvd.html#${encodeURIComponent(C.sym)}">CVD</a>에서 현물 매수·매도 흐름을 대신 볼 수 있어요.</p></div>`);

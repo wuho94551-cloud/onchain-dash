@@ -35,6 +35,11 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 .empty{padding:28px 10px;color:var(--mute);text-align:center}
 .prog{height:2px;background:var(--line);margin-bottom:10px}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.calc{margin-top:16px;border:1px solid var(--line);padding:10px 14px}.calc summary{font-weight:700}
+.cf{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
+.cf label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute)}
+.cf input,.cf select{font:inherit;font-family:var(--mono);font-size:15px;color:var(--ink);background:transparent;border:1px solid var(--line);min-height:40px;padding:0 10px}
+.btnl{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:600}
 .kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);margin:14px 0}
 .kp div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:9px 13px}
 .kp small{display:block;font-size:12px;color:var(--mute)}.kp b{font-family:var(--mono);font-weight:400;font-size:19px}
@@ -64,6 +69,21 @@ details li,details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 </header>
 <section class="band" style="padding-top:14px">
   <div id="chart"></div>
+  <details class="calc" id="calc"><summary>포지션 계산기</summary>
+    <div class="cf">
+      <label>계좌 잔고 (USDT)<input id="k-bal" type="number" step="any"></label>
+      <label>한 번에 잃어도 되는 비율 (%)<input id="k-risk" type="number" step="0.1" value="1"></label>
+      <label>방향<select id="k-side"><option value="L">롱</option><option value="S">숏</option></select></label>
+      <label>진입가<input id="k-en" type="number" step="any"></label>
+      <label>손절가<input id="k-sl" type="number" step="any"></label>
+      <label>목표가 (선택)<input id="k-tp" type="number" step="any"></label>
+      <label>레버리지<input id="k-lev" type="number" step="1" value="10"></label>
+    </div>
+    <div class="kp" id="k-out"></div>
+    <p class="sub" id="k-warn"></p>
+    <div class="ctl"><a class="btnl" id="k-jr" href="./journal.html">이 값으로 매매 일지에 기록 →</a><button type="button" class="ghost" id="k-now">진입가를 현재가로</button></div>
+    <p class="sub">청산가는 격리 마진, 유지증거금 0.5% 기준 대략값이에요. 실제 값은 거래소 화면에서 확인하세요. 수수료는 시장가 0.055%×2로 계산해요.</p>
+  </details>
   <div class="grid2">
     <div class="pn"><h2>미결제약정 (7일)</h2><p>Bybit · 1시간 단위 · 계약 수량 기준</p><div class="mini" id="c-oi"></div></div>
     <div class="pn"><h2>누적 CVD (7일)</h2><p>Gate 체결 기준 · 시장가 매수 − 매도 (달러)</p><div class="mini" id="c-cvd"></div></div>
@@ -110,12 +130,12 @@ async function load(){const b=BASE;$('#stat').textContent='불러오는 중…';
     let c=0,c4=0;S.slice(-24).forEach((a,i,arr)=>{c+=a.v;if(i>=arr.length-4)c4+=a.v});d.cvd=c;d.cvd4=c4;lsr=S.at(-1).lsr}
   let K=null;if(S.length&&cs.status==='fulfilled'&&cs.value.length){const C=cs.value.map(x=>({t:+x.t,h:+x.h,l:+x.l}));K=clusterBins(S.slice(-48),C,pg);d.up=K.up;d.dn=K.dn;
     const Hh=Math.max(...C.map(x=>x.h)),Ll=Math.min(...C.map(x=>x.l));d.pos=Hh>Ll?(pg-Ll)/(Hh-Ll):null}
-  const P=OD.sigP(),sg=OD.sigCond(d,P);
+  const P=OD.sigP(),sg=OD.sigCond(d,P);LASTH=sg.hits;LASTP=p;if(!$('#k-en').value){$('#k-en').value=p}calc();
   const nf=+t.nextFundingTime,left=nf?Math.max(0,Math.round((nf-Date.now())/60e3)):null;
   $('#kp').innerHTML=[['가격',fp(p),pc(d.c24)+' · 24시간'],['미결제약정',usd(+t.openInterestValue),'24시간 '+pc(d.doi,1)],['펀딩비',pc(d.fr,4),left!=null?`다음 정산 ${Math.floor(left/60)}시간 ${left%60}분 뒤`:''],
     ['CVD 24시간',d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–',d.cvd4!=null?`4시간 <span class="${d.cvd4>=0?'up':'dn'}">${usd(d.cvd4)}</span>`:'Gate 데이터 없음'],
     ['롱숏 계정 비율',lsr!=null?lsr.toFixed(2):'–','Gate · 1보다 크면 롱 계정이 많음'],['위·아래 청산 비',d.up!=null&&d.dn?(d.up/d.dn).toFixed(2)+'x':d.up?'위쪽만':'–','숏 청산(위) ÷ 롱 청산(아래)'],
-    ['48시간 위치',d.pos!=null?(d.pos*100).toFixed(0)+'%':'–','0% = 48시간 최저'],['급등 준비',`${sg.hits}/${sg.max}`,`<a href="./journal.html#new=${encodeURIComponent(b)}&p=${p}&h=${sg.hits}">매매 일지에 기록 →</a>`]].map(([a,b,c])=>`<div><small>${a}</small><b>${b}</b><i>${c}</i></div>`).join('');
+    ['48시간 위치',d.pos!=null?(d.pos*100).toFixed(0)+'%':'–','0% = 48시간 최저'],['급등 준비',`${sg.hits}/${sg.max}`,`<a href="#calc" onclick="document.getElementById('calc').open=true">계산기로 크기 정하기 ↓</a>`]].map(([a,b,c])=>`<div><small>${a}</small><b>${b}</b><i>${c}</i></div>`).join('');
   const NM=['① 포지션 누적','② 펀딩 음수','③ 체결 매수 우위','④ 상단 숏 클러스터','⑤ 바닥권'];
   $('#sig').innerHTML=NM.map((n,i)=>P.on[i]?`<span class="${sg.C[i]?'on':''}" title="${esc(OD.sigText(P)[i])}">${n}${sg.C[i]==null?' (데이터 없음)':''}</span>`:'').join('');
   // mini charts
@@ -130,8 +150,27 @@ async function load(){const b=BASE;$('#stat').textContent='불러오는 중…';
     $('#lq').innerHTML=h}else $('#lq').innerHTML='<div><span></span><span class="mu">Gate에 이 코인 선물이 없어서 추정할 수 없어요</span><span></span></div>';
   const tm=new Date();$('#stat').textContent=`${String(tm.getHours()).padStart(2,'0')}:${String(tm.getMinutes()).padStart(2,'0')} 기준 · ${R.s} 무기한 선물`;
 }
+/* ---- 포지션 계산기 ---- */
+const KS=JSON.parse(localStorage.getItem('vw-calc')||'{}');if(KS.bal)$('#k-bal').value=KS.bal;if(KS.risk)$('#k-risk').value=KS.risk;if(KS.lev)$('#k-lev').value=KS.lev;if(localStorage.getItem('vw-calc-open'))$('#calc').open=true;
+$('#calc').addEventListener('toggle',()=>{if($('#calc').open)localStorage.setItem('vw-calc-open',1);else localStorage.removeItem('vw-calc-open')});
+let LASTP=null;
+function calc(){const v=id=>{const x=$(id).value;return x===''?null:+x};const bal=v('#k-bal'),rk=v('#k-risk'),en=v('#k-en'),sl=v('#k-sl'),tp=v('#k-tp'),lev=Math.max(1,v('#k-lev')||1),side=$('#k-side').value,L=side==='L';
+  localStorage.setItem('vw-calc',JSON.stringify({bal,risk:rk,lev}));
+  const out=[],warn=[];let size=null,qty=null;
+  if(bal&&rk&&en&&sl&&sl!==en){const dist=Math.abs(en-sl)/en,risk=bal*rk/100,fee=0.0011;size=risk/(dist+fee);qty=size/en;const margin=size/lev,liq=L?en*(1-1/lev+0.005):en*(1+1/lev-0.005);
+    out.push(['위험 금액',usd(risk),`잔고의 ${rk}%`],['포지션 크기',usd(size),`${qty>=1?qty.toFixed(qty>=100?0:3):qty.toPrecision(4)} ${BASE}`],['필요 증거금',usd(margin),`${lev}배 · 잔고의 ${(margin/bal*100).toFixed(1)}%`],['손절까지',(dist*100).toFixed(2)+'%',L?'아래로':'위로'],['청산가 (대략)',fp(liq),`진입가에서 ${(Math.abs(liq/en-1)*100).toFixed(1)}%`]);
+    if(tp){const rr=Math.abs(tp-en)/Math.abs(en-sl);out.push(['손익비',rr.toFixed(2)+' : 1',`목표 도달 시 ${usd(size*Math.abs(tp/en-1)-size*fee)}`]);if(rr<1.5)warn.push('손익비가 1.5 미만이에요.')}
+    if(L?sl>=en:sl<=en)warn.push(L?'롱인데 손절가가 진입가보다 높아요.':'숏인데 손절가가 진입가보다 낮아요.');
+    if(L?liq>=sl:liq<=sl)warn.push(`⚠️ 손절가보다 청산가(${fp(liq)})에 먼저 닿아요. 레버리지를 ${Math.max(1,Math.floor(1/(dist+0.005+0.002)))}배 이하로 낮추세요.`);
+    if(margin>bal)warn.push('필요 증거금이 잔고보다 커요. 레버리지를 올리거나 위험 비율을 낮추세요.')}
+  else out.push(['입력 필요','–','잔고·비율·진입가·손절가를 넣으세요']);
+  $('#k-out').innerHTML=out.map(([a,b,c])=>`<div><small>${a}</small><b>${b}</b><i>${c}</i></div>`).join('');$('#k-warn').textContent=warn.join(' ');
+  const q=new URLSearchParams({new:BASE,side});if(en)q.set('p',en);if(sl)q.set('stop',sl);if(size)q.set('size',size.toFixed(2));q.set('lev',lev);if(LASTH>0)q.set('h',LASTH);$('#k-jr').href='./journal.html#'+q.toString()}
+let LASTH=null;
+$('#calc').addEventListener('input',calc);$('#k-now').onclick=()=>{if(LASTP){$('#k-en').value=LASTP;calc()}};
 async function open(b){BASE=b.toUpperCase();localStorage.setItem('vw-last',BASE);if(location.hash.slice(1)!==BASE)history.replaceState(null,'','#'+encodeURIComponent(BASE));
   $('#sym').innerHTML=OD.coinIcon(BASE,34)+esc(BASE);document.title=BASE+' 한눈에 · 온체인 데스크';$('#lw').href='./watch.html#'+encodeURIComponent(BASE);$('#lc').href='./coin.html#'+encodeURIComponent(BASE);
+  $('#k-en').value='';$('#k-sl').value='';$('#k-tp').value='';
   if(CH)CH.destroy();CH=null;$('#chart').innerHTML='';OD.mountChart($('#chart'),BASE,{links:false}).then(c=>{CH=c;load().catch(e=>$('#stat').textContent='불러오기 실패: '+e.message)}).catch(e=>$('#stat').textContent='차트 실패: '+e.message)}
 OD.picker($('#pick'),s=>open(s),{searchLabel:'보기'});
 window.addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1)).toUpperCase();if(h&&h!==BASE)open(h)});
