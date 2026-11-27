@@ -203,17 +203,17 @@ setInterval(()=>{if(!document.hidden&&window.LightweightCharts)load().catch(()=>
 async function loadCB(){const b=BASE;$('#cb-go').disabled=true;$('#cb').innerHTML='';$('#cb-st').textContent='불러오는 중…';
   try{const R=await resolve(b);if(!R)throw new Error('심볼 없음');const now=+R.t.lastPrice/R.sc;
     const [cb,sz]=await Promise.all([OD.costBasis(R.s,R.sc),OD.sizeBasis(R.s,b+'USDT',R.sc,28,5e4,1e3,(d,m)=>{if(b===BASE)$('#cb-st').textContent=`체결 샘플 ${d}/${m}`})]);
-    if(b!==BASE)return;const rel=v=>v?`${fp(v)} <small class="${now>=v?'up':'dn'}">${now>=v?'+':''}${((now/v-1)*100).toFixed(1)}%</small>`:'–';
+    if(b!==BASE)return;const rel=(v,sh)=>v?`${fp(v)} <small class="${(now>=v)!==!!sh?'up':'dn'}">${now>=v?'+':''}${((now/v-1)*100).toFixed(1)}%</small>`:'–';
     const usd=v=>v>=1e9?(v/1e9).toFixed(2)+'B':v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v.toFixed(0);
     const rows=[];
-    if(cb){const st=(n,x,why)=>x&&rows.push([n,rel(x.L),rel(x.S),`롱 비중 ${(x.lr*100).toFixed(0)}% · 7일 물량 변화 롱 ${x.Lch>=0?'+':''}${x.Lch.toFixed(1)}% / 숏 ${x.Sch>=0?'+':''}${x.Sch.toFixed(1)}% · ${why}`]);
+    if(cb){const st=(n,x,why)=>x&&rows.push([n,rel(x.L),rel(x.S,1),`롱 비중 ${(x.lr*100).toFixed(0)}% · 7일 물량 변화 롱 ${x.Lch>=0?'+':''}${x.Lch.toFixed(1)}% / 숏 ${x.Sch>=0?'+':''}${x.Sch.toFixed(1)}% · ${why}`]);
       st('큰손 선물',cb.big,'상위 트레이더 보유 물량 기준');st('다수 계정 선물',cb.acct,'계정 수 기준');
-      if(cb.all)rows.push(['선물 전체 신규',rel(cb.all.L),rel(cb.all.S),`새로 열린 물량 중 롱 ${(cb.all.lr*100).toFixed(0)}% · 미결제약정 $${usd(cb.oiUsd)}`])}
-    const sr=(n,x)=>{if(!x)return;const net=(x.bB?.v||0)-(x.bS?.v||0);rows.push([n+' 큰 체결 (≥$50K)',rel(x.bB?.p),rel(x.bS?.p),`매수 ${x.bB?.n||0}건 $${usd(x.bB?.v||0)} · 매도 ${x.bS?.n||0}건 $${usd(x.bS?.v||0)} · 순매수 <b class="${net>=0?'up':'dn'}">${net>=0?'+':'−'}$${usd(Math.abs(net))}</b> · 샘플 금액의 ${x.tot?(((x.bB?.v||0)+(x.bS?.v||0))/x.tot*100).toFixed(0):0}%`]);
-      rows.push([n+' 작은 체결 (<$1K)',rel(x.sB?.p),rel(x.sS?.p),`매수 ${x.sB?.n||0}건 · 매도 ${x.sS?.n||0}건 · 최근 ${x.span>=168?'7일':'2일'} ${x.ok}/${x.win}구간 · 체결 ${x.n.toLocaleString()}건`])};
+      if(cb.all)rows.push(['선물 전체 신규',rel(cb.all.L),rel(cb.all.S,1),`새로 열린 물량 중 롱 ${(cb.all.lr*100).toFixed(0)}% · 미결제약정 $${usd(cb.oiUsd)}`])}
+    const sr=(n,x)=>{if(!x)return;const net=(x.bB?.v||0)-(x.bS?.v||0);rows.push([n+' 큰 체결 (≥$50K)',rel(x.bB?.p),rel(x.bS?.p,1),`매수 ${x.bB?.n||0}건 $${usd(x.bB?.v||0)} · 매도 ${x.bS?.n||0}건 $${usd(x.bS?.v||0)} · 순매수 <b class="${net>=0?'up':'dn'}">${net>=0?'+':'−'}$${usd(Math.abs(net))}</b> · 샘플 금액의 ${x.tot?(((x.bB?.v||0)+(x.bS?.v||0))/x.tot*100).toFixed(0):0}%`]);
+      rows.push([n+' 작은 체결 (<$1K)',rel(x.sB?.p),rel(x.sS?.p,1),`매수 ${x.sB?.n||0}건 · 매도 ${x.sS?.n||0}건 · 최근 ${x.span>=168?'7일':'2일'} ${x.ok}/${x.win}구간 · 체결 ${x.n.toLocaleString()}건`])};
     sr('선물',sz.fut);sr('현물',sz.spot);
     $('#cb').innerHTML=rows.map(r=>`<tr><td class="l"><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td class="l"><small>${r[3]}</small></td></tr>`).join('')||'<tr><td colspan="4" class="l mu">바이낸스에 이 코인 선물이 없어서 계산할 수 없어요.</td></tr>';
-    $('#cb-st').textContent=`현재가 ${fp(now)} 기준 · 초록 = 지금 수익 중, 빨강 = 손실 중`+(sz.spot?'':' · 바이낸스 현물 없음')}
+    $('#cb-st').textContent=`현재가 ${fp(now)} 기준 · 초록 = 그쪽이 지금 수익(매도 쪽은 더 높게 판 것), 빨강 = 손실`+(sz.spot?'':' · 바이낸스 현물 없음')}
   catch(e){$('#cb-st').textContent='실패: '+e.message}finally{$('#cb-go').disabled=false}}
 $('#cb-go').onclick=loadCB;
 open(BASE);

@@ -130,17 +130,17 @@ async function run(){if(busy)return;busy=true;$('#go').disabled=true;$('#bar').s
   }catch(e){$('#stat').textContent='점검 실패: '+e.message}finally{busy=false;$('#go').disabled=false}}
 function render(){const cnt=m=>{let n=0;for(let i=5;i<10;i++)if(m&1<<i)n++;return n};
   const L=DATA.slice().sort((a,b)=>((b.vb?.te.big??-1)-(a.vb?.te.big??-1))||((b.bk?.te.exp??-99)-(a.bk?.te.exp??-99))||((b.best?.te.exp??-99)-(a.best?.te.exp??-99))||(cnt(b.m)-cnt(a.m))||(b.r.vs||0)-(a.r.vs||0));
-  const rel=(v,p)=>v&&isFinite(v)?`${fp(v)} <small class="${v>p?'dn':'up'}">${v>p?'':'+'}${((p/v-1)*100).toFixed(1)}%</small>`:'–';
+  const rel=(v,p,sh)=>v&&isFinite(v)?`${fp(v)} <small class="${(v>p)!==!!sh?'dn':'up'}">${v>p?'':'+'}${((p/v-1)*100).toFixed(1)}%</small>`:'–';
   $('#rows').innerHTML=L.map(c=>{const fl=OD.ALLN.map((n,i)=>`<span class="fl${c.m&1<<i?' on':''}" title="${esc(n)}">${n.slice(0,1)}</span>`).join('');const b=c.best,Lg=b&&b.dir==='L';
     const tp=b?c.p*(1+(Lg?b.tp:-b.tp)/100):null,sl=b?c.p*(1+(Lg?-b.sl:b.sl)/100):null;
     const v=c.vb,k=c.bk;return`<tr data-b="${esc(c.base)}"${b||v||k?'':' class="mu"'}><td class="l">${OD.coinIcon(c.base,18)} <button type="button" class="cn" data-pv="${esc(c.base)}">${esc(c.base)}</button></td><td class="l">${v?esc(v.name):'<span class="mu">–</span>'}</td><td>${v?`<b>${v.te.big.toFixed(0)}%</b> <small class="mu">기준 ${B.base.move.big.toFixed(0)}% · ${v.te.n}건</small>`:'–'}</td><td class="l">${k?`↑${fp(c.p*(1+k.E/100))} 롱 / ↓${fp(c.p*(1-k.E/100))} 숏 <small class="mu">+${k.tp}%/−${k.sl}% · 뒤 ${pc(k.te.exp,2)}</small>`:'<span class="mu">–</span>'}</td><td class="l">${b?esc(b.name)+(b.ok?'':' <small class="mu">(미검증)</small>'):'<span class="mu">검증된 방향 규칙 없음</span>'}</td>
       <td class="l">${b?(Lg?'<b class="up">롱</b>':'<b class="dn">숏</b>'):'–'}</td><td>${fp(c.p)}</td><td>${b?fp(tp)+` <small class="mu">${Lg?'+':'−'}${b.tp}%</small>`:'–'}</td><td>${b?fp(sl)+` <small class="mu">${Lg?'−':'+'}${b.sl}%</small>`:'–'}</td>
       <td>${b?b.te.win.toFixed(0)+'% <small class="mu">'+b.te.n+'건</small>':'–'}</td><td>${b?pc(b.te.exp,2):'–'}</td><td>${b&&b.mv?b.mv.upF.toFixed(0)+'% / '+b.mv.dnF.toFixed(0)+'%':'–'}</td>
-      <td>${rel(c.cb?.big?.L*c.scale,c.p)}</td><td>${rel(c.cb?.big?.S*c.scale,c.p)}</td><td class="l">${fl}</td><td class="hide-sm">${pc(c.c24)}</td><td class="hide-sm">${c.r.vs!=null?c.r.vs.toFixed(1)+'x':'–'}</td></tr>`}).join('')||'<tr><td colspan="17" class="l">결과가 없어요</td></tr>'}
+      <td>${rel(c.cb?.big?.L*c.scale,c.p)}</td><td>${rel(c.cb?.big?.S*c.scale,c.p,1)}</td><td class="l">${fl}</td><td class="hide-sm">${pc(c.c24)}</td><td class="hide-sm">${c.r.vs!=null?c.r.vs.toFixed(1)+'x':'–'}</td></tr>`}).join('')||'<tr><td colspan="17" class="l">결과가 없어요</td></tr>'}
 let PVC=null;
 function preview(base){const c=DATA.find(x=>x.base===base);if(!c)return;const r=c.r,dlg=$('#pv');
   $('#pv-i').innerHTML=OD.coinIcon(c.base,28);$('#pv-t').textContent=c.base;$('#pv-p').innerHTML=`${fp(c.p)} ${pc(c.c24)}`;
-  const rel=v=>v&&isFinite(v)?`${fp(v)} <small class="${c.p>=v?'up':'dn'}">${c.p>=v?'+':''}${((c.p/v-1)*100).toFixed(1)}%</small>`:'–';
+  const rel=(v,sh)=>v&&isFinite(v)?`${fp(v)} <small class="${(c.p>=v)!==!!sh?'up':'dn'}">${c.p>=v?'+':''}${((c.p/v-1)*100).toFixed(1)}%</small>`:'–';
   const usd=v=>v==null?'–':(v<0?'−':'+')+'$'+(Math.abs(v)>=1e6?(Math.abs(v)/1e6).toFixed(1)+'M':(Math.abs(v)/1e3).toFixed(0)+'K');
   const K=[['거래대금 배수',r.vs!=null?r.vs.toFixed(1)+'x':'–','24시간 ÷ 7일 하루 평균'],['미결제약정 24시간',pc(r.doi),'늘면 새 포지션 유입'],['펀딩비',c.fr!=null?c.fr.toFixed(4)+'%':'–','양수면 롱이 지불'],
     ['CVD 24시간',usd(r.cvd),'시장가 매수 − 매도'],['CVD 7일 / 체결량',r.cvdr7!=null?(r.cvdr7*100).toFixed(1)+'%':'–','+3% 이상이면 매수 우위'],['7일 가격',pc(r.c7),'⑪은 +2% 이하일 때'],
@@ -152,9 +152,9 @@ function preview(base){const c=DATA.find(x=>x.base===base);if(!c)return;const r=
     <p style="margin:0 0 8px"><b>지금 켜진 흔적</b>: ${on.length?on.map(esc).join(' · '):'없음'}</p>
     ${c.bk?`<p style="margin:0 0 8px"><b>돌파 진입(검증 통과)</b>: 48시간 안에 ${fp(c.p*(1+c.bk.E/100))} 위로 깨지면 롱, ${fp(c.p*(1-c.bk.E/100))} 아래로 깨지면 숏 · 진입가 기준 익절 +${c.bk.tp}% / 손절 −${c.bk.sl}% · 뒤 기간 ${c.bk.te.t}건 승률 ${c.bk.te.win.toFixed(0)}% 기대값 ${pc(c.bk.te.exp,2)}</p>`:''}
     <div class="tbl"><table class="pvt"><thead><tr><th class="l">평단 (최근 7일 추정)</th><th>롱</th><th>숏</th><th class="l">참고</th></tr></thead><tbody>
-      <tr><td class="l">큰손 선물 (바이낸스 상위 트레이더)</td><td>${rel(cb?.big?.L*sc)}</td><td>${rel(cb?.big?.S*sc)}</td><td class="l"><small class="mu">${cb?.big?`롱 비중 ${(cb.big.lr*100).toFixed(0)}%`:'바이낸스 선물 없음'}</small></td></tr>
-      <tr><td class="l">다수 계정 선물 (계정 수 기준)</td><td>${rel(cb?.acct?.L*sc)}</td><td>${rel(cb?.acct?.S*sc)}</td><td class="l"><small class="mu">${cb?.acct?`롱 계정 ${(cb.acct.lr*100).toFixed(0)}%`:''}</small></td></tr>
-      <tr><td class="l">선물 전체 신규 (게이트 체결 비율)</td><td>${rel(c.lavg)}</td><td>${rel(c.savg)}</td><td class="l"><small class="mu">초록 = 지금 수익, 빨강 = 손실</small></td></tr>
+      <tr><td class="l">큰손 선물 (바이낸스 상위 트레이더)</td><td>${rel(cb?.big?.L*sc)}</td><td>${rel(cb?.big?.S*sc,1)}</td><td class="l"><small class="mu">${cb?.big?`롱 비중 ${(cb.big.lr*100).toFixed(0)}%`:'바이낸스 선물 없음'}</small></td></tr>
+      <tr><td class="l">다수 계정 선물 (계정 수 기준)</td><td>${rel(cb?.acct?.L*sc)}</td><td>${rel(cb?.acct?.S*sc,1)}</td><td class="l"><small class="mu">${cb?.acct?`롱 계정 ${(cb.acct.lr*100).toFixed(0)}%`:''}</small></td></tr>
+      <tr><td class="l">선물 전체 신규 (게이트 체결 비율)</td><td>${rel(c.lavg)}</td><td>${rel(c.savg,1)}</td><td class="l"><small class="mu">초록 = 지금 수익, 빨강 = 손실</small></td></tr>
     </tbody></table></div>
     <p class="sub">현물·선물 체결 크기별 평단과 큰 체결 순매수는 <a href="./view.html#${encodeURIComponent(c.base)}">한눈에</a>, 상위 지갑 분산 흔적은 <a href="./coin.html#${encodeURIComponent(c.base)}">코인 분석</a>에서 볼 수 있어요.</p>`;
   if(PVC){PVC.destroy();PVC=null}dlg.showModal();OD.mountChart($('#pv-c'),c.base,{links:false}).then(x=>{if(dlg.open)PVC=x;else x.destroy()}).catch(e=>{$('#pv-c').textContent='차트 실패: '+e.message})}
