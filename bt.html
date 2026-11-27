@@ -226,7 +226,7 @@ function outcome(c,i,h){const S=c.S,a=i+DLY;if(a+h>=S.length)return null;const e
   return{ret:(S[a+h].price/e-1)*100-cost(c,S[a].T,S[a+h].T),mae,up10:first==='up'}}
 function exitRule(c,i,h,rule){const S=c.S,a=i+DLY;if(a+h>=S.length)return null;const e=S[a].price;
   for(let q=a+1;q<=a+h;q++){const r=S[q];let x=false;
-    if(rule==='cvd')x=r.cvd4!=null&&r.cvd4<0;else if(rule==='oi')x=r.doi!=null&&r.doi<0;else if(rule==='hits')x=r.hits<Math.max(1,KMIN-1);else if(rule==='stop')x=(r.lo/e-1)*100<=-5;
+    if(rule==='cvd')x=S[i].cvd4>0&&r.cvd4!=null&&r.cvd4<0;else if(rule==='oi')x=r.doi!=null&&r.doi<0;else if(rule==='hits')x=r.hits<Math.max(1,KMIN-1);else if(rule==='stop')x=(r.lo/e-1)*100<=-5;
     if(x){const px=rule==='stop'?e*.95:r.price;return{ret:(px/e-1)*100-cost(c,S[a].T,r.T),held:q-a,early:q<a+h}}}
   return{ret:(S[a+h].price/e-1)*100-cost(c,S[a].T,S[a+h].T),held:h,early:false}}
 /* BTC 추세: 1시간 종가를 4시간 봉으로 묶어 20EMA, 6봉 전 대비 기울기 */
@@ -280,7 +280,7 @@ function render(){if(!RES)return;const h=HZ,start=RES.from+2*24*H;
   $('#t-oi').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+OB.map(([l,f])=>row(l,agg(K.filter(e=>e.r.doi!=null&&f(e.r.doi)).map(e=>e.o)),base)).join('');
   $('#t-rg').innerHTML=row(`기준선 <small>아무 때나 매수</small>`,base,null,'base')+[['up','상승 추세'],['side','방향 없음'],['dn','하락 추세']].map(([k,l])=>row(l,agg(K.filter(e=>rgAt(e.r.T)===k).map(e=>e.o)),base)).join('');
   // 무효화
-  const RU=[['hold','보유 기간 끝까지'],['cvd','4시간 CVD가 마이너스로 바뀌면 청산'],['oi','미결제약정 24h가 감소로 바뀌면 청산'],['hits',`충족 개수가 ${Math.max(1,KMIN-1)}개 밑으로 떨어지면 청산`],['stop','-5% 손절']];
+  const RU=[['hold','보유 기간 끝까지'],['cvd','4시간 CVD가 플러스였다가 마이너스로 바뀌면 청산'],['oi','미결제약정 24h가 감소로 바뀌면 청산'],['hits',`충족 개수가 ${Math.max(1,KMIN-1)}개 밑으로 떨어지면 청산`],['stop','-5% 손절']];
   $('#t-inv').innerHTML=RU.map(([k,l])=>{const a=agg(K.map(e=>k==='hold'?(e.o?{ret:e.o.ret,held:h,early:false}:null):exitRule(e.c,e.i,h,k)));return row(l,a,base,'',x=>x.early!=null?x.early.toFixed(0)+'%':'–')}).join('');
   // 최근 신호
   const tm=T=>{const d=new Date(T);return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}시`};

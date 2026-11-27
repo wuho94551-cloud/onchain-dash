@@ -127,10 +127,10 @@ async function checkSignals(env, cfg, out, errs) {
     const on = C.map((v, i) => v ? NM[i] : '').filter(Boolean).join(', ');
     if (!prev) {
       if (hits >= K) { out.push(`🚀 ${b} 급등 준비 ${hits}개 충족 (${on}) · ${fmt(p)} · 24h ${d.c24 >= 0 ? '+' : ''}${d.c24.toFixed(1)}% · OI ${d.doi != null ? (d.doi >= 0 ? '+' : '') + d.doi.toFixed(1) + '%' : '–'}`);
-        if (env.STATE) await env.STATE.put(key, JSON.stringify({ p, at: now }), { expirationTtl: (hold + 24) * 3600 }); }
+        if (env.STATE) await env.STATE.put(key, JSON.stringify({ p, at: now, c4: d.cvd4 > 0 }), { expirationTtl: (hold + 24) * 3600 }); }
     } else { const v = JSON.parse(prev), r = (p / v.p - 1) * 100, hrs = (now - v.at) / 36e5, rs = `${r >= 0 ? '+' : ''}${r.toFixed(1)}%`;
       let why = null;
-      if (hits < Math.max(1, K - 1)) why = `충족 ${hits}개로 줄어듦`; else if (S.inv !== false && d.cvd4 != null && d.cvd4 < 0) why = '4시간 CVD 마이너스 전환';
+      if (hits < Math.max(1, K - 1)) why = `충족 ${hits}개로 줄어듦`; else if (S.inv !== false && v.c4 && d.cvd4 != null && d.cvd4 < 0) why = '4시간 CVD 마이너스 전환';
       if (why) { out.push(`⚠️ ${b} 신호 무효화: ${why} · 신호 뒤 ${rs} (${hrs.toFixed(0)}시간)`); if (env.STATE) await env.STATE.delete(key); }
       else if (hrs >= hold) { out.push(`⏰ ${b} 신호 ${hold}시간 경과 · 신호 뒤 ${rs} · 정리 여부 확인`); if (env.STATE) await env.STATE.delete(key); } }
   } catch (e) { errs.push(x.symbol + ' ' + e.message); } }));
