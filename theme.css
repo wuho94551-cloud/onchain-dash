@@ -120,3 +120,4 @@ nav.top .od-mood:empty{display:none}
   .od-srch{top:20px}
 }
 nav.top .od-mood>span{white-space:nowrap}
+nav.top .od-mood>span{flex-shrink:0}

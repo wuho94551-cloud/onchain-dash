@@ -58,7 +58,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 @media(max-width:700px){table{font-size:13px}.hide-sm{display:none}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=17">
+<link rel="stylesheet" href="./theme.css?v=18">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -108,7 +108,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
     <th class="l">심볼</th><th>충족</th><th class="hide-sm">가격</th><th>24H</th><th>OI 24H</th><th>펀딩</th><th class="hide-sm">CVD 24H</th><th class="hide-sm">위/아래 청산비</th>
     <th class="c">①</th><th class="c">②</th><th class="c">③</th><th class="c">④</th><th class="c">⑤</th>
   </tr></thead><tbody id="rows"><tr><td colspan="13" class="l">점검 중…</td></tr></tbody></table></div>
-  <p class="sub">종목을 누르면 볼륨 프로파일이 겹쳐진 차트가 열리고, 거기서 호가 감시로 넘어갈 수 있어요. 코인·주식·ETF·원자재·외환은 따로 묶어서 보여줘요. 10분마다 자동으로 다시 점검해요.</p>
+  <p class="sub">종목을 누르면 볼륨 프로파일이 겹쳐진 차트가 열리고, 거기서 호가 감시로 넘어갈 수 있어요. 코인·주식·ETF·원자재·외환은 따로 묶어서 보여줘요. 5분마다 자동으로 다시 점검해요.</p>
 </section>
 
 <section class="band">
@@ -197,7 +197,8 @@ function render(){
   if(KF==='전체'){for(const k of OD.KINDS){const g=f.filter(d=>d.kind===k);if(!g.length)continue;const top3=g.filter(d=>d.hits>=3).length;
       html+=`<tr class="grp"><td colspan="13">${k}<small>${g.length}개 · 3개 이상 충족 ${top3}개</small></td></tr>`+g.map(row).join('')}}
   else html=f.map(row).join('');
-  $('#rows').innerHTML=html||'<tr><td colspan="13" class="l">조건에 맞는 종목이 없어요.</td></tr>';
+  const near=MINH>1?DATA.filter(d=>d.C&&d.hits===MINH-1&&(KF==='전체'||d.kind===KF)).map(d=>d.base):[];
+  $('#rows').innerHTML=html||`<tr><td colspan="13" class="l">지금 ${MINH}개 이상 맞는 종목은 없어요.${near.length?` 하나 모자란 ${MINH-1}개 종목: ${near.slice(0,8).map(esc).join(', ')}${near.length>8?` 외 ${near.length-8}개`:''}`:''}</td></tr>`;
 }
 const SP=OD.sigP(),SMAX=OD.sigP().on.filter(Boolean).length;
 {const T=OD.sigText(SP);document.querySelectorAll('[data-ci]').forEach(el=>{const i=+el.dataset.ci;el.querySelector('span').textContent=SP.on[i]?T[i]:'꺼둠 (신호 검증에서 켤 수 있어요)';if(!SP.on[i])el.style.opacity=.5})}
