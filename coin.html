@@ -389,7 +389,7 @@ async function loadHolders(){
 }
 
 /* 거래소 대량 출금: 공개 RPC(publicnode)에서 Transfer 로그를 직접 받음. 보낸 거래 10만 건 넘는 EOA = 거래소급 지갑 */
-const WCH=[['ethereum','ethereum-rpc','이더리움','etherscan.io','ETH','eth'],['binance-smart-chain','bsc-rpc','BSC','bscscan.com','BNB',''],['base','base-rpc','Base','basescan.org','ETH','base'],['arbitrum-one','arbitrum-one-rpc','Arbitrum','arbiscan.io','ETH','arbitrum'],['optimistic-ethereum','optimism-rpc','Optimism','optimistic.etherscan.io','ETH','optimism'],['polygon-pos','polygon-bor-rpc','Polygon','polygonscan.com','POL','polygon'],['avalanche','avalanche-c-chain-rpc','Avalanche','snowtrace.io','AVAX','']];
+const WCH=[['ethereum','ethereum-rpc','이더리움','etherscan.io','ETH',''],['binance-smart-chain','bsc-rpc','BSC','bscscan.com','BNB',''],['base','base-rpc','Base','basescan.org','ETH','base'],['arbitrum-one','arbitrum-one-rpc','Arbitrum','arbiscan.io','ETH','arbitrum'],['optimistic-ethereum','optimism-rpc','Optimism','optimistic.etherscan.io','ETH','optimism'],['polygon-pos','polygon-bor-rpc','Polygon','polygonscan.com','POL','polygon'],['avalanche','avalanche-c-chain-rpc','Avalanche','snowtrace.io','AVAX','']];
 /* 이름을 확인한 거래소 지갑(BSC는 무료 라벨 출처가 없어서 직접 확인한 것만) */
 const WKNOWN={'0x0d0707963952f2fba59dd06f2b425ace40b492fe':'Gate','0xc882b111a75c0c657fc507c04fbfcd2cc984f071':'Gate'};
 const WHOT=1e5;
@@ -417,10 +417,9 @@ async function loadWd(){const box=$('#wd'),cs=wdChains();if(!cs.length){wdInit()
     const addrs=[...new Set(L.flatMap(l=>[l.f,l.t]))].slice(0,120),AI=new Map();let ai=0;
     await pool(addrs,4,async a=>{const [n,code,gas,bal]=await Promise.all([rpc('eth_getTransactionCount',[a,'latest']),rpc('eth_getCode',[a,'latest']),rpc('eth_getBalance',[a,'latest']),rpc('eth_call',[{to:tok,data:'0x70a08231'+pad(a).slice(2)},'latest'])]);
       AI.set(a,{n:parseInt(n,16),ct:code&&code!=='0x',gas:Number(big(gas))/1e18,bal:toN(big(bal))});ai++;msg(`주소 확인 중… ${ai}/${addrs.length}`)});
-    const hot=a=>{const x=AI.get(a);return !!x&&!x.ct&&(x.n>=WHOT||!!WKNOWN[a])};
-    /* 이름: 알려진 목록, 그다음 Blockscout 라벨(되는 체인만) */
-    const NM=new Map(Object.entries(WKNOWN));const hots=[...new Set(L.filter(l=>hot(l.f)).map(l=>l.f))].filter(a=>!NM.has(a)).slice(0,6);
-    if(ch[5]&&hots.length){msg('거래소 이름 확인 중…');await pool(hots,3,async a=>{try{const ac=new AbortController(),tt=setTimeout(()=>ac.abort(),12000);const d=await (await fetch(`https://${ch[5]}.blockscout.com/api/v2/addresses/${a}`,{signal:ac.signal})).json();clearTimeout(tt);const lb=bsLabel(d);if(lb.nm)NM.set(a,lb.nm)}catch(e){}})}
+    const WK=ch[0]==='binance-smart-chain'?WKNOWN:{};const hot=a=>{const x=AI.get(a);return !!x&&!x.ct&&(x.n>=WHOT||!!WK[a])};
+    /* 이름: 직접 확인한 목록만. 나머지는 탐색기 링크에서 이름 확인 */
+    const NM=new Map(Object.entries(WK));
     /* 출금 = 거래소급 지갑 → 거래소급 아닌 EOA */
     const W=L.filter(l=>hot(l.f)&&!hot(l.t)&&!AI.get(l.t)?.ct);const recvSum=new Map();for(const l of W)recvSum.set(l.t,(recvSum.get(l.t)||0)+l.v);
     const tsOf=b=>tH-(head-b)*spb;
@@ -432,12 +431,13 @@ async function loadWd(){const box=$('#wd'),cs=wdChains();if(!cs.length){wdInit()
     /* 묶음: 같은 거래소 지갑에서 1시간 안에 2곳 이상 새 지갑으로 */
     const grp=new Set();for(const l of W){const sib=W.filter(m=>m.f===l.f&&m.t!==l.t&&Math.abs(m.b-l.b)*spb<=3600&&S.get(m.t)?.fresh);if(S.get(l.t)?.fresh&&sib.length)grp.add(l.t)}
     const sp=v=>sup?` <small>${(v/sup*100).toFixed(2)}%</small>`:'',ud=v=>px?` <small>${usd(v*px)}</small>`:'';
-    const pk=sup?keepAmt/sup*100:0,lvl=pk>=1||keepAmt*px>=1e6?'눈에 띔':pk>=.3||keepAmt*px>=25e4?'약간':'뚜렷하지 않음';
+    const newAmt=[...recvSum].reduce((s,[a,v])=>s+(S.get(a).k==='new'?Math.min(v,AI.get(a).bal):0),0),nNew=[...S.values()].filter(x=>x.k==='new').length;
+    const pk=sup?newAmt/sup*100:0,lvl=pk>=1?'눈에 띔':pk>=.3?'약간':'뚜렷하지 않음';
     const exIn=L.filter(l=>hot(l.t)&&!hot(l.f)&&!AI.get(l.f)?.ct).reduce((s,l)=>s+l.v,0);
-    const nmOf=a=>NM.get(a)?esc(NM.get(a)):`거래소급 <small>${(AI.get(a).n/1e6>=1?(AI.get(a).n/1e6).toFixed(1)+'M':Math.round(AI.get(a).n/1e3)+'K')}건</small>`;
+    const nmOf=a=>`<a class="addr" href="https://${ch[3]}/address/${a}" target="_blank" rel="noopener" title="탐색기에서 이름 확인">`+(NM.get(a)?esc(NM.get(a)):`거래소급 <small>${(AI.get(a).n/1e6>=1?(AI.get(a).n/1e6).toFixed(1)+'M':Math.round(AI.get(a).n/1e3)+'K')}건</small>`)+'</a>';
     const ad=a=>`<a class="addr" href="https://${ch[3]}/address/${a}" target="_blank" rel="noopener">${a.slice(0,6)}…${a.slice(-4)}</a>`;
     const rows=W.slice().sort((x,y)=>y.v-x.v).slice(0,40);
-    box.innerHTML=`<p style="margin:6px 0 10px;font-size:15px"><b>출금 후 보관: ${lvl}</b> · ${esc(ch[2])} · 최근 ${H}시간 거래소급 지갑에서 개인 지갑으로 큰 출금 ${W.length}건, 합계 <b>${num(tot)} ${esc(C.sym)}</b>${sp(tot)}${ud(tot)} · 그중 받은 지갑이 아직 그대로 들고 있는 양 <b>${num(keepAmt)}</b>${sp(keepAmt)}${ud(keepAmt)} (${nKeep}곳)${grp.size?` · 몇 분~1시간 안에 새 지갑 여러 곳으로 나눠 뺀 묶음 ${grp.size}곳`:''} · 참고로 개인 지갑에서 거래소급 지갑으로 바로 들어간 큰 이동 ${num(exIn)}</p>
+    box.innerHTML=`<p style="margin:6px 0 10px;font-size:15px"><b>새 지갑으로 출금 후 보관: ${lvl}</b> <small title="새 지갑이 그대로 들고 있는 양이 공급량 1% 이상이면 눈에 띔, 0.3% 이상이면 약간">(공급량 대비)</small> · ${esc(ch[2])} · 최근 ${H}시간 거래소급 지갑에서 개인 지갑으로 큰 출금 ${W.length}건, 합계 <b>${num(tot)} ${esc(C.sym)}</b>${sp(tot)}${ud(tot)} · 그중 받은 지갑이 아직 그대로 들고 있는 양 <b>${num(keepAmt)}</b>${sp(keepAmt)}${ud(keepAmt)} (${nKeep}곳) · 그중 한 번도 보낸 적 없는 새 지갑 <b>${num(newAmt)}</b>${sp(newAmt)} (${nNew}곳)${grp.size?` · 몇 분~1시간 안에 새 지갑 여러 곳으로 나눠 뺀 묶음 ${grp.size}곳`:''} · 참고로 개인 지갑에서 거래소급 지갑으로 바로 들어간 큰 이동 ${exIn?num(exIn)+ud(exIn):'없음'}</p>
     ${W.length?`<div class="scroll"><table><thead><tr><th class="l">시각</th><th class="l">보낸 곳</th><th class="l">받은 지갑</th><th>양</th><th>받은 지갑 지금 보유</th><th class="l">상태</th></tr></thead><tbody>${rows.map(l=>{const x=AI.get(l.t),s=S.get(l.t);
       return`<tr${['new','hold'].includes(s.k)?'':' class="mu"'}><td class="l"><a href="https://${ch[3]}/tx/${l.tx}" target="_blank" rel="noopener">${new Date(tsOf(l.b)*1000).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</a></td><td class="l">${nmOf(l.f)}</td><td class="l">${ad(l.t)}${grp.has(l.t)?' <span class="kb">묶음</span>':''}</td><td>${num(l.v)}${sp(l.v)}${ud(l.v)}</td><td>${num(x.bal)}</td><td class="l">${s.t}</td></tr>`}).join('')}</tbody></table></div>`:''}
     <p class="src">공개 RPC(publicnode) 원본 기록 · 토큰 이동 ${logs.length.toLocaleString()}건 중 공급량 0.2% 또는 $50K 넘는 ${L.length}건 확인 · 시각은 블록 간격으로 계산한 대략값 · 누가 출금했는지(팀·마켓메이커·고래)는 체인으로는 알 수 없어요</p>`;
