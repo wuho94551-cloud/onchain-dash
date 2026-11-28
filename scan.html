@@ -67,7 +67,7 @@ details{border:1px solid var(--line);padding:12px 16px}
 summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(max-width:700px){.hide-sm{display:none}table{font-size:13px}dl.leg{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=21">
+<link rel="stylesheet" href="./theme.css?v=22">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -116,7 +116,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
   </details>
 </section>
 
-<script src="./common.js?v=25"></script>
+<script src="./common.js?v=26"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -155,7 +155,7 @@ const COLS=[['sym','심볼','l'],['p','가격','hide-sm'],['c24','24H'],['c1','1
 function head(){$('#hd').innerHTML=COLS.map(([k,l,c])=>`<th class="${c||''}" data-k="${k}" aria-sort="${sortK===k?(sortD<0?'descending':'ascending'):'none'}" tabindex="0">${l}</th>`).join('')}
 $('#hd').addEventListener('click',e=>{const th=e.target.closest('th');if(!th||th.dataset.k==='tags')return;const k=th.dataset.k;if(sortK===k)sortD=-sortD;else{sortK=k;sortD=k==='sym'?1:-1}head();render()});
 head();
-$('#rows').addEventListener('click',e=>{const tr=e.target.closest('tr[data-s]');if(!tr)return;e.preventDefault();OD.openChart(tr.dataset.s,{kind:tr.dataset.k})});
+$('#rows').addEventListener('click',e=>{if(e.target.closest('a.wdl'))return;const tr=e.target.closest('tr[data-s]');if(!tr)return;e.preventDefault();OD.openChart(tr.dataset.s,{kind:tr.dataset.k})});
 let KF=store.get('sc-kind')||'전체';
 function kindSeg(){const cnt={};for(const d of DATA)cnt[d.kind]=(cnt[d.kind]||0)+1;
   $('#kind').innerHTML=['전체',...OD.KINDS].filter(k=>k==='전체'||cnt[k]).map(k=>`<button type="button" data-v="${k}" aria-pressed="${k===KF}">${k}${k==='전체'?'':' '+cnt[k]}</button>`).join('')}
@@ -167,7 +167,7 @@ function render(){
   $('#chips').innerHTML=`<button class="chip" data-s="" aria-pressed="${!fSig}">전체<b>${KD.length}</b></button>`+Object.entries(SIG).map(([k,s])=>`<button class="chip" data-s="${k}" aria-pressed="${fSig===k}">${s.n}<b>${cnt[k]||0}</b></button>`).join('');
   const f=KD.filter(d=>d.score>=MINSC&&(!fSig||d.tags.includes(fSig)));
   f.sort((a,b)=>sortK==='sym'?sortD*a.sym.localeCompare(b.sym):sortD*((a[sortK]??-1e18)-(b[sortK]??-1e18)));
-  $('#rows').innerHTML=f.length?f.map((d,i)=>`<tr data-s="${esc(d.base)}" data-k="${esc(d.kind)}"><td class="l sym"><a href="./coin.html#${encodeURIComponent(d.base)}">${esc(d.base)}</a><span class="kb">${esc(d.kind)}</span></td><td class="hide-sm">${px(d.p)}</td><td>${pc(d.c24)}</td><td>${pc(d.c1)}</td><td class="hide-sm">${pc(d.rs)}</td><td>${d.vx!=null?d.vx.toFixed(1)+'x':'–'}</td><td>${pc(d.fr,3)}</td><td class="hide-sm">${pc(d.doi,1)}</td><td>${d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–'}</td><td><span class="score"><i style="width:${(d.score*.5).toFixed(0)}px"></i>${d.score}</span></td><td class="tags">${d.tags.map(t=>`<span class="tag ${SIG[t].b>0?'b':SIG[t].b<0?'s':''}">${SIG[t].n}</span>`).join('')}</td></tr>`).join(''):`<tr><td colspan="11" class="l tags">${DATA.length?'조건에 맞는 종목이 없어요.':'스캔 대기 중…'}</td></tr>`;
+  $('#rows').innerHTML=f.length?f.map((d,i)=>`<tr data-s="${esc(d.base)}" data-k="${esc(d.kind)}"><td class="l sym"><a href="./coin.html#${encodeURIComponent(d.base)}">${esc(d.base)}</a><span class="kb">${esc(d.kind)}</span> <a class="wdl" href="./coin.html#${encodeURIComponent(d.base)}!wd" title="거래소 대량 출금 점검">출금</a></td><td class="hide-sm">${px(d.p)}</td><td>${pc(d.c24)}</td><td>${pc(d.c1)}</td><td class="hide-sm">${pc(d.rs)}</td><td>${d.vx!=null?d.vx.toFixed(1)+'x':'–'}</td><td>${pc(d.fr,3)}</td><td class="hide-sm">${pc(d.doi,1)}</td><td>${d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–'}</td><td><span class="score"><i style="width:${(d.score*.5).toFixed(0)}px"></i>${d.score}</span></td><td class="tags">${d.tags.map(t=>`<span class="tag ${SIG[t].b>0?'b':SIG[t].b<0?'s':''}">${SIG[t].n}</span>`).join('')}</td></tr>`).join(''):`<tr><td colspan="11" class="l tags">${DATA.length?'조건에 맞는 종목이 없어요.':'스캔 대기 중…'}</td></tr>`;
 }
 $('#chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;fSig=b.dataset.s;render()});
 

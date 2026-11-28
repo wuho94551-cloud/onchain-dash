@@ -58,7 +58,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 details p{font-size:14px;color:var(--mute);margin:8px 0 0}
 @media(max-width:700px){table{font-size:13px}.hide-sm{display:none}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=21">
+<link rel="stylesheet" href="./theme.css?v=22">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -119,7 +119,7 @@ details p{font-size:14px;color:var(--mute);margin:8px 0 0}
   </details>
 </section>
 
-<script src="./common.js?v=25"></script>
+<script src="./common.js?v=26"></script>
 <script>if(location.hash.length>1)location.replace("./coin.html"+location.hash);</script>
 <script>
 {
@@ -137,7 +137,7 @@ function seg(id,opts,cur,cb){const el=$(id);const r=()=>{el.innerHTML=opts.map((
   el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cb(Number(b.dataset.v));r()})}
 seg('#topn',[[30,'상위 30'],[50,'상위 50'],[80,'상위 80']],()=>TOPN,v=>{TOPN=v;store.set('su-top',v);run()});
 seg('#minh',[[0,'전체'],[2,'2개+'],[3,'3개+'],[4,'4개+']],()=>MINH,v=>{MINH=v;store.set('su-min',v);render()});
-$('#rows').addEventListener('click',e=>{const tr=e.target.closest('tr[data-s]');if(tr)OD.openChart(tr.dataset.s,{kind:tr.dataset.k})});
+$('#rows').addEventListener('click',e=>{if(e.target.closest('a.wdl'))return;const tr=e.target.closest('tr[data-s]');if(tr)OD.openChart(tr.dataset.s,{kind:tr.dataset.k})});
 let KF=store.get('su-kind')||'전체';
 function kindSeg(){const cnt={};for(const d of DATA)if(d.C&&d.hits>=MINH)cnt[d.kind]=(cnt[d.kind]||0)+1;
   $('#kind').innerHTML=['전체',...OD.KINDS].filter(k=>k==='전체'||cnt[k]).map(k=>`<button type="button" data-v="${k}" aria-pressed="${k===KF}">${k}${k==='전체'?'':' '+cnt[k]}</button>`).join('')}
@@ -190,7 +190,7 @@ setInterval(tickStat,30e3);
 function cell(v){return v===true?'<span class="on">충족</span>':v===false?'<span class="off">–</span>':'<span class="na">데이터 없음</span>'}
 function render(){
   kindSeg();
-  const row=d=>`<tr data-s="${esc(d.base)}" data-k="${esc(d.kind)}"><td class="l"><b>${esc(d.base)}</b>${d.fresh?'<span class="kb" style="color:var(--up);border-color:var(--up)">NEW</span>':''}${KF==='전체'?'':`<span class="kb">${esc(d.kind)}</span>`}</td><td><span class="hit">${d.hits}</span>/${SMAX}</td><td class="hide-sm">${px(d.p)}</td><td>${pc(d.c24)}</td><td>${pc(d.doi,1)}</td><td>${pc(d.fr,4)}</td><td class="hide-sm">${d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–'}</td><td class="hide-sm">${d.up!=null&&(d.up+d.dn)?(d.dn?(d.up/d.dn).toFixed(2)+'x':'위쪽만'):'–'}</td>${d.C.map(c=>`<td class="c">${cell(c)}</td>`).join('')}</tr>`;
+  const row=d=>`<tr data-s="${esc(d.base)}" data-k="${esc(d.kind)}"><td class="l"><b>${esc(d.base)}</b> <a class="wdl" href="./coin.html#${encodeURIComponent(d.base)}!wd" title="거래소 대량 출금 점검">출금</a>${d.fresh?'<span class="kb" style="color:var(--up);border-color:var(--up)">NEW</span>':''}${KF==='전체'?'':`<span class="kb">${esc(d.kind)}</span>`}</td><td><span class="hit">${d.hits}</span>/${SMAX}</td><td class="hide-sm">${px(d.p)}</td><td>${pc(d.c24)}</td><td>${pc(d.doi,1)}</td><td>${pc(d.fr,4)}</td><td class="hide-sm">${d.cvd!=null?`<span class="${d.cvd>=0?'up':'dn'}">${usd(d.cvd)}</span>`:'–'}</td><td class="hide-sm">${d.up!=null&&(d.up+d.dn)?(d.dn?(d.up/d.dn).toFixed(2)+'x':'위쪽만'):'–'}</td>${d.C.map(c=>`<td class="c">${cell(c)}</td>`).join('')}</tr>`;
   const f=DATA.filter(d=>d.C&&d.hits>=MINH&&(KF==='전체'||d.kind===KF)).sort((a,b)=>b.hits-a.hits||(b.doi||0)-(a.doi||0));
   let html='';
   if(KF==='전체'){for(const k of OD.KINDS){const g=f.filter(d=>d.kind===k);if(!g.length)continue;const top3=g.filter(d=>d.hits>=3).length;

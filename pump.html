@@ -61,7 +61,7 @@ dialog#pv::backdrop{background:rgb(0 0 0/.45)}
 .pvt td,.pvt th{padding:5px 8px}
 @media(max-width:700px){.hide-sm{display:none}.pvc{height:260px}}
 </style>
-<link rel="stylesheet" href="./theme.css?v=21">
+<link rel="stylesheet" href="./theme.css?v=22">
 </head>
 <body>
 <nav class="top"><div class="band"></div></nav>
@@ -82,7 +82,7 @@ dialog#pv::backdrop{background:rgb(0 0 0/.45)}
     <p class="sub">'세력'을 직접 볼 수는 없어요. 여기 나오는 건 작업이 있을 때 자주 같이 보이는 흔적일 뿐이고, 같은 흔적이 급락 전에도 나와요. 승률·기대값은 신호 검증에서 계산한 과거 값이라 앞으로도 같다는 보장이 없어요. 익절·손절은 신호가 뜬 시점 가격 기준이에요. 7일 안에 둘 다 안 닿으면 7일 뒤 종가로 정리한 결과예요. 롱·숏 평단은 Gate 선물에서 최근 7일 미결제약정이 늘어난 시간마다 시장가 매수 비중만큼 롱, 나머지는 숏이 새로 열렸다고 보고 가격을 가중평균한 추정치예요. 실제 세력의 평단을 아는 방법은 없어요. 현재가가 롱 평단보다 아래면 롱이 손실 중(아래로 털릴 연료), 숏 평단보다 위면 숏이 손실 중(위로 털릴 연료)이라는 뜻으로 보세요.</p></details>
   <dialog id="pv" aria-labelledby="pv-t"><div class="pvh"><span id="pv-i"></span><h2 id="pv-t"></h2><span id="pv-p" style="font-family:var(--mono)"></span><button type="button" class="x" id="pv-x">닫기</button></div><div class="pvb" id="pv-b"></div></dialog>
 </section>
-<script src="./common.js?v=25"></script>
+<script src="./common.js?v=26"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -138,7 +138,7 @@ function render(){const cnt=m=>{let n=0;for(let i=5;i<10;i++)if(m&1<<i)n++;retur
   const rel=(v,p,sh)=>v&&isFinite(v)?`${fp(v)} <small class="${(v>p)!==!!sh?'dn':'up'}">${v>p?'':'+'}${((p/v-1)*100).toFixed(1)}%</small>`:'–';
   $('#rows').innerHTML=L.map(c=>{const fl=OD.ALLN.map((n,i)=>`<span class="fl${c.m&1<<i?' on':''}" title="${esc(n)}">${n.slice(0,1)}</span>`).join('');const b=c.best,Lg=b&&b.dir==='L';
     const tp=b?c.p*(1+(Lg?b.tp:-b.tp)/100):null,sl=b?c.p*(1+(Lg?-b.sl:b.sl)/100):null;
-    const v=c.vb,k=c.bk;return`<tr data-b="${esc(c.base)}"${b||v||k?'':' class="mu"'}><td class="l">${OD.coinIcon(c.base,18)} <button type="button" class="cn" data-pv="${esc(c.base)}">${esc(c.base)}</button></td><td class="l">${v?esc(v.name):'<span class="mu">–</span>'}</td><td>${v?`<b>${v.te.big.toFixed(0)}%</b> <small class="mu">기준 ${B.base.move.big.toFixed(0)}% · ${v.te.n}건</small>`:'–'}</td><td class="l">${k?`↑${fp(c.p*(1+k.E/100))} 롱 / ↓${fp(c.p*(1-k.E/100))} 숏 <small class="mu">+${k.tp}%/−${k.sl}% · 뒤 ${pc(k.te.exp,2)}</small>`:'<span class="mu">–</span>'}</td><td class="l">${b?esc(b.name)+(b.ok?'':' <small class="mu">(미검증)</small>'):'<span class="mu">검증된 방향 규칙 없음</span>'}</td>
+    const v=c.vb,k=c.bk;return`<tr data-b="${esc(c.base)}"${b||v||k?'':' class="mu"'}><td class="l">${OD.coinIcon(c.base,18)} <button type="button" class="cn" data-pv="${esc(c.base)}">${esc(c.base)}</button> <a class="wdl" href="./coin.html#${encodeURIComponent(c.base)}!wd" title="거래소 대량 출금 점검">출금</a></td><td class="l">${v?esc(v.name):'<span class="mu">–</span>'}</td><td>${v?`<b>${v.te.big.toFixed(0)}%</b> <small class="mu">기준 ${B.base.move.big.toFixed(0)}% · ${v.te.n}건</small>`:'–'}</td><td class="l">${k?`↑${fp(c.p*(1+k.E/100))} 롱 / ↓${fp(c.p*(1-k.E/100))} 숏 <small class="mu">+${k.tp}%/−${k.sl}% · 뒤 ${pc(k.te.exp,2)}</small>`:'<span class="mu">–</span>'}</td><td class="l">${b?esc(b.name)+(b.ok?'':' <small class="mu">(미검증)</small>'):'<span class="mu">검증된 방향 규칙 없음</span>'}</td>
       <td class="l">${b?(Lg?'<b class="up">롱</b>':'<b class="dn">숏</b>'):'–'}</td><td>${fp(c.p)}</td><td>${b?fp(tp)+` <small class="mu">${Lg?'+':'−'}${b.tp}%</small>`:'–'}</td><td>${b?fp(sl)+` <small class="mu">${Lg?'−':'+'}${b.sl}%</small>`:'–'}</td>
       <td>${b?b.te.win.toFixed(0)+'% <small class="mu">'+b.te.n+'건</small>':'–'}</td><td>${b?pc(b.te.exp,2):'–'}</td><td>${b&&b.mv?b.mv.upF.toFixed(0)+'% / '+b.mv.dnF.toFixed(0)+'%':'–'}</td>
       <td>${rel(c.cb?.big?.L*c.scale,c.p)}</td><td>${rel(c.cb?.big?.S*c.scale,c.p,1)}</td><td class="l">${fl}</td><td class="hide-sm">${pc(c.c24)}</td><td class="hide-sm">${c.r.vs!=null?c.r.vs.toFixed(1)+'x':'–'}</td></tr>`}).join('')||'<tr><td colspan="17" class="l">결과가 없어요</td></tr>'}
@@ -161,7 +161,7 @@ function preview(base){const c=DATA.find(x=>x.base===base);if(!c)return;const r=
       <tr><td class="l">다수 계정 선물 (계정 수 기준)</td><td>${rel(cb?.acct?.L*sc)}</td><td>${rel(cb?.acct?.S*sc,1)}</td><td class="l"><small class="mu">${cb?.acct?`롱 계정 ${(cb.acct.lr*100).toFixed(0)}%`:''}</small></td></tr>
       <tr><td class="l">선물 전체 신규 (${c.src==='gate'?'Gate.io 체결 비율':'바이낸스 체결 비율 × Bybit 미결제약정'})</td><td>${rel(c.lavg)}</td><td>${rel(c.savg,1)}</td><td class="l"><small class="mu">초록 = 지금 수익, 빨강 = 손실</small></td></tr>
     </tbody></table></div>
-    <p class="sub">현물·선물 체결 크기별 평단과 큰 체결 순매수는 <a href="./view.html#${encodeURIComponent(c.base)}">한눈에</a>, 상위 지갑 분산 흔적은 <a href="./coin.html#${encodeURIComponent(c.base)}">코인 분석</a>에서 볼 수 있어요.</p>`;
+    <p class="sub">현물·선물 체결 크기별 평단과 큰 체결 순매수는 <a href="./view.html#${encodeURIComponent(c.base)}">한눈에</a>, 상위 지갑 분산 흔적은 <a href="./coin.html#${encodeURIComponent(c.base)}">코인 분석</a>, 거래소 대량 출금은 <a href="./coin.html#${encodeURIComponent(c.base)}!wd">출금 점검</a>에서 볼 수 있어요.</p>`;
   if(PVC){PVC.destroy();PVC=null}dlg.showModal();OD.mountChart($('#pv-c'),c.base,{links:false}).then(x=>{if(dlg.open)PVC=x;else x.destroy()}).catch(e=>{$('#pv-c').textContent='차트 실패: '+e.message})}
 $('#rows').addEventListener('click',e=>{const b=e.target.closest('[data-pv]');if(b)preview(b.dataset.pv)});
 $('#pv-x').onclick=()=>$('#pv').close();$('#pv').addEventListener('close',()=>{if(PVC){PVC.destroy();PVC=null}});

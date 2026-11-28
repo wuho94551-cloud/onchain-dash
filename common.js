@@ -87,7 +87,7 @@ const isFav=b=>favs().includes(b);
 function toggleFav(b){let f=favs();f=f.includes(b)?f.filter(x=>x!==b):[b,...f];LS.set('od-fav',f.slice(0,40));window.dispatchEvent(new Event('od-fav'));return f.includes(b)}
 /* ---- 같은 코인 바로가기 ---- */
 function coinLinks(host,base,here){shellStyle();const b=encodeURIComponent(base);
-  const L=[['coin','코인 분석',`./coin.html#${b}`],['watch','호가 감시',`./watch.html#${b}`],['cvd','CVD',`./cvd.html#${b}`]].filter(x=>x[0]!==here);
+  const L=[['coin','코인 분석',`./coin.html#${b}`],['wd','거래소 출금 점검',`./coin.html#${b}!wd`],['watch','호가 감시',`./watch.html#${b}`],['cvd','CVD',`./cvd.html#${b}`]].filter(x=>x[0]!==here);
   host.innerHTML=`<button type="button" data-fav aria-pressed="${isFav(base)}" title="관심 코인">${isFav(base)?'★':'☆'} 관심</button><span>이 코인으로</span>`+L.map(x=>`<a href="${x[2]}">${x[1]} →</a>`).join('')+(here!=='chart'?`<a href="#" data-chart>차트 창 →</a>`:'');
   host.querySelector('[data-fav]').onclick=e=>{const on=toggleFav(base);e.currentTarget.setAttribute('aria-pressed',on);e.currentTarget.textContent=(on?'★':'☆')+' 관심'};
   const ch=host.querySelector('[data-chart]');if(ch)ch.onclick=e=>{e.preventDefault();openChart(base)};
@@ -148,6 +148,7 @@ const SRC_L={
   cg:['CoinGecko API','https://docs.coingecko.com'],
   llama:['DefiLlama 언락 데이터','https://defillama.com/unlocks'],
   ethp:['Ethplorer API','https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API'],
+  rpc:['PublicNode 공개 RPC','https://www.publicnode.com'],
   dune:['Dune API (내 키)','https://docs.dune.com/api-reference'],
   bs:['Blockscout API','https://docs.blockscout.com'],
   gh:['GitHub Gist API (내 토큰)','https://docs.github.com/rest/gists'],
@@ -164,7 +165,7 @@ const SRC_P={
   './bt.html':[['bybit','180일 1시간 봉(kline), 미결제약정(open-interest), 펀딩비 기록(funding/history), 롱숏 계정 비율(account-ratio), 실전 기록의 1·3·7일 뒤 가격(kline)'],['binF','180일 CVD·청산 추정용 1시간 봉 시장가 매수량(klines)'],['gate','바이낸스 선물에 없는 코인만 contract_stats·candlesticks (최근 180일까지만 제공)']],
   './fav.html':[['bybit','가격·펀딩비(tickers), 미결제약정(open-interest)'],['binS','현물 1시간 봉 시장가 매수량으로 CVD(data-api.binance.vision klines)'],['binF','현물이 없으면 선물 1시간 봉으로 CVD'],['upbit','원화 시세(김프)'],['bithumb','입출금 상태'],['gate','입출금 상태(spot/currencies)'],['fx','달러/원 환율']],
   './view.html':[['bybit','가격·차트(tickers, kline), 미결제약정(open-interest), 펀딩비 기록(funding/history), 롱숏 계정 비율(account-ratio)'],['binF','CVD·청산 추정용 1시간 봉(klines), 평단 나눠 보기(futures/data 상위 트레이더·전체 계정 비율·미결제약정 기록·시장가 매수/매도 비율, aggTrades 최근 2일 체결)'],['binS','현물 체결 크기별 평단(api/v3/aggTrades 최근 7일 체결)'],['gate',GATE_FB]],
-  './coin.html':[['cg','코인 검색·정보·컨트랙트 주소'],['binF','CVD(klines의 시장가 매수량), 상위 트레이더 롱/숏(futures/data)'],['bybit','미결제약정·펀딩비'],['okx','최근 약 24시간 청산 합계(liquidation-orders)'],['gate','바이낸스에 없는 코인의 CVD'],['llama','언락 일정·물량'],['ethp','이더리움 보유자 상위 20'],['bs','상위 지갑 분산 흔적: 보유자·토큰 이동·주소 라벨(이더리움·Base·Arbitrum·Optimism·Polygon)'],['dune','거래소 유입·유출(내 Dune 키를 넣었을 때)'],['','주소 정보 링크: Arkham, Etherscan']],
+  './coin.html':[['cg','코인 검색·정보·컨트랙트 주소'],['binF','CVD(klines의 시장가 매수량), 상위 트레이더 롱/숏(futures/data)'],['bybit','미결제약정·펀딩비'],['okx','최근 약 24시간 청산 합계(liquidation-orders)'],['gate','바이낸스에 없는 코인의 CVD'],['llama','언락 일정·물량'],['ethp','이더리움 보유자 상위 20'],['bs','상위 지갑 분산 흔적: 보유자·토큰 이동·주소 라벨(이더리움·Base·Arbitrum·Optimism·Polygon)'],['rpc','거래소 대량 출금: 토큰 이동 원본 기록·지갑 거래 수·잔고(이더리움·BSC·Base·Arbitrum·Optimism·Polygon·Avalanche)'],['dune','거래소 유입·유출(내 Dune 키를 넣었을 때)'],['','주소 정보 링크: Arkham, Etherscan']],
   './watch.html':[['bybit','실시간 호가·체결(웹소켓 stream.bybit.com 선물·현물), 캔들·가격(kline, tickers)']],
   './cvd.html':[['binF','선물 실시간 체결(웹소켓 fstream.binance.com), 최근 체결(fapi/v1)'],['binS','현물 실시간 체결(웹소켓 stream.binance.com), 최근 체결(data-api.binance.vision)'],['binV','지난 체결 기록 파일(data.binance.vision)']],
   './liq.html':[['binF','실시간 청산(웹소켓 fstream.binance.com !forceOrder@arr, 종목마다 1초에 1건까지만 옴)'],['bybit','실시간 청산(웹소켓 stream.bybit.com), 종목 목록(tickers)'],['okx','실시간 청산(웹소켓 ws.okx.com), 계약 정보(instruments)'],['gate','실시간 청산(웹소켓 fx-ws.gateio.ws), 계약 배수(contracts)']],

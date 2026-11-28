@@ -94,7 +94,7 @@ summary{cursor:pointer;font-weight:600;min-height:28px}
 @media(prefers-reduced-motion:no-preference){.panel{animation:in .35s ease both}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
 tr.mu td{color:var(--mute)}
 </style>
-<link rel="stylesheet" href="./theme.css?v=21">
+<link rel="stylesheet" href="./theme.css?v=22">
 </head>
 <body>
 <nav class="top"><div class="band">
@@ -169,6 +169,9 @@ tr.mu td{color:var(--mute)}
     <div class="phead" style="margin-top:18px"><h2>상위 지갑 분산 흔적</h2><button type="button" id="sp-go" class="ghost">점검하기</button></div>
     <p class="src" style="margin-top:0">상위 20개 지갑의 최근 토큰 이동을 받아, 최근 7일·30일에 얼마나 내보냈는지, 몇 개 주소로 쪼갰는지, 거래소 지갑으로 보냈는지 봐요. 상위 지갑끼리 옮긴 건 내부 이동으로 빼요. 이더리움·Base·Arbitrum·Optimism·Polygon 토큰이 돼요. 1분 가까이 걸려요.</p>
     <div id="spread"></div>
+    <div class="phead" style="margin-top:18px"><h2>거래소 대량 출금</h2><span class="sp"></span><select id="wd-ch" aria-label="체인"></select><select id="wd-h" aria-label="기간"><option value="24">24시간</option><option value="72">3일</option></select><button type="button" id="wd-go" class="ghost">점검하기</button></div>
+    <p class="src" style="margin-top:0">체인 원본 기록(토큰 이동)을 직접 받아, 거래소급 지갑에서 개인 지갑으로 큰 물량이 빠져나간 걸 찾아요. 받은 지갑이 아직 그대로 들고 있는지, 한 번도 보낸 적 없는 새 지갑인지, 수수료 낼 코인(가스)이 있는지도 봐요. 거래소급 지갑은 보낸 거래가 10만 건 넘는 지갑으로 판단해요(마켓메이커 봇도 섞일 수 있어요). 이더리움·BSC·Base·Arbitrum·Optimism·Polygon·Avalanche 토큰이 돼요.</p>
+    <div id="wd"></div>
   </div>
 </section>
 
@@ -184,7 +187,7 @@ tr.mu td{color:var(--mute)}
   </details>
 </section>
 
-<script src="./common.js?v=25"></script>
+<script src="./common.js?v=26"></script>
 <script>
 {
 const $=s=>document.querySelector(s);
@@ -266,6 +269,7 @@ async function loadCoin(q){
   $('#stamp').textContent='불러오는 중…';
   try{C=await findCoin(q)}catch(e){$('#stamp').textContent='조회 실패: '+e.message;return}
   OD.coinLinks($('#clinks'),C.sym,'coin');
+  wdInit();
   store.set('coin',C.sym);try{history.replaceState(null,'','#'+C.sym.replace(/[^A-Za-z0-9-]/g,''))}catch(e){}
   document.title=C.sym+' · 온체인 데스크';
   if(C.img)OD.setIcon(C.sym,C.img);
@@ -383,6 +387,62 @@ async function loadHolders(){
       return `<tr><td class="l">${i+1}</td><td class="l"><a class="addr" href="https://intel.arkm.com/explorer/address/${a}" target="_blank" rel="noopener">${a.slice(0,8)}…${a.slice(-6)}</a> <a class="sub" href="https://etherscan.io/address/${a}" target="_blank" rel="noopener">etherscan</a></td><td>${num(amt)}</td><td>${C.price?usd(amt*C.price):''}</td><td>${Number(h.share).toFixed(2)}%</td><td class="l"><div class="meter" style="width:${(h.share/mx*100).toFixed(1)}%"></div></td></tr>`}).join('')}</tbody></table></div>`;
   }catch(er){empty('#holders','보유자를 불러오지 못했어요: '+esc(er.message)+(key==='freekey'?' · 무료 공용 키라 제한에 걸렸을 수 있어요. 아래에서 Ethplorer 키를 넣어보세요.':''))}
 }
+
+/* 거래소 대량 출금: 공개 RPC(publicnode)에서 Transfer 로그를 직접 받음. 보낸 거래 10만 건 넘는 EOA = 거래소급 지갑 */
+const WCH=[['ethereum','ethereum-rpc','이더리움','etherscan.io','ETH','eth'],['binance-smart-chain','bsc-rpc','BSC','bscscan.com','BNB',''],['base','base-rpc','Base','basescan.org','ETH','base'],['arbitrum-one','arbitrum-one-rpc','Arbitrum','arbiscan.io','ETH','arbitrum'],['optimistic-ethereum','optimism-rpc','Optimism','optimistic.etherscan.io','ETH','optimism'],['polygon-pos','polygon-bor-rpc','Polygon','polygonscan.com','POL','polygon'],['avalanche','avalanche-c-chain-rpc','Avalanche','snowtrace.io','AVAX','']];
+/* 이름을 확인한 거래소 지갑(BSC는 무료 라벨 출처가 없어서 직접 확인한 것만) */
+const WKNOWN={'0x0d0707963952f2fba59dd06f2b425ace40b492fe':'Gate','0xc882b111a75c0c657fc507c04fbfcd2cc984f071':'Gate'};
+const WHOT=1e5;
+const wdChains=()=>WCH.filter(c=>C&&C.platforms&&C.platforms[c[0]]&&/^0x[0-9a-f]{40}$/i.test(String(C.platforms[c[0]])));
+function wdInit(){const cs=wdChains(),sel=$('#wd-ch');sel.innerHTML=cs.map(c=>`<option value="${c[0]}">${c[2]}</option>`).join('');sel.hidden=cs.length<2;$('#wd').innerHTML=cs.length?'':'<div class="empty">이 코인은 지원하는 체인(이더리움·BSC·Base·Arbitrum·Optimism·Polygon·Avalanche)의 토큰 주소가 없어요.</div>';$('#wd-go').disabled=!cs.length}
+async function loadWd(){const box=$('#wd'),cs=wdChains();if(!cs.length){wdInit();return}
+  const ch=cs.find(c=>c[0]===$('#wd-ch').value)||cs[0],tok=String(C.platforms[ch[0]]).toLowerCase(),RPC=`https://${ch[1]}.publicnode.com`,H=+$('#wd-h').value||24;
+  $('#wd-go').disabled=true;const msg=t=>box.innerHTML=`<div class="empty">${t}</div>`;
+  let id=0;const rpc=async(m,p)=>{for(let n=0;n<4;n++){try{const r=await fetch(RPC,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:++id,method:m,params:p})});if(r.status===429||r.status>=500)throw new Error('HTTP '+r.status);const d=await r.json();if(d.error){const e=new Error(d.error.message||'RPC 오류');e.rpc=1;throw e}return d.result}catch(e){if(e.rpc||n===3)throw e;await new Promise(r=>setTimeout(r,1500*(n+1)))}}};
+  const hx=n=>'0x'+n.toString(16),pad=a=>'0x'+a.slice(2).padStart(64,'0'),big=h=>BigInt(h&&h!=='0x'?h:'0x0');
+  const pool=async(items,k,fn)=>{let i=0;await Promise.all(Array.from({length:k},async()=>{while(i<items.length){const x=i++;await fn(items[x],x)}}))};
+  try{msg('블록 위치 찾는 중…');
+    const head=parseInt(await rpc('eth_blockNumber',[]),16),bt=async n=>parseInt((await rpc('eth_getBlockByNumber',[hx(n),false])).timestamp,16);
+    const tH=await bt(head),back=Math.min(head-1,20000),tB=await bt(head-back),spb=(tH-tB)/back,target=tH-H*3600;
+    let from=Math.max(1,head-Math.round(H*3600/spb));const tF=await bt(from);from=Math.max(1,from-Math.round((tF-target)/spb));
+    const [decH,supH]=await Promise.all([rpc('eth_call',[{to:tok,data:'0x313ce567'},'latest']),rpc('eth_call',[{to:tok,data:'0x18160ddd'},'latest'])]);
+    const dec=Number(big(decH))||18,unit=10n**BigInt(dec),toN=v=>Number(v/unit)+Number(v%unit)/Number(unit),sup=toN(big(supH));
+    /* 로그: 1만 블록씩, 너무 많다고 하면 반으로 쪼갬 */
+    const TT='0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',rng=[];for(let a=from;a<=head;a+=10000)rng.push([a,Math.min(head,a+9999)]);
+    const logs=[];let dn=0;const getR=async(a,b)=>{try{return await rpc('eth_getLogs',[{address:tok,topics:[TT],fromBlock:hx(a),toBlock:hx(b)}])}catch(e){if(b>a&&/range|limit|too many|exceed|large|10000|size/i.test(e.message)){const m=Math.floor((a+b)/2);return [...await getR(a,m),...await getR(m+1,b)]}throw e}};
+    await pool(rng,4,async([a,b])=>{const r=await getR(a,b);for(const l of r)if(l.topics.length===3)logs.push({b:parseInt(l.blockNumber,16),f:'0x'+l.topics[1].slice(26),t:'0x'+l.topics[2].slice(26),v:toN(big(l.data)),tx:l.transactionHash});dn++;msg(`토큰 이동 받는 중… ${dn}/${rng.length} 구간 · ${logs.length.toLocaleString()}건`)});
+    const px=C.price||0,minV=Math.min(sup*.002||Infinity,px?50000/px:Infinity);const L=logs.filter(l=>l.v>=minV);
+    if(!L.length){box.innerHTML=`<p style="margin:6px 0">최근 ${H}시간 동안 공급량 0.2% 또는 $50K 넘는 이동이 없어요. (${ch[2]} · 이동 ${logs.length.toLocaleString()}건 확인)</p>`;return}
+    /* 주소 정보: 보낸 거래 수, 컨트랙트 여부, 가스 잔고, 지금 토큰 잔고 */
+    const addrs=[...new Set(L.flatMap(l=>[l.f,l.t]))].slice(0,120),AI=new Map();let ai=0;
+    await pool(addrs,4,async a=>{const [n,code,gas,bal]=await Promise.all([rpc('eth_getTransactionCount',[a,'latest']),rpc('eth_getCode',[a,'latest']),rpc('eth_getBalance',[a,'latest']),rpc('eth_call',[{to:tok,data:'0x70a08231'+pad(a).slice(2)},'latest'])]);
+      AI.set(a,{n:parseInt(n,16),ct:code&&code!=='0x',gas:Number(big(gas))/1e18,bal:toN(big(bal))});ai++;msg(`주소 확인 중… ${ai}/${addrs.length}`)});
+    const hot=a=>{const x=AI.get(a);return !!x&&!x.ct&&(x.n>=WHOT||!!WKNOWN[a])};
+    /* 이름: 알려진 목록, 그다음 Blockscout 라벨(되는 체인만) */
+    const NM=new Map(Object.entries(WKNOWN));const hots=[...new Set(L.filter(l=>hot(l.f)).map(l=>l.f))].filter(a=>!NM.has(a)).slice(0,6);
+    if(ch[5]&&hots.length){msg('거래소 이름 확인 중…');await pool(hots,3,async a=>{try{const ac=new AbortController(),tt=setTimeout(()=>ac.abort(),12000);const d=await (await fetch(`https://${ch[5]}.blockscout.com/api/v2/addresses/${a}`,{signal:ac.signal})).json();clearTimeout(tt);const lb=bsLabel(d);if(lb.nm)NM.set(a,lb.nm)}catch(e){}})}
+    /* 출금 = 거래소급 지갑 → 거래소급 아닌 EOA */
+    const W=L.filter(l=>hot(l.f)&&!hot(l.t)&&!AI.get(l.t)?.ct);const recvSum=new Map();for(const l of W)recvSum.set(l.t,(recvSum.get(l.t)||0)+l.v);
+    const tsOf=b=>tH-(head-b)*spb;
+    const st=a=>{const x=AI.get(a),got=recvSum.get(a)||0;if(!x)return{k:'?',t:'확인 못 함'};const keep=got?x.bal/got:0;
+      const fresh=x.n===0;const k=keep>=.9?(fresh?'new':'hold'):keep>=.3?'part':'moved';
+      return{k,fresh,keep,t:(k==='new'?'<b>새 지갑 · 그대로 보유</b>':k==='hold'?'<b>그대로 보유</b>':k==='part'?`일부 옮김 (${Math.round(keep*100)}% 남음)`:'대부분 옮김')+(fresh&&k!=='new'?' · 보낸 적 없음':'')+(x.gas<1e-4?' · <span title="수수료 낼 코인이 없어 당장은 못 움직여요">가스 없음</span>':'')}};
+    const S=new Map([...recvSum.keys()].map(a=>[a,st(a)]));
+    const keepAmt=[...recvSum].reduce((s,[a,v])=>s+(['new','hold'].includes(S.get(a).k)?Math.min(v,AI.get(a).bal):0),0),tot=W.reduce((s,l)=>s+l.v,0),nKeep=[...S.values()].filter(x=>['new','hold'].includes(x.k)).length;
+    /* 묶음: 같은 거래소 지갑에서 1시간 안에 2곳 이상 새 지갑으로 */
+    const grp=new Set();for(const l of W){const sib=W.filter(m=>m.f===l.f&&m.t!==l.t&&Math.abs(m.b-l.b)*spb<=3600&&S.get(m.t)?.fresh);if(S.get(l.t)?.fresh&&sib.length)grp.add(l.t)}
+    const sp=v=>sup?` <small>${(v/sup*100).toFixed(2)}%</small>`:'',ud=v=>px?` <small>${usd(v*px)}</small>`:'';
+    const pk=sup?keepAmt/sup*100:0,lvl=pk>=1||keepAmt*px>=1e6?'눈에 띔':pk>=.3||keepAmt*px>=25e4?'약간':'뚜렷하지 않음';
+    const exIn=L.filter(l=>hot(l.t)&&!hot(l.f)&&!AI.get(l.f)?.ct).reduce((s,l)=>s+l.v,0);
+    const nmOf=a=>NM.get(a)?esc(NM.get(a)):`거래소급 <small>${(AI.get(a).n/1e6>=1?(AI.get(a).n/1e6).toFixed(1)+'M':Math.round(AI.get(a).n/1e3)+'K')}건</small>`;
+    const ad=a=>`<a class="addr" href="https://${ch[3]}/address/${a}" target="_blank" rel="noopener">${a.slice(0,6)}…${a.slice(-4)}</a>`;
+    const rows=W.slice().sort((x,y)=>y.v-x.v).slice(0,40);
+    box.innerHTML=`<p style="margin:6px 0 10px;font-size:15px"><b>출금 후 보관: ${lvl}</b> · ${esc(ch[2])} · 최근 ${H}시간 거래소급 지갑에서 개인 지갑으로 큰 출금 ${W.length}건, 합계 <b>${num(tot)} ${esc(C.sym)}</b>${sp(tot)}${ud(tot)} · 그중 받은 지갑이 아직 그대로 들고 있는 양 <b>${num(keepAmt)}</b>${sp(keepAmt)}${ud(keepAmt)} (${nKeep}곳)${grp.size?` · 몇 분~1시간 안에 새 지갑 여러 곳으로 나눠 뺀 묶음 ${grp.size}곳`:''} · 참고로 개인 지갑에서 거래소급 지갑으로 바로 들어간 큰 이동 ${num(exIn)}</p>
+    ${W.length?`<div class="scroll"><table><thead><tr><th class="l">시각</th><th class="l">보낸 곳</th><th class="l">받은 지갑</th><th>양</th><th>받은 지갑 지금 보유</th><th class="l">상태</th></tr></thead><tbody>${rows.map(l=>{const x=AI.get(l.t),s=S.get(l.t);
+      return`<tr${['new','hold'].includes(s.k)?'':' class="mu"'}><td class="l"><a href="https://${ch[3]}/tx/${l.tx}" target="_blank" rel="noopener">${new Date(tsOf(l.b)*1000).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</a></td><td class="l">${nmOf(l.f)}</td><td class="l">${ad(l.t)}${grp.has(l.t)?' <span class="kb">묶음</span>':''}</td><td>${num(l.v)}${sp(l.v)}${ud(l.v)}</td><td>${num(x.bal)}</td><td class="l">${s.t}</td></tr>`}).join('')}</tbody></table></div>`:''}
+    <p class="src">공개 RPC(publicnode) 원본 기록 · 토큰 이동 ${logs.length.toLocaleString()}건 중 공급량 0.2% 또는 $50K 넘는 ${L.length}건 확인 · 시각은 블록 간격으로 계산한 대략값 · 누가 출금했는지(팀·마켓메이커·고래)는 체인으로는 알 수 없어요</p>`;
+  }catch(er){box.innerHTML='<div class="empty">점검 실패: '+esc(er.message)+'</div>'}finally{$('#wd-go').disabled=!wdChains().length}}
+$('#wd-go').onclick=loadWd;
 
 /* 상위 지갑 분산 흔적: Blockscout(이더리움·Base·Arbitrum·Optimism·Polygon). 주소 라벨(거래소 등)도 같이 옴 */
 let HOLD=null;
@@ -530,8 +590,10 @@ $('#q').addEventListener('keydown',e=>{const n=$('#pklist').children.length;
   else if(e.key==='Escape'){pkClose();$('#pick').focus()}});
 $('#pklist').addEventListener('click',e=>pkGo(e.target.closest('li')));
 document.addEventListener('pointerdown',e=>{if(!$('#pkpop').hidden&&!e.target.closest('.pk'))pkClose()});
-window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h&&(!C||h!==C.sym))loadCoin(h)});
-const start=decodeURIComponent(location.hash.slice(1))||store.get('coin')||'ARB';loadCoin(start);
+const wdAuto=()=>{wdInit();$('#wd').scrollIntoView({block:'center'});if(wdChains().length)loadWd()};
+const hParse=()=>{const h=decodeURIComponent(location.hash.slice(1));const m=h.match(/^(.*?)!wd$/);return m?[m[1],1]:[h,0]};
+window.addEventListener('hashchange',async()=>{const [h,w]=hParse();if(h&&(!C||h!==C.sym))await loadCoin(h);if(w)wdAuto()});
+{const [h,w]=hParse();loadCoin(h||store.get('coin')||'ARB').then(()=>{if(w)wdAuto()})}
 }
 </script>
 </body>
